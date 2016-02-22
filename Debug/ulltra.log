@@ -1,0 +1,27 @@
+﻿Der Buildvorgang wurde am 22.02.2016 16:29:06 gestartet.
+     1>Projekt "c:\dev\ulltra\ulltra.vcxproj" auf Knoten "2", Build Ziel(e).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /Irtt /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt Discovery.cpp
+         Discovery.cpp
+     1>c:\dev\ulltra\discovery.cpp(219): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+         c:\program files (x86)\windows kits\10\include\10.0.10150.0\ucrt\stdio.h(1769): note: Siehe Deklaration von "sprintf"
+     1>c:\dev\ulltra\discovery.cpp(244): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+         c:\program files (x86)\windows kits\10\include\10.0.10150.0\ucrt\string.h(119): note: Siehe Deklaration von "strcpy"
+     1>c:\dev\ulltra\discovery.cpp(245): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+         c:\program files (x86)\windows kits\10\include\10.0.10150.0\ucrt\string.h(119): note: Siehe Deklaration von "strcpy"
+     1>c:\dev\ulltra\discovery.cpp(246): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+         c:\program files (x86)\windows kits\10\include\10.0.10150.0\ucrt\string.h(119): note: Siehe Deklaration von "strcpy"
+     1>c:\dev\ulltra\discovery.cpp(269): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+         c:\program files (x86)\windows kits\8.1\include\um\winsock2.h(2238): note: Siehe Deklaration von "gethostbyname"
+     1>c:\dev\ulltra\discovery.cpp(114): warning C4172: Adresse einer lokalen Variablen oder eines temporären Werts ": n" wird zurückgegeben
+     1>c:\dev\ulltra\discovery.cpp(117): warning C4172: Adresse einer lokalen Variablen oder eines temporären Werts "" wird zurückgegeben
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\dev\ulltra\Debug\ulltra.exe" /INCREMENTAL /NOLOGO Ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"C:\dev\ulltra\Debug\ulltra.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\dev\ulltra\Debug\ulltra.lib" /MACHINE:X86 Debug\Discovery.obj
+         Debug\NetworkManager.obj
+         Debug\ulltra.obj
+         ulltra.vcxproj -> C:\dev\ulltra\Debug\ulltra.exe
+     1>Die Erstellung von Projekt "c:\dev\ulltra\ulltra.vcxproj" ist abgeschlossen (Build Ziel(e)).
+
+Der Buildvorgang wurde erfolgreich ausgeführt.
+
+Verstrichene Zeit 00:00:00.78

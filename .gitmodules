@@ -1,0 +1,3 @@
+[submodule "rtt"]
+	path = rtt
+	url = https://github.com/rtaudio/rtt.git
