@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <fstream>
 
 #ifdef WIN32
@@ -13,20 +14,25 @@
 #pragma comment(lib, "iphlpapi.lib")
 
 #else
+#include<unistd.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-
-#include <unistd.h>
 #include <fcntl.h>
-
+#ifndef SOCKET
+#define SOCKET int
+#endif
 #endif
 
 
 
 void print_last_errno(int err = 0);
+
+
+const Discovery::NodeDevice Discovery::NodeDevice::none = Discovery::NodeDevice();
 
 Discovery::Discovery()
 {
@@ -109,12 +115,14 @@ bool Discovery::start(int broadcastPort)
 
 const Discovery::NodeDevice &Discovery::findById(const std::string &id) const
 {
-	for (auto n : m_discovered) {
+	int i = 0;
+	for (auto &n : m_discovered) {
 		if (n.id == id) {
-			return n;
+			return m_discovered[i];
 		}
+		i++;
 	}
-	return NodeDevice();
+	return NodeDevice::none;
 }
 
 bool Discovery::update()
@@ -122,10 +130,13 @@ bool Discovery::update()
 	while (true) {
 		struct sockaddr_in remote;  // UDP Sender IPv4 Adress und Port Struktur
 #ifndef WIN32
-		unsigned
-#endif
-			char recvBuffer[1024];
+		unsigned char recvBuffer[1024];
+		socklen_t addr_len = sizeof(remote);
+#else
+		char recvBuffer[1024];
 		int addr_len = sizeof(remote);
+#endif
+			
 		int len = recvfrom((SOCKET)m_recvSocket, (char*)recvBuffer, sizeof(recvBuffer), 0, (struct sockaddr *) &remote, &addr_len);
 		
 		// would block? 
@@ -138,12 +149,14 @@ bool Discovery::update()
 
 		recvBuffer[1000] = 0;
 
+		std::string act((const char*)recvBuffer);
+		
 		NodeDevice nd;
-		nd.name = std::string(&recvBuffer[strlen("ULLTRA_DEV_R") + 1]);
-		nd.id = std::string(&recvBuffer[strlen("ULLTRA_DEV_R") + nd.name.length() + 2]);
+		nd.name = std::string((const char*)&recvBuffer[act.length() + 1]);
+		nd.id = std::string((const char*)&recvBuffer[act.length() + nd.name.length() + 2]);
 		nd.addr = remote.sin_addr;
 
-		if (strcmp("ULLTRA_DEV_R", recvBuffer) == 0) { // register
+		if ("ULLTRA_DEV_R" == act) { // register
 			// check if we somehow received our own broadcast
 			if (nd.id ==  getHwAddress()) {
 				continue;
@@ -155,11 +168,9 @@ bool Discovery::update()
 			}
 
 			m_discovered.push_back(nd);
+			std::cout << "Discovered node " << nd.name << " (id " << nd.id << ")" << std::endl;
 		}
-		else if (strcmp("ULLTRA_DEV_Z", recvBuffer) == 0) { // unregister
-			char client_name[32];
-			strncpy_s(client_name, sizeof(client_name), &recvBuffer[18], 32);
-
+		else if ("ULLTRA_DEV_Z" == act) { // unregister
 			for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
 				if (it->id == nd.id || it->addr.s_addr == nd.addr.s_addr) {
 					m_discovered.erase(it);
@@ -167,7 +178,7 @@ bool Discovery::update()
 				}
 			}
 		}
-		else if ((strcmp("ULLTRA_DEV_H", recvBuffer)) == 0) { // heartbeat
+		else if ("ULLTRA_DEV_H" == act) { // heartbeat
 
 			//ProcessHeartbeat(remote.sin_addr, ((HeartBeatData*)&recvBuffer[10]));
 		}

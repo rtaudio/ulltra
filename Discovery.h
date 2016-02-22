@@ -3,14 +3,19 @@
 #include <string>
 #include <vector>
 
-
+#ifdef WIN32
 #include<winsock2.h>
+#else
+#include <netinet/in.h>
+#endif
 //#include <inaddr.h>
 
 class Discovery
 {
 public:
 	struct NodeDevice {
+		const static NodeDevice none;
+		
 		std::string name;
 		std::string id;
 		in_addr addr;

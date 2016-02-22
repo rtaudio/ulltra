@@ -26,6 +26,7 @@
 *.exe
 *.out
 *.app
+
 *.suo
 *.sdf
 *.ilk
@@ -33,3 +34,7 @@
 *.pdb
 *.idb
 *.opensdf
+/CMakeFiles/
+/Makefile
+/cmake_install.cmake
+/ulltra
