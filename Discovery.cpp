@@ -155,6 +155,7 @@ bool Discovery::update()
 			}
 
 			m_discovered.push_back(nd);
+			std::cout << "Discovered node " << nd.name << " (id " << nd.id << ")" << std::endl;
 		}
 		else if (strcmp("ULLTRA_DEV_Z", recvBuffer) == 0) { // unregister
 			char client_name[32];
