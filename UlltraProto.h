@@ -25,7 +25,7 @@ public:
 	static const int DiscoveryPort = 26025;
 	static const int BroadcastInterval = 2; //seconds
 	static const int LinkEvalPort = 26026;
-	static const int LinkEvalTimeoutMS = 100; // milliseconds
+	static const int LinkEvalTimeoutMS = 200; // milliseconds
 
 	static const std::string LatencyTestStartToken;
 

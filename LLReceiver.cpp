@@ -10,7 +10,9 @@
 #include <cstring>
 #include <thread>
 
-LLReceiver::LLReceiver(int port, int receiveBlockingTimeoutMs) : m_receiveBlockingTimeoutUs(1000*receiveBlockingTimeoutMs)
+//#define USE_SELECT
+
+LLReceiver::LLReceiver(int port, int receiveBlockingTimeoutUs) : m_receiveBlockingTimeoutUs(receiveBlockingTimeoutUs)
 {
 	// bind receiving socket
 	m_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -30,16 +32,19 @@ LLReceiver::LLReceiver(int port, int receiveBlockingTimeoutMs) : m_receiveBlocki
 
 	typedef const char * optval;
 
+
+#ifndef USE_SELECT
 #ifndef _WIN32
 	struct timeval tv;
 	tv.tv_sec = 0;
 	tv.tv_usec = m_receiveBlockingTimeoutUs;
 #else
-	int tv = m_receiveBlockingTimeoutUs / 1000UL;
+	int tv = m_receiveBlockingTimeoutUs < 1000 ? 1UL : (m_receiveBlockingTimeoutUs / 1000UL);
 #endif
 	if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (optval)&tv, sizeof(tv)) < 0) {
 		LOG(logERROR) << ("Cannot set recvtimeo!");
 	}
+#endif
 
 
 	// set the buffer size, is this necessary?
@@ -55,6 +60,13 @@ LLReceiver::LLReceiver(int port, int receiveBlockingTimeoutMs) : m_receiveBlocki
 
 LLReceiver::~LLReceiver()
 {
+	int yes = 1;
+	setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&yes, sizeof(yes));
+
+	shutdown((SOCKET)m_socket, 2);
+#ifndef _WIN32
+	close((SOCKET)m_socket);
+#endif
 }
 
 bool LLReceiver::setBlocking(BlockingMode  blocking)
@@ -153,5 +165,6 @@ const uint8_t  *LLReceiver::receive(int &receivedBytes, struct sockaddr_in &remo
 		i++;
 	}
 }
+
 
 

@@ -211,6 +211,8 @@ bool Discovery::update(time_t now)
 
 			{ LOG(logINFO) << "Custom handler for message " << act << " from node " << nd; }
 			m_customHandlers[act](nd);
+
+			exN.vitalSign = UP::getMicroSeconds();
 		}
 		else {
 			{ LOG(logDEBUG1) << "Received unknown message from " << nd; }
