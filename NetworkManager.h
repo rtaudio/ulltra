@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Discovery.h"
+#include "LinkEval.h"
 
 class RttThread;
 
@@ -12,9 +13,11 @@ public:
 
 	inline bool isRunning() const { return m_isRunning;  } 
 
+	const Discovery::NodeDevice &getDiscoveredNode(const in_addr &addr) const;
 private:
 
 	Discovery m_discovery;
+	LinkEval m_linkEval;
 
 	bool m_isRunning;
 	RttThread *m_updateThread;

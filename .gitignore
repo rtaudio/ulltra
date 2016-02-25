@@ -38,3 +38,7 @@
 /Makefile
 /cmake_install.cmake
 /ulltra
+CMakeCache.txt
+/*.m
+*.enc
+*.log

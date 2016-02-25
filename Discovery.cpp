@@ -1,119 +1,96 @@
-#include "Discovery.h"
-
 #include <iostream>
 #include <string>
 #include <cstring>
 #include <fstream>
+#include <map>
 
-#ifdef WIN32
-#include <ws2tcpip.h>
+#include "networking.h"
 
-#include <Windows.h>
-#include <Iphlpapi.h>
-#include <Assert.h>
-#pragma comment(lib, "iphlpapi.lib")
+#include "UlltraProto.h"
+#include "Discovery.h"
+#include "SimpleUdpReceiver.h"
 
-#else
-#include<unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#ifndef SOCKET
-#define SOCKET int
-#endif
+#ifndef _WIN32
+#include <dirent.h>
 #endif
 
+#include <rtt.h>
 
 
-void print_last_errno(int err = 0);
+std::ostream& operator<<(std::ostream &strm, const Discovery::NodeDevice &nd) {
+	std::string ip4(inet_ntoa(nd.addr));
+	return strm << nd.name << " (id " << nd.id << ", ip4 address " << ip4 << ")";
+}
 
 
-const Discovery::NodeDevice Discovery::NodeDevice::none = Discovery::NodeDevice();
+Discovery::NodeDevice Discovery::NodeDevice::none = Discovery::NodeDevice();
 
-Discovery::Discovery()
+Discovery::Discovery() : m_receiver(0), m_broadcastPort(0)
 {
 	m_updateCounter = 0;
+	m_lastBroadcast = 0;
 }
 
 
 Discovery::~Discovery()
 {
-	shutdown((SOCKET)m_recvSocket, 2);
-	shutdown((SOCKET)m_soc, 2);
+	send("ULLTRA_DEV_Z");
 
-#ifndef WIN32
-	close((SOCKET)m_recvSocket);
+	if (m_receiver)
+		delete m_receiver;
+
+	shutdown((SOCKET)m_soc, 2);
+#ifndef _WIN32
 	close((SOCKET)m_soc);
 #endif
 }
 
 bool Discovery::start(int broadcastPort)
 {
+	if (m_broadcastPort)
+		return false;
+
+	auto hwid = getHwAddress();
+	if (hwid.empty()) {
+		LOG(logERROR) << "Not hardware id available!";
+		return false;
+	}
+
+	LOG(logDEBUG) << "HWID: " << hwid;
 
 	m_broadcastPort = broadcastPort;
 	m_updateCounter = 0;
 
-	// bind receiving socket
-	m_recvSocket = (void*)socket(AF_INET, SOCK_DGRAM, 0);
-	struct sockaddr_in local;
-	memset(&local, 0, sizeof(local));
-	local.sin_family = AF_INET;
-	local.sin_port = htons(m_broadcastPort);
-	local.sin_addr.s_addr = INADDR_ANY;
-	int rv = bind((SOCKET)m_recvSocket, (struct sockaddr *) &local, sizeof(local));
-
-	if (rv != 0) {
-		printf("Failed to bind UDP receiving socket: ");
-		print_last_errno();
+	m_receiver = SimpleUdpReceiver::create(broadcastPort, true);
+	if (!m_receiver) {
+		LOG(logERROR) << ("Error: could not create receiver socket!") << lastError();
 		return false;
 	}
-
-#ifndef WIN32
-	if (-1 == fcntl((SOCKET)m_recvSocket, F_GETFL, 0)) {
-		printf("Cannot set non-blocking I/O!\n");
-		return false;
-	}
-#else
-	u_long iMode = 1; // non-blocking
-	if (ioctlsocket((SOCKET)m_recvSocket, FIONBIO, &iMode) != NO_ERROR)
-	{
-		printf("Cannot set non-blocking I/O!\n");
-		return false;
-	}
-
-#endif
-
-
 
 	SOCKET soc = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (soc == -1) {
-		printf("Error: could not create broadcast socket!\n");
+		LOG(logERROR) << ("Error: could not create broadcast socket!") << lastError();
 		return false;
 	}
-#ifdef WIN32
+#ifdef _WIN32
 	char yes = 1;
 #else
 	int yes = 1;
 #endif
 	// allow broadcast
-	rv = setsockopt(soc, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes));
+	int rv = setsockopt(soc, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes));
 	if (rv == -1) {
-		printf("Error: could not set broadcast socket options!\n");
-		print_last_errno();
+		LOG(logERROR) << ("Error: could not set broadcast socket options!") << lastError();
 		return false;
 	}
 
-	m_soc = (void*)soc;
+	m_soc = soc;
 
 
 	return true;
 }
 
-const Discovery::NodeDevice &Discovery::findById(const std::string &id) const
+const Discovery::NodeDevice &Discovery::getNode(const std::string &id) const
 {
 	int i = 0;
 	for (auto &n : m_discovered) {
@@ -125,29 +102,51 @@ const Discovery::NodeDevice &Discovery::findById(const std::string &id) const
 	return NodeDevice::none;
 }
 
-bool Discovery::update()
+
+
+Discovery::NodeDevice &Discovery::getNode(const std::string &id)
 {
+	int i = 0;
+	for (auto &n : m_discovered) {
+		if (n.id == id) {
+			return m_discovered[i];
+		}
+		i++;
+	}
+	return NodeDevice::none;
+}
+
+const Discovery::NodeDevice &Discovery::getNode(const in_addr &addr) const
+{
+	int i = 0;
+	for (auto &n : m_discovered) {
+		if (n.addr.s_addr == addr.s_addr) {
+			return m_discovered[i];
+		}
+		i++;
+	}
+	return NodeDevice::none;
+}
+
+bool Discovery::update(time_t now)
+{
+	bool sendNow = false;
+
+	std::map<std::string, NodeDevice> newlyDiscovered;
+
 	while (true) {
-		struct sockaddr_in remote;  // UDP Sender IPv4 Adress und Port Struktur
-#ifndef WIN32
-		unsigned char recvBuffer[1024];
-		socklen_t addr_len = sizeof(remote);
-#else
-		char recvBuffer[1024];
-		int addr_len = sizeof(remote);
-#endif
-			
-		int len = recvfrom((SOCKET)m_recvSocket, (char*)recvBuffer, sizeof(recvBuffer), 0, (struct sockaddr *) &remote, &addr_len);
-		
+		struct sockaddr_in remote;
+		int len;
+
+		const uint8_t * recvBuffer = m_receiver->receive(len, remote);
+
 		// would block? 
-		if (len == -1 || len > sizeof(recvBuffer))
+		if (len == -1 || !recvBuffer)
 			break;	
 
 		if (len < 20)
 			continue;
 
-
-		recvBuffer[1000] = 0;
 
 		std::string act((const char*)recvBuffer);
 		
@@ -156,42 +155,100 @@ bool Discovery::update()
 		nd.id = std::string((const char*)&recvBuffer[act.length() + nd.name.length() + 2]);
 		nd.addr = remote.sin_addr;
 
+		// check if we somehow received our own broadcast
+		if (nd.id == getHwAddress()) {
+			continue;
+		}
+
 		if ("ULLTRA_DEV_R" == act) { // register
-			// check if we somehow received our own broadcast
-			if (nd.id ==  getHwAddress()) {
-				continue;
-			}
-
+			auto &exN = getNode(nd.id);
 			// already there?
-			if (findById(nd.id).exists()) {
+			if (exN.exists()) {
+				exN.vitalSign = now;
 				continue;
 			}
 
-			m_discovered.push_back(nd);
-			std::cout << "Discovered node " << nd.name << " (id " << nd.id << ")" << std::endl;
+			nd.vitalSign = now;
+
+			if (newlyDiscovered.find(nd.id) == newlyDiscovered.end()) {
+				newlyDiscovered[nd.id] = nd;
+				LOG(logINFO) << "Discovered node " << nd;
+
+				send("ULLTRA_DEV_R", nd);
+
+				sendNow = true;
+			}
 		}
 		else if ("ULLTRA_DEV_Z" == act) { // unregister
 			for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
 				if (it->id == nd.id || it->addr.s_addr == nd.addr.s_addr) {
+										
+					{ LOG(logINFO) << "Lost node " << nd; }
+					sendNow = true;
+
+					if (onNodeLost)
+						onNodeLost(*it);
+
 					m_discovered.erase(it);
 					break;
 				}
 			}
 		}
 		else if ("ULLTRA_DEV_H" == act) { // heartbeat
-
+			LOG(logINFO) << "Heartbeat node " << nd;
 			//ProcessHeartbeat(remote.sin_addr, ((HeartBeatData*)&recvBuffer[10]));
+		}
+		else if (m_customHandlers.find(act) != m_customHandlers.end() && m_customHandlers[act])
+		{
+			// only accept custom messages from known nodes
+			auto &exN = getNode(nd.id);
+			if (!exN.exists() && newlyDiscovered.find(nd.id) == newlyDiscovered.end()) {
+				{ LOG(logDEBUG1) << "Received custom message " << act << " from unknown " << nd; }
+				continue;
+			}
+
+			exN.vitalSign = now;
+
+			{ LOG(logINFO) << "Custom handler for message " << act << " from node " << nd; }
+			m_customHandlers[act](nd);
+		}
+		else {
+			{ LOG(logDEBUG1) << "Received unknown message from " << nd; }
+		}
+	}
+
+
+	// auto-purge dead nodes
+	for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
+		if(difftime(now, it->vitalSign) > (UlltraProto::BroadcastInterval*3)) {
+			LOG(logINFO) << "Dead node " << (*it);
+			m_discovered.erase(it);
+			sendNow = true;
+			break;
 		}
 	}
 	
+	// broadcast a discovery packet every 10 updates or if something changed
+	// e.g. if a new node appears make current node visible
+	// this needs to be done beffore onNodeDiscovered() call!
+	if (difftime(now, m_lastBroadcast) >= UlltraProto::BroadcastInterval || sendNow) {
+		usleep(1000 * 100);
+		send("ULLTRA_DEV_R");
+		m_lastBroadcast = now;
+		usleep(1000 * 100);
+	}
 
-	if(m_updateCounter % 4 == 0)
-		sayIAmHere(true);
+	for (auto &nd : newlyDiscovered) {
+		if (onNodeDiscovered)
+			onNodeDiscovered(nd.second);
+		m_discovered.push_back(nd.second);
+	}
 
 	m_updateCounter++;
 
 	return true;
 }
+
 
 
 std::string Discovery::getHwAddress()
@@ -200,17 +257,43 @@ std::string Discovery::getHwAddress()
 	if (addr.length() > 0)
 		return addr;
 
-#ifndef WIN32
-	std::ifstream infile("/sys/class/net/eth0/address");
+#ifndef _WIN32
+
+	std::ifstream infile("/sys/class/net/et*/address");
 	if (infile.good()) {
 		std::getline(infile, addr);
+		return addr;
 	}
-	else {
-		infile = std::ifstream("/sys/class/net/wlan0/address");
-		if (infile.good()) {
-			std::getline(infile, addr);
-		}
+
+	infile = std::ifstream("/sys/class/net/wl*/address");
+	if (infile.good()) {
+		std::getline(infile, addr);
+		return addr;
 	}
+
+
+	DIR *dir;
+	struct dirent *ent;
+	if (!(dir = opendir("/sys/class/net/")))
+		return "";
+
+	
+	while ((ent = readdir(dir)) != NULL) {
+		if (ent->d_name[0] == '.' || strlen(ent->d_name) < 4)
+			continue;
+		printf("%s\n", ent->d_name);
+		if ((ent->d_name[0] == 'w' && ent->d_name[1] == 'l') || ent->d_name[0] == 'e') {
+			infile = std::ifstream("/sys/class/net/" + std::string(ent->d_name )+"/address");
+			if (infile.good()) {
+				std::getline(infile, addr);
+				closedir(dir);
+				LOG(logDEBUG) << "Using " << ent->d_name << "'s address";
+				return addr;
+			}
+		}		
+	}
+	closedir(dir);
+
 #else	
 	char *mac_addr = (char*)malloc(17);
 	IP_ADAPTER_INFO AdapterInfo[16];	
@@ -218,8 +301,10 @@ std::string Discovery::getHwAddress()
 
 	GetAdaptersInfo(AdapterInfo, &dwBufLen);
 
-	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) != NO_ERROR)
+	if (GetAdaptersInfo(AdapterInfo, &dwBufLen) != NO_ERROR) {
+		LOG(logERROR) << "GetAdaptersInfo failed!";
 		return "";
+	}
 
 	PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
 
@@ -238,7 +323,7 @@ std::string Discovery::getHwAddress()
 	return addr;
 }
 
-void Discovery::sayIAmHere(bool notGoodby)
+void  Discovery::send(const std::string &msg, const NodeDevice &node)
 {
 	SOCKET soc = (SOCKET)m_soc;
 
@@ -251,8 +336,10 @@ void Discovery::sayIAmHere(bool notGoodby)
 
 	char *dp = &data[0];
 
+
+
 	// create 0-seperated string list
-	strcpy(dp, notGoodby ? "ULLTRA_DEV_R" : "ULLTRA_DEV_Z"); dp += strlen(dp) + 1;
+	strcpy(dp, msg.c_str()); dp += strlen(dp) + 1;
 	strcpy(dp, hostname); dp += strlen(hostname) + 1;
 	strcpy(dp, hwAddress.c_str());  dp += hwAddress.length() + 1;
 
@@ -262,19 +349,19 @@ void Discovery::sayIAmHere(bool notGoodby)
 	memset(&s, 0, sizeof(struct sockaddr_in));
 	s.sin_family = AF_INET;
 	s.sin_port = htons(m_broadcastPort);
-	s.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	s.sin_addr.s_addr = node.exists() ? node.addr.s_addr : htonl(INADDR_BROADCAST);
 
 	int sent = sendto(soc, data, dataLen, 0, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 
 	if (sent != dataLen) {
-		printf("Could not send broadcast message!\n");
+		LOG(logERROR) << "Could not send broadcast message!";
 	}
 
-#ifdef WIN32
+	//#ifdef _WIN32
 	// win32 broadcast fix
 	// use this on linux too?
 	char ac[200];
-	if (gethostname(ac, sizeof(ac)) == SOCKET_ERROR)
+	if (gethostname(ac, sizeof(ac)) == -1)
 		return;
 
 	struct hostent *phe = gethostbyname(ac);
@@ -285,40 +372,19 @@ void Discovery::sayIAmHere(bool notGoodby)
 		struct in_addr addr;
 		memcpy(&addr, phe->h_addr_list[i], sizeof(struct in_addr));
 		addr.s_addr = addr.s_addr | (255) << (8 * 3);
-
 		s.sin_addr.s_addr = addr.s_addr | (255) << (8 * 3);
+
+		std::string ip4(inet_ntoa(s.sin_addr));
+		//std::cout << "broadcast message to " << ip4 << ":" << ntohs(s.sin_port) << "!" << std::endl;
 
 		sent = sendto(soc, data, dataLen, 0, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 		if (sent != dataLen) {
-			printf("Could not send broadcast message!\n");
+			LOG(logERROR) << "Could not send broadcast message  to " << ip4 << "!" << std::endl;
 		}
 	}
-#else
-	inet_aton("10.0.0.255", &s.sin_addr);
-	sendto(soc, data, 16 + 32, 0, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
-#endif
+	//#else
+	//	inet_aton("10.0.0.255", &s.sin_addr);
+	//	sendto(soc, data, 16 + 32, 0, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+	//#endif
 }
 
-void print_last_errno(int err)
-{
-	switch (err ? err : errno) {
-	case EADDRINUSE: printf("EADDRINUSE\n"); break;
-	case EADDRNOTAVAIL: printf("EADDRNOTAVAIL\n"); break;
-	case EBADF: printf("EBADF\n"); break;
-	case ECONNABORTED: printf("ECONNABORTED\n"); break;
-	case EINVAL: printf("EINVAL\n"); break;
-	case EIO: printf("EIO\n"); break;
-	case ENOBUFS: printf("ENOBUFS\n"); break;
-	case ENOPROTOOPT: printf("ENOPROTOOPT\n"); break;
-	case ENOTCONN: printf("ENOTCONN\n"); break;
-	case ENOTSOCK: printf("ENOTSOCK\n"); break;
-	case EPERM: printf("EPERM\n"); break;
-#ifdef ETOOMANYREFS
-	case ETOOMANYREFS: printf("ETOOMANYREFS\n"); break;
-#endif
-#ifdef EUNATCH
-	case EUNATCH: printf("EUNATCH\n"); break;
-#endif
-	default: printf("UNKNOWN\n"); break;
-	}
-}
