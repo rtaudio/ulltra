@@ -38,34 +38,32 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 {
 	LOG(logDEBUG) << "Starting link evaluation (MASTER) with node " << nd;
 
-	int RttMin = 500; // us
-	int MaxBytesPerSecond = 1024 * 64;
-
 	std::function<void(void)> f([this, &nd]() {
 		LLSender lls(nd.addr, UlltraProto::LinkEvalPort);
-		LLReceiver llr(UlltraProto::LinkEvalPort, 4000);
+		LLReceiver llr(UlltraProto::LinkEvalPort);
 
 		// linux performs better with user space blocking! (at least on non RT)
 #ifndef _WIN32
-		llr.setBlocking(BlockingMode::UserBlock);
+		const static BlockingMode bm = BlockingMode::UserBlock;
 #else
-		llr.setBlocking(BlockingMode::KernelBlock);
-#endif
+		const static BlockingMode bm = BlockingMode::KernelBlock;
+#endif		
 
-		struct sockaddr_storage recvAddr = {};
+		llr.setBlocking(bm, 4000);
+
+		sockaddr_in recvAddr;
 		int recvLen;
 
 		// discard any queued packets
 		llr.clearBuffer();
 
 		static const int blockSizes[] = {
-			//32, 64, 128, 256, 512, 1024, //, 2048
-			//32
-			1024
+			32, 64, 128, 256, 512, 1024, //, 2048
 		};
 
 		static const int nBlockSizes = sizeof(blockSizes) / sizeof(*blockSizes);
 		static const int nPasses = 200;
+		static const int nPassesWarmUp =  4;
 
 		bool cancel = false;
 
@@ -88,63 +86,60 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 		int packetsSend = 0, packetsReceived = 0;
 		uint64_t bytesSentTotal = 0;
 
-		int bytesInFlight = 0, packetsInFlight = 0;
-
-		uint64_t tLastSend = 0;
-
-		//int currentReceiveTimeout = 4000;
-
 		
 			//if(pi %(nPasses/10) == 0)
 			//	LOG(logDEBUG) << "Pass (" << pi << "/"<<nPasses << ")";
 
-		for (int bsi = 0; bsi < sizeof(blockSizes) / sizeof(*blockSizes); bsi++) {
+		for (int bsi = 0; bsi < nBlockSizes; bsi++) {
 			for (int pi = 0; pi < nPasses; pi++) {
+
 				int blockSize = blockSizes[bsi];
-				bool finalPass = (pi == nPasses - 1);
 
+				bool  finalPass = (pi == nPasses - 1) && (bsi == nBlockSizes - 1);
 
-				bool skipSend = false;
-				if (bytesInFlight > 512) {
-					skipSend = true;
-					//LOG(logDEBUG) << "Skipping send bytes in fligt:" << bytesInFlight << " packets " << packetsInFlight;
-					//pi--;
+				uint64_t now = 0;
+				if (pi >= nPassesWarmUp) {
+					now = stats[bsi].begin(0);
 				}
 
-				uint64_t now = UlltraProto::getSystemTimeNanoSeconds();
-
-				if (!finalPass || skipSend) {
-					dataBlocks[blockSize * pi] = 1 + bsi; // set first packet byte to >1
+				if (!finalPass) {
+					// set first packet byte to 1, followed by timestamp
+					dataBlocks[blockSize * pi] = 1 + bsi;
 					*reinterpret_cast<int*>(&dataBlocks[blockSize * pi + 1]) = key;
 					*reinterpret_cast<uint64_t*>(&dataBlocks[blockSize * pi + 1 + sizeof(int)]) = now;
 
 					if (lls.send(&dataBlocks[blockSize * pi], blockSize) != blockSize) {
 						LOG(logERROR) << "Failed sending data block during latency test, cancelling!";
-						cancel = true; break;
+						cancel = true;
+						break;
 					}
 
-					tLastSend = now;
-
 					bytesSentTotal += (uint64_t)blockSize;
-					bytesInFlight += (int)blockSize;
-					packetsInFlight++;
 					packetsSend++;
 				}
 
+				if (pi >= nPassesWarmUp)
+					stats[bsi].begin(1);
+
+
+				const uint8_t *receivedData;
 
 				bool received = false;
 
-				if ((packetsSend - packetsReceived) > 50) {
-					// increase the timeout
+				if (finalPass) {
+					llr.setBlocking(bm, UP::LinkEvalTimeoutMS * 1000 * 20);
+					LOG(logDEBUG) << "final pass, " << llr;
 				}
 
-				bool tooManyInFlight = false;
-
-				const uint8_t *receivedData;
+				// always empty receive buffer before sending new packet!
 				while ((receivedData = llr.receive(recvLen, recvAddr))) {
+					if (recvAddr.sin_addr.s_addr != nd.addr.s_addr) {
+						LOG(logINFO) << "Received packet from invalid host during latency test, ignoring.";
+						continue;
+					}
 
 					if (recvLen < 16) {
-						LOG(logINFO) << "Received packet with invalid size " << recvLen << ", ignoring.";
+						LOG(logINFO) << "Received packet with invalid size, ignoring.";
 						continue;
 					}
 
@@ -166,13 +161,9 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 					received = true;
 					packetsReceived++;
 
-					packetsInFlight--;
-					bytesInFlight -= (int)recvLen;
-
 					uint64_t sentAt = *reinterpret_cast<const uint64_t*>(&receivedData[1 + sizeof(int)]);
 					if (sentAt > 0 && statMatIdx[rbsi] < nPasses) {
-						//uint64_t rtt = UP::getMicroSeconds() - sentAt;
-						uint64_t rtt = UP::getSystemTimeNanoSeconds() - sentAt;
+						uint64_t rtt = UP::getMicroSeconds() - sentAt;
 						if (rtt > 0)
 							statMat[rbsi][statMatIdx[rbsi]++] = rtt;
 					}
@@ -186,11 +177,8 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 		}
 
 		// let slave know that its over
-		uint8_t z[32];
-		memset(z, 0, sizeof(z));
-		*reinterpret_cast<int*>(z + 1) = key;
-		lls.send(z, sizeof(z));
-
+		uint8_t z = 0;
+		lls.send(&z, 1);
 
 		delete dataBlocks;
 
@@ -201,10 +189,9 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 		LOG(logDEBUG) <<"Packets send: " << packetsSend <<" ( " << ((float)bytesSentTotal/1000.0f/1000.0f) << " MB), recv: " <<  packetsReceived;
 
 
-
 		for (int bsi = 0; bsi < sizeof(blockSizes) / sizeof(*blockSizes); bsi++) {
 			int blockSize = blockSizes[bsi];
-		/*	uint64_t min, max, med, maxs, maxr;
+			uint64_t min, max, med, maxs, maxr;
 
 			LOG(logDEBUG1) << "BS=" << blockSize << ":";
 
@@ -213,7 +200,7 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 			LOG(logDEBUG2) << "send max: " << std::setw(8) << maxs << ", recv max: " << std::setw(8) << maxr;
 			stats[bsi].getStats(min, max, med);
 			LOG(logDEBUG2) << "acc : min: " << std::setw(8) << min << ", max: " << std::setw(8) << max << ", median: " << std::setw(8) << med;
-			*/
+
 #ifdef _DEBUG
 			//statMat[bsi] = stats[bsi].getAccTS<float>();
 			legend[bsi] = "bs " + std::to_string(blockSize);
@@ -234,7 +221,7 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 		std::string fn("./latencies_" + nd.name + "_" + std::to_string(UlltraProto::getMicroSeconds()) + ".m");
 		std::ofstream f(fn);
 		f << "figure; l=(" << statMat << "');" << std::endl;
-		f << "  plot(medfilt1(l, 25), '-*', 'LineWidth', 4); hold on;  grid on; ylim([1000, 10000]*1000);" << std::endl;
+		f << "  plot(medfilt1(l, 25), '-*', 'LineWidth', 4); hold on;  grid on; ylim([1000, 10000]);" << std::endl;
 		f << " ax = gca; ax.ColorOrderIndex = 1; plot(l, 'LineWidth', 1); " << std::endl;
 		f << "legend(" << legend << "); title('latency " << hostname << " <-> " <<  nd << " " << llr << "'); ";
 		LOG(logDEBUG) << "data written to " << fn;
@@ -247,33 +234,28 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 
 void LinkEval::latencyTestSlave(const Discovery::NodeDevice &nd)
 {
-	LOG(logDEBUG) << "Starting link evaluation (SLAVE) for node " << nd << " (MASTER)";
+	LOG(logDEBUG) << "Starting link evaluation (SLAVE) for node " <<nd << " (MASTER)";
 
 	std::function<void(void)> f([this, &nd]() {
 		LLSender lls(nd.addr, UlltraProto::LinkEvalPort);
-		LLReceiver llr(UlltraProto::LinkEvalPort, UlltraProto::LinkEvalTimeoutMS*1000);
+		LLReceiver llr(UlltraProto::LinkEvalPort);
 
-
-		// TODO: need to check if user block performs better on linux!
 #ifndef _WIN32
-		llr.setBlocking(BlockingMode::UserBlock);
+		llr.setBlocking(BlockingMode::KernelBlock, UlltraProto::LinkEvalTimeoutMS * 100000);
 #else
-		llr.setBlocking(BlockingMode::KernelBlock);
+		llr.setBlocking(BlockingMode::KernelBlock, UlltraProto::LinkEvalTimeoutMS * 100000);
 #endif
 
+		LOG(logDEBUG) << "receiving with " << llr;
 
 		int len = 0;
-		struct sockaddr_storage ad = {};
+		sockaddr_in ad;
 	
-		uint32_t nPackets = 0;
-
-		int key;
 
 		// just bounce packages until end flag received (or timeouts)
 		while (true) {
 			len = 0;
 			auto data = llr.receive(len, ad);
-			
 
 			int retries = 1;
 			while (!data && retries < 10) {
@@ -283,36 +265,21 @@ void LinkEval::latencyTestSlave(const Discovery::NodeDevice &nd)
 			}
 
 			if (!data) {
-				std::cout << "Reached max number of " << retries << " timeouts after receiving " << nPackets << " packets, canceling." << std::endl;
+				std::cout << "Reached max numnber of timeouts, canceling." << std::endl;
 				break;
 			}
 
-			if (len < 20) {
-				LOG(logINFO) <<  "received small package, ignoring.";
+			if (ad.sin_addr.s_addr != nd.addr.s_addr) {
+				std::cout << "Received packt from invalid host during latency test, ignoring (expected " << nd << ", got " << std::string(inet_ntoa(nd.addr)) << ")" << std::endl;
 				continue;
 			}
-
-			int rkey = *reinterpret_cast<const int*>(&data[1]);
-
-			if (nPackets == 0) {
-				key = rkey;
-			}
-			else if (key != rkey) {
-				LOG(logINFO) << "Received with different session key, ignoring.";
-				continue;
-			}
-
-			nPackets++;
 
 			if (data[0] == 0) {
 				std::cout << "Latency test ended (end flag)" << std::endl;
 				break;
 			}
 
-			if (lls.send(data, len) != len) { // just send it back
-				LOG(logERROR) << "send failed, cancelling!";
-				break;
-			}
+			lls.send(data, len); // just send it back
 
 			//LOG(logDEBUG1) << "bounced " << len;
 		}

@@ -12,7 +12,7 @@
 
 //#define USE_SELECT
 
-LLReceiver::LLReceiver(int port, int receiveBlockingTimeoutUs) : m_receiveBlockingTimeoutUs(receiveBlockingTimeoutUs)
+LLReceiver::LLReceiver(int port)
 {
 	// bind receiving socket
 	m_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -27,30 +27,14 @@ LLReceiver::LLReceiver(int port, int receiveBlockingTimeoutUs) : m_receiveBlocki
 		LOG(logERROR) << "Cannot bind UDP socket to port " << port;
 	}
 
-	// default: blocking
-	setBlocking(BlockingMode::KernelBlock);
-
-	typedef const char * optval;
-
-
-#ifndef USE_SELECT
-#ifndef _WIN32
-	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = m_receiveBlockingTimeoutUs;
-#else
-	int tv = m_receiveBlockingTimeoutUs < 1000 ? 1UL : (m_receiveBlockingTimeoutUs / 1000UL);
-#endif
-	if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (optval)&tv, sizeof(tv)) < 0) {
-		LOG(logERROR) << ("Cannot set recvtimeo!");
-	}
-#endif
+	// default: non-blocking
+	//setBlocking(BlockingMode::NoBlock);
 
 
 	// set the buffer size, is this necessary?
 	int n = 1024 * 2;
 
-	if (setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (optval)&n, sizeof(n)) == -1) {
+	if (setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (const char *)&n, sizeof(n)) == -1) {
 		LOG(logERROR) << ("Cannot set rcvbuf size!");
 	} else {
 		LOG(logDEBUG) << "Set rcvbuf size to " << n;
@@ -69,8 +53,12 @@ LLReceiver::~LLReceiver()
 #endif
 }
 
-bool LLReceiver::setBlocking(BlockingMode  blocking)
+bool LLReceiver::setBlocking(BlockingMode  blocking, uint64_t receiveBlockingTimeoutUs)
 {
+	m_isBlocking = blocking;
+	if(receiveBlockingTimeoutUs > 0)
+		m_receiveBlockingTimeoutUs = receiveBlockingTimeoutUs;	
+
 	bool kblock = (blocking == BlockingMode::KernelBlock);
 
 #ifndef _WIN32
@@ -104,7 +92,23 @@ bool LLReceiver::setBlocking(BlockingMode  blocking)
 	}
 #endif
 
-	m_isBlocking = blocking;
+	
+
+	if (blocking != BlockingMode::NoBlock) {
+		// set timeout
+#ifndef USE_SELECT
+#ifndef _WIN32
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = m_receiveBlockingTimeoutUs;
+#else
+		int tv = m_receiveBlockingTimeoutUs < 1000 ? 1UL : (m_receiveBlockingTimeoutUs / 1000UL);
+#endif
+		if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) < 0) {
+			LOG(logERROR) << ("Cannot set recvtimeo!");
+		}
+#endif
+	}
 
 	return true;
 }
@@ -118,13 +122,13 @@ bool LLReceiver::clearBuffer()
 			return false;
 	}
 	int recvLen;
-	struct sockaddr_storage addr;
+	struct sockaddr_in addr;
 	while (receive(recvLen, addr)) {}
 	if (bl != BlockingMode::NoBlock) return setBlocking(bl); // restore previous blocking state
 	return true;
 }
 
-inline int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize, struct sockaddr_storage &remote)
+inline int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize, struct sockaddr_in &remote)
 {
 #ifndef _WIN32
 	socklen_t addr_len = sizeof(remote);
@@ -135,7 +139,7 @@ inline int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize, struct soc
 #endif	
 }
 
-const uint8_t  *LLReceiver::receive(int &receivedBytes, struct sockaddr_storage &remote) {
+const uint8_t  *LLReceiver::receive(int &receivedBytes, struct sockaddr_in &remote) {
 	if (m_isBlocking != BlockingMode::UserBlock) {
 		receivedBytes = socketReceive(m_socket, m_receiveBuffer, sizeof(m_receiveBuffer), remote);
 		if (receivedBytes == -1)

@@ -230,11 +230,11 @@ private:
 
 typedef UlltraProto UP;
 
-
+#include <thread>
 inline void spinWait(uint64_t usec)
 {
 	auto tu = UP::getMicroSeconds() + usec;
-	while (tu > UP::getMicroSeconds()) {}
+	while (tu > UP::getMicroSeconds()) { std::this_thread::yield(); }
 }
 
 // Log, version 0.1: a simple logging class
