@@ -6,7 +6,6 @@
 #include <iostream>
 #include <cstring>
 
-void print_last_errno(int err = 0);
 
 SimpleUdpReceiver::SimpleUdpReceiver()
 {
@@ -60,20 +59,13 @@ SimpleUdpReceiver  *SimpleUdpReceiver::create(int port, bool nonBlocking)
 	return sur;
 }
 
-
-const uint8_t  *SimpleUdpReceiver::receive(int &receivedBytes, struct sockaddr_in &remote) {
-#ifndef _WIN32
+const uint8_t *SimpleUdpReceiver::receive(int &receivedBytes, struct sockaddr_storage &remote) {
 	socklen_t addr_len = sizeof(remote);
-	receivedBytes = recvfrom((SOCKET)m_recvSocket, m_receiveBuffer, sizeof(m_receiveBuffer)-1, 0, (struct sockaddr *) &remote, &addr_len);
-#else
-	int addr_len = sizeof(remote);
-	receivedBytes = recvfrom((SOCKET)m_recvSocket, (char*)m_receiveBuffer, sizeof(m_receiveBuffer)-1, 0, (struct sockaddr *) &remote, &addr_len);
-#endif	
+	receivedBytes = recvfrom(m_recvSocket, (socket_buffer_t)m_receiveBuffer, sizeof(m_receiveBuffer)-1, 0,
+		(struct sockaddr *) &remote, &addr_len);
 
 	if (receivedBytes == -1)
 		return 0;
-
-	
 
 	return m_receiveBuffer;
 }

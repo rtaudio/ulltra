@@ -33,7 +33,7 @@ NetworkManager::~NetworkManager()
 void NetworkManager::updateThreadMain(void *arg)
 {
 	m_discovery.onNodeDiscovered = [this](const Discovery::NodeDevice &node) {
-		if (node.id > m_discovery.getHwAddress()) {
+        if (node.getId() > m_discovery.getHwAddress()) {
 			LOG(logINFO) << "initiating link evaluation to node " << node;
 
 			// request a latency test start
@@ -80,7 +80,7 @@ void NetworkManager::updateThreadMain(void *arg)
 
 }
 
-const Discovery::NodeDevice &NetworkManager::getDiscoveredNode(const in_addr &addr) const
+const Discovery::NodeDevice &NetworkManager::getDiscoveredNode(const addrinfo &addr) const
 {
 	return m_discovery.getNode(addr);
 }

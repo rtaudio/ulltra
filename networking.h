@@ -9,6 +9,8 @@
 #include <Assert.h>
 #pragma comment(lib, "iphlpapi.lib")
 
+#define close closesocket
+
 #else
 #include<unistd.h>
 #include <sys/types.h>
@@ -25,6 +27,15 @@
 
 #include <string>
 
+typedef struct addrinfo NodeAddr;
+
+
+
+#ifdef _WIN32
+        typedef char * socket_buffer_t;
+#else
+        typedef unsigned char * socket_buffer_t;
+#endif
 
 inline std::string lastError( int err=0)
 {
@@ -49,3 +60,9 @@ inline std::string lastError( int err=0)
 	default: return("UNKNOWN\n"); break;
 	}
 }
+
+
+struct LinkEndpoint {
+	struct addrinfo addr;
+	int port;
+};

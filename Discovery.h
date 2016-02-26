@@ -12,24 +12,49 @@ class SimpleUdpReceiver;
 class Discovery
 {
 public:
-	struct NodeDevice {
-		static NodeDevice none;
+        class NodeDevice {
+            public:
+                inline bool exists() const { return id.length() > 0; }
+                inline const std::string & getId() const { return id; }
+                static NodeDevice none;
+
+            private:
+                friend class Discovery;
+                void initAddr() {
+                    //memset(&addr, 0 , sizeof(addr));
+                    addr = {};
+                    addr.ai_family   = PF_UNSPEC;
+                    addr.ai_socktype = SOCK_DGRAM;
+                    addr.ai_flags    = AI_NUMERICHOST | AI_CANONNAME;
+                }
+
+                /* reflects a non-existing node with a multicast address */
+                NodeDevice() {
+                    initAddr();
+                }
+
+                /* create from a hostname or address */
+                NodeDevice(const std::string &host);
+
+                NodeDevice(const sockaddr_storage &addr);
+
 		
 		std::string name;
 		std::string id;
-		in_addr addr;
-		time_t vitalSign;
+                addrinfo addr;
+                time_t sinceVitalSign;
 
-		bool exists() const {
-			return id.length() > 0;
-		}
+                mutable std::map<int,addrinfo> portAddr;
+
+                const addrinfo &getAddr(int port) const;
+                friend std::ostream & operator<<(std::ostream &os, const NodeDevice& n);
 	};
 
 	typedef std::function<void(const NodeDevice &node)> NodeEventHandler;
 
-
-	Discovery();
+    Discovery();
 	~Discovery();
+    void addExplicitHosts(const std::string &host);
 
 	std::string getHwAddress();
 
@@ -38,7 +63,7 @@ public:
 
 
 	const NodeDevice &getNode(const std::string &id) const;
-	const NodeDevice &getNode(const in_addr &addr) const;
+    const NodeDevice &getNode(const addrinfo &addr) const;
 
 	NodeEventHandler onNodeDiscovered;
 	NodeEventHandler onNodeLost;
@@ -53,13 +78,17 @@ public:
 private:
 	NodeDevice &getNode(const std::string &id);
 
-	int m_broadcastPort;
-	SOCKET m_soc;
+        int m_broadcastPort;
+
+    SOCKET m_socBroadcast; //UDP broadcast
+    SOCKET m_socAccept; //TCP accept
+
 	SimpleUdpReceiver * m_receiver;
 
 	uint32_t m_updateCounter;
 
-	std::vector<NodeDevice> m_discovered;
+        std::map<std::string, NodeDevice> m_discovered;
+        std::vector<NodeDevice> m_explicitNodes;
 
 	std::map<std::string, NodeEventHandler> m_customHandlers;
 

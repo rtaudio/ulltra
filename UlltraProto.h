@@ -18,6 +18,8 @@
 #include<vector>
 #endif
 
+#include <thread>
+
 
 
 class UlltraProto {
@@ -230,7 +232,9 @@ private:
 
 typedef UlltraProto UP;
 
-#include <thread>
+
+
+
 inline void spinWait(uint64_t usec)
 {
 	auto tu = UP::getMicroSeconds() + usec;
