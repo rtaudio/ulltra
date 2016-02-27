@@ -1,5 +1,5 @@
 #pragma once
-#include "LLRx.h"
+#include "LLLink.h"
 
 /*
 PF_PACKAT, MMAP
@@ -8,8 +8,8 @@ http://www.linuxquestions.org/questions/programming-9/sending-receiving-udp-pack
 */
 
 
-class LLRxUdp :
-	public LLRx
+class LLUdpLink :
+	public LLLink
 {
 public:
 	enum class BlockingMode { KernelBlock, UserBlock, Undefined };
@@ -22,22 +22,29 @@ public:
 		}
 	}
 
-	LLRxUdp();
-	~LLRxUdp();
+	LLUdpLink();
+	~LLUdpLink();
 
 	bool connect(const LinkEndpoint &addr);
-
-	bool onBlockingTimeoutChanged(uint64_t timeoutUs);
-	bool flushBuffer();
-	const uint8_t *receive(int &receivedBytes, struct sockaddr_storage &remote);
-
-
 	void toString(std::ostream& stream) const;
 
-	bool setBlockingMode(BlockingMode mode);
+	/* rx */
+	bool onBlockingTimeoutChanged(uint64_t timeoutUs);
+	bool flushBuffer();
+	const uint8_t *receive(int &receivedBytes);
+	bool setRxBlockingMode(BlockingMode mode);
+
+
+	/* tx */
+	bool send(const uint8_t *data, int dataLength);
+	
 private:
-	SOCKET m_socket;
-	BlockingMode m_blockingMode;
-	uint8_t  m_receiveBuffer[1024 * 8 + 1];
+	SOCKET m_socketRx, m_socketTx;
+
+	BlockingMode m_rxBlockingMode;
+	uint8_t  m_rxBuffer[1024 * 8 + 1];
+
+
+	struct sockaddr_storage m_addr;
 };
 

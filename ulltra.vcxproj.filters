@@ -52,17 +52,11 @@
     <ClInclude Include="UlltraProto.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="LLRx.h">
+    <ClInclude Include="LLLink.h">
       <Filter>LLLink</Filter>
     </ClInclude>
-    <ClInclude Include="LLRxUdp.h">
+    <ClInclude Include="LLUdpLink.h">
       <Filter>LLLink</Filter>
-    </ClInclude>
-    <ClInclude Include="LLTx.h">
-      <Filter>LLLink</Filter>
-    </ClInclude>
-    <ClInclude Include="LLUdpTx.h">
-      <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -90,14 +84,11 @@
     <ClCompile Include="UlltraProto.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="LLRx.cpp">
+    <ClCompile Include="LLLink.cpp">
       <Filter>LLLink</Filter>
     </ClCompile>
-    <ClCompile Include="LLRxUdp.cpp">
+    <ClCompile Include="LLUdpLink.cpp">
       <Filter>LLLink</Filter>
-    </ClCompile>
-    <ClCompile Include="LLUdpTx.cpp">
-      <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
