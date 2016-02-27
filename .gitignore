@@ -38,3 +38,13 @@
 /Makefile
 /cmake_install.cmake
 /ulltra
+CMakeCache.txt 
+/*.m
+*.enc
+*.log
+
+*.autosave
+CMakeLists.txt.user
+enc_temp_folder
+*.vcxproj.user
+ulltra.cbp
