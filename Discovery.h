@@ -89,7 +89,8 @@ private:
 	int m_broadcastPort;
 
 	SOCKET m_socBroadcast4, m_socMulticast; //UDP
-	SOCKET m_socAccept; //TCP accept
+    SOCKET m_socAccept; //TCP accept
+    SOCKET m_socConnect; //TCP accept
 
 
 	bool initMulticast(int port);

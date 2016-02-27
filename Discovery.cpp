@@ -113,9 +113,20 @@ bool Discovery::start(int broadcastPort)
     auto bindAddr = NodeDevice::local6.getAddr(broadcastPort);
     if (bind(m_socAccept, (struct sockaddr *) &bindAddr, sizeof(bindAddr)) < 0) {
          LOG(logERROR) << "tcp bind to " <<  bindAddr << " failed!";
-         exit(1);
+         return false;
     }
+
+    if(listen(m_socAccept, UlltraProto::DiscoveryTcpQueue) == 0) {
+        LOG(logERROR) << "tcp listen() on " <<  bindAddr << " failed!";
+        return false;
+    }
+
+    if(!socketSetBlocking(m_socAccept, false)) {
+        return false;
+    }
+
     LOG(logERROR) << "accepting tcp connections on " <<  bindAddr;
+
 	return true;
 }
 
@@ -143,14 +154,41 @@ const Discovery::NodeDevice &Discovery::getNode(const sockaddr_storage &addr) co
     return NodeDevice::none;
 }
 
+void Discovery::tryConnectExplictHosts()
+{
+    for(const NodeDevice &n : m_explicitNodes) {
+        auto a = n.getAddr(UlltraProto::DiscoveryPort);
+
+        // initiate a non-blocking connection attempt
+        // if its succeeds within a short time, instantly set
+        // it up, otherwise postpone to next update
+        connect(m_socConnect, &a, sizeof(a));
+        SOCKET s = socketSelectTimeout(m_socConnect, 50);
+        if(s != -1) {
+            auto t = [s](){
+                char buf[1000];
+                int rlen;
+
+                read(s, buf, sizeof(buf)-1);
+                rlen = socketSelectTimeout(s, 2000);
+
+
+            };
+            RttThread();
+        }
+    }
+}
+
 bool Discovery::update(time_t now)
 {
 	bool sendNow = false;
 
     std::vector<const NodeDevice*> newNodes;
 
+    struct sockaddr_storage remote;
+
 	while (true) {
-		struct sockaddr_storage remote;
+
 		int len;
 		socklen_t remoteAddrLen = sizeof(remote);
 
@@ -231,6 +269,12 @@ bool Discovery::update(time_t now)
 		}
 	}
 
+    while(true) {
+        int remoteAddrLen = sizeof(remote);
+        SOCKET newsockfd = accept(m_socAccept, (struct sockaddr *)&remote, &remoteAddrLen);
+        if(newsockfd < 0)
+            break;
+    }
 
 	// auto-purge dead nodes
 	for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
@@ -251,6 +295,7 @@ bool Discovery::update(time_t now)
 	// this needs to be done beffore onNodeDiscovered() call!
 	if (difftime(now, m_lastBroadcast) >= UlltraProto::BroadcastInterval || sendNow) {
 		send("ULLTRA_DEV_R");
+        tryConnectExplictHosts();
 		m_lastBroadcast = now;
 	}
 

@@ -132,7 +132,12 @@ inline int socketSelectTimeout(SOCKET &soc, uint64_t toUs)
             LOG(logERROR) << "Error in getsockopt() " << errno << " " << strerror(errno);
             return res;
         }
-        return o;
+
+        if(o != 0) {
+            return -1;
+        }
+
+        return res;
     }
     else {
         LOG(logDEBUG) << "select() timeout";
