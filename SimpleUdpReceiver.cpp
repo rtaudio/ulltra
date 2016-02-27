@@ -40,21 +40,10 @@ SimpleUdpReceiver  *SimpleUdpReceiver::create(int port, bool nonBlocking)
 		return 0;
 	}
 
-	if (nonBlocking) {
-#ifndef _WIN32
-		if (-1 == fcntl((SOCKET)sur->m_recvSocket, F_SETFL, O_NONBLOCK)) {
-			LOG(logERROR) << ("Cannot set non-blocking I/O!") << lastError();
-			return 0;
-		}
-#else
-		u_long iMode = 1; // non-blocking
-		if (ioctlsocket((SOCKET)sur->m_recvSocket, FIONBIO, &iMode) != NO_ERROR)
-		{
-			LOG(logERROR) << ("Cannot set non-blocking I/O!") << lastError();
-			return 0;
-		}
-#endif
+	if (!socketSetBlocking(sur->m_recvSocket, !nonBlocking)) {
+		return 0;
 	}
+
 
 	return sur;
 }

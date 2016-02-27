@@ -1,19 +1,20 @@
 
+#include "LinkEval.h"
+
 #include <iostream>
 #include <iomanip>
 #include <thread>
 #include <chrono>
 #include <rtt.h>
 
-#include "LinkEval.h"
+
 
 #include "UlltraProto.h"
 #include "SimpleUdpReceiver.h"
 #include "NetworkManager.h"
 
 
-#include "LLRxUdp.h"
-#include "LLUdpTx.h"
+#include "LLUdpLink.h"
 
 
 struct TestDataHeader {
@@ -24,24 +25,21 @@ struct TestDataHeader {
 };
 
 
-struct LinkCandidate {
-    LLTx *sender;
-    LLRx *receiver;
-    std::function<bool(void)> init;
-};
+typedef std::function<LLUdpLink *(LinkEndpoint end)> LinkGenerator;
 
-typedef std::function<LLTx*(LinkEndpoint end)> LLTxGenerator;
-typedef std::function<LLRx*(LinkEndpoint end)> LLRxGenerator;
+void runTestAsMaster(const Discovery::NodeDevice &nd, const LinkGenerator &linkGen);
+void runTestAsSlave(const Discovery::NodeDevice &nd, const LinkGenerator &linkGen);
 
-
-void runTestAsSlave(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx);
-void runTestAsMaster(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx);
 
 LinkEval::LinkEval() :  m_netMan(0)
 {
-    std::map<std::string, LLTxGenerator> transmitters;
+    std::map<std::string, LinkGenerator> linkCandidates;
+	/*
+	linkCandidates["udp"] = [](const NodeAddr &other) {
+		new LLUdpLink();
+	};
 
-    /*
+    
     transmitters["udp"] = [](const NodeAddr &other) {
         auto lls = new LLSender(other, UlltraProto::LinkEvalPort);
         return lls;
@@ -90,6 +88,7 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 	std::function<void(void)> f([this, &nd]() {
 		//LLSender lls(nd.addr, UlltraProto::LinkEvalPort);
 		//LLReceiver llr(UlltraProto::LinkEvalPort, 4000);
+		//LLRxGenerator
 
 		// linux performs better with user space blocking! (at least on non RT)
 #ifndef _WIN32
@@ -98,7 +97,7 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 		//llr.setBlocking(BlockingMode::KernelBlock);
 #endif
 
-		runTestAsMaster(nd, tx, rx);
+		//runTestAsMaster(nd, tx, rx);
 
 	});
 
@@ -111,7 +110,7 @@ void LinkEval::latencyTestSlave(const Discovery::NodeDevice &nd)
 	LOG(logDEBUG) << "Starting link evaluation (SLAVE) for node " << nd << " (MASTER)";
 
 	std::function<void(void)> f([this, &nd]() {
-		LLSender lls(nd.addr, UlltraProto::LinkEvalPort);
+		/*LLSender lls(nd.addr, UlltraProto::LinkEvalPort);
 		LLReceiver llr(UlltraProto::LinkEvalPort, UlltraProto::LinkEvalTimeoutMS * 1000);
 
 
@@ -122,14 +121,14 @@ void LinkEval::latencyTestSlave(const Discovery::NodeDevice &nd)
 		llr.setBlocking(BlockingMode::KernelBlock);
 #endif
 
-		runTestSlave(nd, tx, rx);
+		runTestSlave(nd, tx, rx); */
 	});
 
 	{ RttThread t(f, true); }
 	LOG(logDEBUG1) << "Link evaluation ended";
 }
 
-void runTestAsMaster(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
+void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 {
 	static const int nPasses = 200;
 	static const int blockSizes[] = {
@@ -164,7 +163,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
 	}
 
 	// discard any queued packets
-	rx->flushBuffer();	
+	link->flushReceiveBuffer();
 
 	for (int bsi = 0; bsi < sizeof(blockSizes) / sizeof(*blockSizes); bsi++) {
 		for (int pi = 0; pi < nPasses; pi++) {
@@ -186,7 +185,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
 				tdh.tSent = now;
 				*reinterpret_cast<TestDataHeader*>(&dataBlocks[blockSize * pi]) = tdh;
 
-				if (!tx->send(&dataBlocks[blockSize * pi], blockSize)) {
+				if (!link->send(&dataBlocks[blockSize * pi], blockSize)) {
 					LOG(logERROR) << "Failed sending data block during latency test, cancelling!";
 					cancel = true;
 					break;
@@ -200,7 +199,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
 
 			const uint8_t *receivedData;
 			int recvLen;
-			while ((receivedData = rx->receive(recvLen)))
+			while ((receivedData = link->receive(recvLen)))
 			{
 				if (recvLen < sizeof(TestDataHeader)) {
 					LOG(logINFO) << "Received packet with invalid size " << recvLen << ", ignoring.";
@@ -247,7 +246,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
 	uint8_t z[32];
 	memset(z, 0, sizeof(z));
 	*reinterpret_cast<int*>(z + 1) = key;
-	tx->send(z, sizeof(z));
+	link->send(z, sizeof(z));
 
 	LOG(logDEBUG) << "Packets send: " << packetsSend << " ( " << ((float)bytesSentTotal / 1000.0f / 1000.0f) << " MB), recv: " << packetsReceived;
 
@@ -274,20 +273,20 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
 	char hostname[32];
 	gethostname(hostname, 31);
 
-	std::string fn("./out/latencies_" + nd.name + "_" + std::to_string(UlltraProto::getMicroSeconds()) + ".m");
+	std::string fn("./out/latencies_" + nd.getName() + "_" + std::to_string(UlltraProto::getMicroSeconds()) + ".m");
 	std::ofstream f(fn);
 	if (f.good()) {
 		f << "figure; l=(" << statMat << "');" << std::endl;
 		f << "  plot(medfilt1(l, 25), '-*', 'LineWidth', 4); hold on;  grid on; ylim([1000, 10000]*1000);" << std::endl;
 		f << " ax = gca; ax.ColorOrderIndex = 1; plot(l, 'LineWidth', 1); " << std::endl;
-		f << "legend(" << legend << "); title('latency " << hostname << " <-> " << nd << " " << llr << "'); ";
+		f << "legend(" << legend << "); title('latency " << hostname << " <-[" << link << "]-> " << nd << "'); ";
 		LOG(logDEBUG) << "data written to " << fn;
 	}
 #endif	
 }
 
 
-void runTestAsSlave(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
+void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 {
 	const int MaxTimeouts = 10;
 
@@ -301,7 +300,7 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
 	while (true) {
 		len = 0;
 		for (int i = 0; i <= MaxTimeouts; i++) {
-			data = rx->receive(len);
+			data = link->receive(len);
 			if (data) break;
 			LOG(logDEBUG) << "Timeout during latency test, retrying.";
 		}
@@ -333,7 +332,7 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLTx *tx, LLRx *rx)
 
 		nPackets++;
 
-		if (tx->send(data, len) != len) { // just send it back
+		if (link->send(data, len) != len) { // just send it back
 			LOG(logERROR) << "send failed, cancelling!";
 			break;
 		}

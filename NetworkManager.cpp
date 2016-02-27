@@ -80,7 +80,7 @@ void NetworkManager::updateThreadMain(void *arg)
 
 }
 
-const Discovery::NodeDevice &NetworkManager::getDiscoveredNode(const addrinfo &addr) const
+const Discovery::NodeDevice &NetworkManager::getDiscoveredNode(const sockaddr_storage &addr) const
 {
 	return m_discovery.getNode(addr);
 }

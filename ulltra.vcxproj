@@ -157,10 +157,8 @@
   <ItemGroup>
     <ClInclude Include="Discovery.h" />
     <ClInclude Include="LinkEval.h" />
-    <ClInclude Include="LLRx.h" />
-    <ClInclude Include="LLRxUdp.h" />
-    <ClInclude Include="LLTx.h" />
-    <ClInclude Include="LLUdpTx.h" />
+    <ClInclude Include="LLReceiver.h" />
+    <ClInclude Include="LLSender.h" />
     <ClInclude Include="LowLatencyUDPSocket.h" />
     <ClInclude Include="networking.h" />
     <ClInclude Include="NetworkManager.h" />
@@ -173,9 +171,8 @@
   <ItemGroup>
     <ClCompile Include="Discovery.cpp" />
     <ClCompile Include="LinkEval.cpp" />
-    <ClCompile Include="LLRx.cpp" />
-    <ClCompile Include="LLRxUdp.cpp" />
-    <ClCompile Include="LLUdpTx.cpp" />
+    <ClCompile Include="LLReceiver.cpp" />
+    <ClCompile Include="LLSender.cpp" />
     <ClCompile Include="LowLatencyUDPSocket.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="rtt\rtt.cpp" />

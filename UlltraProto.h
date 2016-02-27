@@ -29,6 +29,9 @@ public:
 	static const int LinkEvalPort = 26026;
 	static const int LinkEvalTimeoutMS = 200; // milliseconds
 
+    static const int DiscoveryTcpQueue = 8;
+    static const int DiscoveryTcpTimeout = 800; // milliseconds
+
 	static const std::string LatencyTestStartToken;
 
 

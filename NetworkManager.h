@@ -13,7 +13,7 @@ public:
 
 	inline bool isRunning() const { return m_isRunning;  } 
 
-    const Discovery::NodeDevice &getDiscoveredNode(const addrinfo &addr) const;
+    const Discovery::NodeDevice &getDiscoveredNode(const sockaddr_storage &addr) const;
 private:
 
 	Discovery m_discovery;
