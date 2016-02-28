@@ -11,8 +11,6 @@
 
 #include "UlltraProto.h"
 #include "SimpleUdpReceiver.h"
-#include "NetworkManager.h"
-
 
 #include "LLUdpLink.h"
 
@@ -31,7 +29,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, const LinkGenerator &linkG
 void runTestAsSlave(const Discovery::NodeDevice &nd, const LinkGenerator &linkGen);
 
 
-LinkEval::LinkEval() :  m_netMan(0)
+LinkEval::LinkEval()
 {
     std::map<std::string, LinkGenerator> linkCandidates;
 	/*
@@ -67,9 +65,8 @@ LinkEval::LinkEval() :  m_netMan(0)
     */
 }
 
-bool LinkEval::init(NetworkManager *netManager)
+bool LinkEval::init()
 {
-	m_netMan = netManager;
 	return true;
 }
 

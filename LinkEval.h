@@ -9,7 +9,6 @@
 
 
 
-class NetworkManager;
 class SimpleUdpReceiver;
 class LLReceiver;
 
@@ -95,14 +94,14 @@ public:
 
 	LinkEval();
 	~LinkEval();
-	bool init(NetworkManager *netManager);
+    bool init();
 
 	void update(time_t now);
 	void latencyTestMaster(const Discovery::NodeDevice &nd);
 	void latencyTestSlave(const Discovery::NodeDevice &nd);
 
 private:
-	NetworkManager *m_netMan;
+
 
 };
 

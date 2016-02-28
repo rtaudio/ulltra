@@ -120,30 +120,29 @@ inline int socketSelectTimeout(SOCKET &soc, uint64_t toUs)
 
     res = select(soc+1/* this is ignored on windows*/, NULL, &myset, NULL, &tv);
 
-    if (res < 0 && errno != EINTR) {
-        LOG(logERROR) << "error while select: " << errno << " " << strerror(errno);
-        return res;
-    }
-    else if (res > 0)
-    {
-        // get the actual result
-        socklen_t olen = sizeof(int);
-        int o;
-        if (getsockopt(soc, SOL_SOCKET, SO_ERROR, (char*)(&o), &olen) < 0) {
-            LOG(logERROR) << "Error in getsockopt() " << errno << " " << strerror(errno);
-            return -1;
-        }
-
-        if(o != 0) {
-            return -1;
-        }
-
-        return res;
-    }
-    else {
-        LOG(logDEBUG) << "select() timeout";
+    if(res == -1) {
+        LOG(logERROR) << "error while select: " << lastError();
         return -1;
     }
+
+    if(res == 0) {
+        LOG(logDEBUG1) << "timeout during select";
+        return 0;
+    }
+
+    socklen_t olen = sizeof(int);
+    int o = -1;
+    if (getsockopt(soc, SOL_SOCKET, SO_ERROR, (char*)(&o), &olen) < 0) {
+        LOG(logERROR) << "Error in getsockopt() " << lastError();
+        return -1;
+    }
+
+    // some error occured
+    if(o != 0) {
+        return -1;
+    }
+
+    return res;
  }
 
 
@@ -174,17 +173,17 @@ inline std::ostream & operator<<(std::ostream &os, const struct addrinfo* s)
 {
 	const struct sockaddr_storage *ss = (sockaddr_storage *)s->ai_addr;
 
-	os << *ss;
-	if (s->ai_socktype == SOCK_STREAM) {
-		os << "tcp";
-	}
-	else if (s->ai_socktype == SOCK_DGRAM) {
-		os << "udp";
-	}
-	else if (s->ai_socktype == SOCK_RAW) {
-		os << "raw";
-	}
+        if (s->ai_socktype == SOCK_STREAM) {
+                os << "tcp://";
+        }
+        else if (s->ai_socktype == SOCK_DGRAM) {
+                os << "udp://";
+        }
+        else if (s->ai_socktype == SOCK_RAW) {
+                os << "raw://";
+        }
 
+	os << *ss;
 
 	if (s->ai_canonname) {
 		os << "(" << s->ai_canonname << ")";
@@ -198,4 +197,38 @@ inline std::ostream & operator<<(std::ostream &os, const struct addrinfo* s)
 }
 
 inline std::ostream & operator<<(std::ostream &os, const struct addrinfo& s) { return os << &s; }
+
+union SocketAddress {
+    struct sockaddr sa;
+    struct sockaddr_in sin;
+    struct sockaddr_in6 sin6;
+    // union! no more fields!
+
+    SocketAddress(const sockaddr_storage &ss)
+    {
+        memcpy(&sa, &ss, sizeof(sin6));
+    }
+
+    inline void setPort(int port) {
+        if(sa.sa_family == AF_INET6)
+            sin6.sin6_port = htons(port);
+        else
+            sin.sin_port = htons(port);
+    }
+
+    inline std::string toString() const {
+        char host[64], serv[32];
+        int r = getnameinfo((const sockaddr*)&sin6, sizeof(sin6), host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV);
+        if(r != 0) {
+            LOG(logERROR) << "getnameinfo() failed! " << gai_strerror(r) << lastError();
+            return "";
+        }
+
+        if(sin6.sin6_family == AF_INET6) {
+            return "["+std::string(host)+"]:" + std::string(serv);
+        } else {
+            return std::string(host) + ":" + std::string(serv);
+        }
+    }
+};
 

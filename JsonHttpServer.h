@@ -1,8 +1,10 @@
 #pragma once
 
 #include "networking.h"
+#include<map>
 
 typedef struct json_token JsonObject;
+typedef std::map<std::string, std::string> StringMap;
 
 struct mg_mgr;
 struct mg_connection;
@@ -25,7 +27,7 @@ public:
 	JsonHttpServer();
 	~JsonHttpServer();
 	void on(std::string requestPath, const RequestHandler &handler);
-	bool start(int port);
+    bool start(const std::string &bindAddr);
 	void update();
 private:
 	static void ev_handler(struct mg_connection *nc, int ev, void *ev_data);

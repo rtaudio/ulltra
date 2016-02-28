@@ -57,7 +57,7 @@ bool LLUdpLink::connect(const LinkEndpoint &end)
 	if (addrRes->ai_addrlen != sizeof(m_addr)) {
 		LOG(logERROR) << "addrinfo too long!";
 	}
-	memcpy(&m_addr, addrRes->ai_addr, (std::min)(addrRes->ai_addrlen, sizeof(m_addr)));
+    memcpy(&m_addr, addrRes->ai_addr, (std::min)((int)addrRes->ai_addrlen, (int)sizeof(m_addr)));
 	freeaddrinfo(addrRes);
 
 

@@ -1,6 +1,13 @@
 #include "JsonHttpClient.h"
 
+#define MG_ENABLE_IPV6
+#undef LOG
 #include "mongoose/mongoose.h"
+
+// need to override LOG() macro:
+#undef LOG
+#define LOG(level) if (level > Log::ReportingLevel()) ; else Log().get(level)
+
 
 JsonHttpClient::JsonHttpClient()
 {
@@ -11,18 +18,45 @@ JsonHttpClient::~JsonHttpClient()
 {
 }
 
+const JsonHttpClient::Response &JsonHttpClient::request(const NodeAddr &host, std::string path, const StringMap &data)
+{
+    char res[1024];
+    const int m = sizeof(res)-1;
+    int n = 0;
 
-const JsonHttpClient::Response &JsonHttpClient::requestAsync(const NodeAddr &host, std::string path, const std::string &body)
+    n += json_emit(&res[n], m, "{");
+    for (auto it = data.begin(); it != data.end(); it++) {
+        n += json_emit(&res[n], m, "s:s,", it->first.c_str(), it->second.c_str());
+    }
+    n += json_emit(&res[n-1], m, "}"); // n-1 to remove last ','
+
+    return request(host, path, std::string(res));
+}
+
+const JsonHttpClient::Response &JsonHttpClient::request(const NodeAddr &host, std::string path, const std::string &body)
 {
 	SOCKET soc = socket(host.ss_family, SOCK_STREAM, IPPROTO_TCP);
 	try {
-		socketSetBlocking(soc, false);		
-		connect(soc, (const sockaddr*)(&host), sizeof(host));
-		int res = socketSelectTimeout(soc, UP::DiscoveryTcpTimeout);
+        //socketSetBlocking(soc, false);
+        int res = connect(soc, (const sockaddr*)(&host), sizeof(host));
+        if (res != EINPROGRESS)
+        {
+            LOG(logDEBUG) << "connect() to " << host << " instantly failed! " << lastError();
+            throw Exception("Async connect failed!");
+        }
 
-		if (res != 0) {
-			throw Exception("Connect failed!");
-		}
+        res = socketSelectTimeout(soc, UP::DiscoveryTcpTimeout*1000);
+
+        if (res == 0) {
+             LOG(logDEBUG) << "connect() to " << host << " timed out";
+            throw Exception("Connect timeout!");
+        }
+
+
+        if (res == -1) {
+             LOG(logDEBUG) << "connect() to " << host << " failed!";
+            throw Exception("Connect failed!");
+        }
 
 		std::ostringstream buf;
 		std::string str;
@@ -32,7 +66,7 @@ const JsonHttpClient::Response &JsonHttpClient::requestAsync(const NodeAddr &hos
 		buf << "Content-Length: " << std::to_string(body.length()) << "\n\n";
 		buf << body;
 		str = buf.str();
-		send(soc, str.data(), str.size(), NULL);
+        send(soc, str.data(), str.size(), 0);
 		buf.clear();
 
 		char chunk[1024*8+1];

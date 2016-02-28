@@ -62,9 +62,18 @@ bool Discovery::start(int broadcastPort)
 	if (m_broadcastPort)
 		return false;
 
-	NodeDevice::localAny = NodeDevice(0);
 	NodeDevice::local4 = NodeDevice(AF_INET);
 	NodeDevice::local6 = NodeDevice(AF_INET6);
+
+    // prefer ipv6, if we actually have an IPv6 address
+    // localAny will be used for bind() later
+    if(NodeDevice::local6.addrStorage.ss_family == AF_INET6) {
+        NodeDevice::localAny = NodeDevice::local6;
+    } else {
+        NodeDevice::localAny = NodeDevice::local4;
+    }
+
+    LOG(logDEBUG) << "default bind address set to " << NodeDevice::localAny;
 
 	char hostname[32];
 	gethostname(hostname, 31);
@@ -420,6 +429,7 @@ Discovery::NodeDevice::NodeDevice(const std::string &host) {
 
 Discovery::NodeDevice::NodeDevice(const sockaddr_storage &s)
 {
+    sinceVitalSign = -1;
     addrStorage = s;
 }
 

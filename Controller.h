@@ -10,7 +10,10 @@
 class Controller
 {
 public:
-	Controller();
+    struct Params {
+        std::string nodesFileName;
+    };
+    Controller(const Params &nodes);
 	~Controller();
 	bool init();
 
@@ -26,4 +29,6 @@ private:
 
 	bool m_isRunning;
 	RttThread *m_updateThread;
+
+    std::vector<Discovery::NodeDevice> m_explicitNodes;
 };

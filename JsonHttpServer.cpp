@@ -6,6 +6,7 @@
 
 
 #define MG_ENABLE_IPV6
+#undef LOG
 #include "mongoose/mongoose.h"
 
 // need to override LOG() macro:
@@ -49,7 +50,7 @@ int JsonHttpServer::mgHandlerWrapper(std::string path, char *buf, int len, struc
 	return mg_rpc_create_reply(buf, len, req, "S", s.c_str());
 }
 
-bool JsonHttpServer::start(int port)
+bool JsonHttpServer::start(const std::string &bindAddr)
 {
 	m_handlerPaths = new const char*[m_handlers.size()+1];
 	m_handlerMethods = new mg_rpc_handler_t[m_handlers.size()+1];
@@ -67,15 +68,15 @@ bool JsonHttpServer::start(int port)
 	m_handlerPaths[i] = 0;
 	m_handlerMethods[i] = 0;
 
-	nc = mg_bind(m_mgr, std::to_string(port).c_str(), JsonHttpServer::ev_handler);
+    nc = mg_bind(m_mgr, bindAddr.c_str(), JsonHttpServer::ev_handler);
 	if (!nc) {
-		LOG(logERROR) << "Failed to bind mongoose web server to port " << port;
+        LOG(logERROR) << "Failed to bind mongoose web server to " << bindAddr.c_str();
 		return false;
 	}
 	mg_set_protocol_http_websocket(nc);
 	//mg_enable_multithreading(nc);
 
-	LOG(logDEBUG) << "started mongoose on port " << port;
+    LOG(logDEBUG) << "started mongoose on " << bindAddr.c_str();
 
 	return true;
 }

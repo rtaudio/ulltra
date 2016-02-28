@@ -16,15 +16,22 @@ public:
 	class NodeDevice {
 	public:
         inline bool exists() const { return id.length() > 0 || name.length() > 0; }
-		inline const std::string & getId() const { return id; }
+        inline bool alive() const { return (sinceVitalSign >= 0 && sinceVitalSign < (UP::BroadcastInterval*2)); }
+
+        inline const std::string & getId() const { return id; }
 		inline const std::string & getName() const { return name; }
         static NodeDevice none, localAny, local4, local6;
 
+
+        /* create from a hostname or address (used for explicit host discovery) */
+        NodeDevice(const std::string &host);
 	private:
-		friend class Discovery;
+        friend class Discovery;
+        friend class Controller;
 
         /* reflects a non-existing node with a local address wildcard */
         NodeDevice(int family) {
+            sinceVitalSign = -1;
             if(family == -1)
                 return; // none node
             struct addrinfo hints, *res;
@@ -49,8 +56,6 @@ public:
             }
         }
 
-		/* create from a hostname or address (used for explicit host discovery) */
-		NodeDevice(const std::string &host);
 
 		/* create from a incoming link (udp/tcp) */
 		NodeDevice(const sockaddr_storage &addr);
@@ -60,7 +65,8 @@ public:
 		std::string id;
 
 		struct sockaddr_storage addrStorage;
-		time_t sinceVitalSign;//seconds
+        time_t sinceVitalSign;//seconds
+        time_t timeLastConnectionTry;//seconds
 
 		const struct sockaddr_storage getAddr(int port) const;
 		friend std::ostream & operator<<(std::ostream &os, const NodeDevice& n);
@@ -93,6 +99,7 @@ public:
     bool send(const std::string &msg, const NodeDevice &node = NodeDevice::none);
 
 	std::string getHwAddress();
+    inline const std::string &getSelfName() const { return m_hostname; }
 
 private:
 	bool initMulticast(int port);
@@ -108,6 +115,7 @@ private:
 	struct sockaddr_storage m_multicastAddrBind, m_multicastAddrSend;
 
 	std::string m_hostname;
+
 
 	uint32_t m_updateCounter;
 	time_t m_lastBroadcast, m_lastUpdateTime;

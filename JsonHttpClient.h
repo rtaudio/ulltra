@@ -8,7 +8,6 @@
 
 #include "JsonHttpServer.h"
 
-/* mongoose.h */
 
 class JsonHttpClient
 {
@@ -38,7 +37,8 @@ public:
 
 	JsonHttpClient();
 	virtual ~JsonHttpClient();
-	const Response &requestAsync(const NodeAddr &host, std::string path, const std::string &body);
+    const Response &request(const NodeAddr &host, std::string path, const std::string &body);
+    const Response &request(const NodeAddr &host, std::string path, const StringMap &data);
 
 	JsonHttpClient::Response m_lastResponse;
 };

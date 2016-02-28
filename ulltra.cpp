@@ -1,8 +1,9 @@
 // ulltra.cpp : Definiert den Einstiegspunkt für die Konsolenanwendung.
 //
-#include"UlltraProto.h"
-#include "NetworkManager.h"
+
 #include <rtt.h>
+#include"UlltraProto.h"
+#include "Controller.h"
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -35,7 +36,10 @@ int main()
 	g_isRunning = true;
 	signal(SIGINT, sigintHandler);
 
-	Controller controller;
+    Controller::Params params;
+    params.nodesFileName = "nodes.txt";
+
+    Controller controller(params);
 
 	LOG(logINFO) << "ulltra is running ..." << std::endl;
 
