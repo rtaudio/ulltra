@@ -1,0 +1,1 @@
+c:\dev\apps\winscp\WinSCP.com /script=dirsync.txt /parameter root:root@rpi2dev.local /root/ulltra

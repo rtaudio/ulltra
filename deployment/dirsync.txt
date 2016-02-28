@@ -1,0 +1,3 @@
+open sftp://%1%
+synchronize remote ../ "%2%" -filemask="*.c; *.cpp; *.h; CMakeLists.txt | .*/;" -transfer=binary
+keepuptodate ../ "%2%" -filemask="*.c; *.cpp; *.h; CMakeLists.txt | .*/; enc_temp*/;" -transfer=binary
