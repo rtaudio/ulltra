@@ -2,6 +2,7 @@
 
 #include "Discovery.h"
 #include "LinkEval.h"
+#include "Controller.h"
 
 class RttThread;
 
@@ -18,6 +19,7 @@ private:
 
 	Discovery m_discovery;
 	LinkEval m_linkEval;
+	Controller m_contr;
 
 	bool m_isRunning;
 	RttThread *m_updateThread;

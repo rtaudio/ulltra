@@ -33,7 +33,16 @@ public:
             hints.ai_family = family;
             int r;
             if((r=getaddrinfo(NULL, std::to_string(UlltraProto::DiscoveryPort).c_str(), &hints, &res)) == 0) {
+				memset(&addrStorage, 0, sizeof(addrStorage));
                 memcpy(&addrStorage, res->ai_addr, sizeof(res->ai_addrlen));
+				if (family == AF_INET) {
+					LOG(logDEBUG) << "local ipv4 addresses:" << *res;
+				}
+				else if(family == AF_INET6) {
+					LOG(logDEBUG) << "local ipv6 addresses:" << addrStorage;
+				} else {
+					LOG(logDEBUG) << "local addresses:" << *res;
+				}
                 freeaddrinfo(res);
             } else {
                 LOG(logERROR) << "getaddrinfo failed: " << gai_strerror(r);
@@ -85,6 +94,8 @@ public:
 
 private:
 	NodeDevice &getNode(const std::string &id);
+
+	void tryConnectExplictHosts();
 
 	int m_broadcastPort;
 

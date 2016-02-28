@@ -32,6 +32,8 @@ public:
     static const int DiscoveryTcpQueue = 8;
     static const int DiscoveryTcpTimeout = 800; // milliseconds
 
+	static const int HttpControlPort = 26080;
+
 	static const std::string LatencyTestStartToken;
 
 

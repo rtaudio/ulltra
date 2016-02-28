@@ -63,13 +63,21 @@ void NetworkManager::updateThreadMain(void *arg)
 		return;
 	}
 
+
+	if (!m_contr.init()) {
+		m_isRunning = false;
+		LOG(logERROR) << "Controller init failed!";
+		return;
+	}
+
 	time_t now;
 
 	while (m_isRunning) {
 		now = time(NULL);
 
 		m_discovery.update(now);
-		m_linkEval.update(now);
+		//m_linkEval.update(now);
+		m_contr.update(now);
 
 #ifdef _WIN32
 		Sleep(200);

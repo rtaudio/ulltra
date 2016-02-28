@@ -31,7 +31,7 @@
 
 #include <string>
 
-typedef struct addrinfo NodeAddr;
+typedef struct sockaddr_storage NodeAddr;
 
 
 
@@ -111,13 +111,13 @@ inline int socketSelectTimeout(SOCKET &soc, uint64_t toUs)
     struct timeval tv;
     int res;
 
-    tv.tv_sec = toUs/1000000;
-    tv.tv_usec = toUs - tv.tv_sec;
+    tv.tv_sec = (long)(toUs/1000000UL);
+    tv.tv_usec = (long)(toUs - tv.tv_sec);
 
     FD_ZERO(&myset);
     FD_SET(soc, &myset);
 
-    res = select(soc+1, NULL, &myset, NULL, &tv);
+    res = select(soc+1/* this is ignored on windows*/, NULL, &myset, NULL, &tv);
 
     if (res < 0 && errno != EINTR) {
         LOG(logERROR) << "error while select: " << errno << " " << strerror(errno);
@@ -128,9 +128,9 @@ inline int socketSelectTimeout(SOCKET &soc, uint64_t toUs)
         // get the actual result
         socklen_t olen = sizeof(int);
         int o;
-        if ((res = getsockopt(soc, SOL_SOCKET, SO_ERROR, (void*)(&o), &olen)) < 0) {
+        if (getsockopt(soc, SOL_SOCKET, SO_ERROR, (char*)(&o), &olen) < 0) {
             LOG(logERROR) << "Error in getsockopt() " << errno << " " << strerror(errno);
-            return res;
+            return -1;
         }
 
         if(o != 0) {
@@ -147,9 +147,43 @@ inline int socketSelectTimeout(SOCKET &soc, uint64_t toUs)
 
 
 
-inline std::ostream & operator<<(std::ostream &os, const struct sockaddr_storage& s)
+inline std::ostream & operator<<(std::ostream &os, const struct sockaddr_storage* s)
 {
-    char host[64], serv[32];
-    getnameinfo((const sockaddr*)&s, sizeof(s), host, sizeof(host), serv, sizeof(serv), 0);
-    os << "[" << host << "]:" << serv;
+	char host[64], host2[64], serv[32];
+	int r = getnameinfo((const sockaddr*)s, sizeof(*s), host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST);
+	if (r == 0) {
+		if (getnameinfo((const sockaddr*)s, sizeof(*s), host2, sizeof(host2), serv, sizeof(serv), 0) == 0 && strcmp(host, host2) != 0)
+			os << "[" << host << "]("<< host2 << "):" << serv;
+		else
+			os << "[" << host << "]:" << serv;
+	}
+	else {
+		os << "[getnameinfo error!]";
+	}
+	return os;
 }
+
+inline std::ostream & operator<<(std::ostream &os, const struct sockaddr_storage& s) { return os << &s; }
+inline std::ostream & operator<<(std::ostream &os, const struct sockaddr& s) { return os << ((const struct sockaddr_storage *)&s); }
+inline std::ostream & operator<<(std::ostream &os, const struct sockaddr_in& s) { return os << ((const struct sockaddr_storage *)&s); }
+inline std::ostream & operator<<(std::ostream &os, const struct sockaddr* s) { return os << ((const struct sockaddr_storage *)s); }
+inline std::ostream & operator<<(std::ostream &os, const struct sockaddr_in* s) { return os << ((const struct sockaddr_storage *)s); }
+
+inline std::ostream & operator<<(std::ostream &os, const struct addrinfo* s)
+{
+	const struct sockaddr_storage *ss = (sockaddr_storage *)s->ai_addr;
+	os << *ss;
+
+	if (s->ai_canonname) {
+		os << "(" << s->ai_canonname << ")";
+	}
+
+	if (s->ai_next) {
+		os << ", " << s->ai_next;
+	}
+
+	return os;
+}
+
+inline std::ostream & operator<<(std::ostream &os, const struct addrinfo& s) { return os << &s; }
+

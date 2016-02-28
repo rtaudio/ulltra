@@ -22,7 +22,6 @@
 int
 get_multicast_addrs(const char *hostname,
 	const char *service,
-	int         family,
 	int         socktype,
 struct sockaddr_storage *addrToBind,
 struct sockaddr_storage *addrToSend);
@@ -31,9 +30,9 @@ int isMulticast(struct sockaddr_storage *addr);
 int joinGroup(int sockfd, int loopBack, int mcastHop, struct sockaddr_storage *addr);
 
 Discovery::NodeDevice Discovery::NodeDevice::none(-1);
-Discovery::NodeDevice Discovery::NodeDevice::localAny(0);
-Discovery::NodeDevice Discovery::NodeDevice::local4(AF_INET);
-Discovery::NodeDevice Discovery::NodeDevice::local6(AF_INET6);
+Discovery::NodeDevice Discovery::NodeDevice::localAny(-1);
+Discovery::NodeDevice Discovery::NodeDevice::local4(-1);
+Discovery::NodeDevice Discovery::NodeDevice::local6(-1);
 
 Discovery::Discovery()
     : m_updateCounter(0), m_receiver(0), m_broadcastPort(0),
@@ -68,6 +67,12 @@ bool Discovery::start(int broadcastPort)
 {
 	if (m_broadcastPort)
 		return false;
+
+
+	NodeDevice::localAny = NodeDevice(0);
+	NodeDevice::local4 = NodeDevice(AF_INET);
+	NodeDevice::local6 = NodeDevice(AF_INET6);
+
 	m_broadcastPort = broadcastPort;
 	m_updateCounter = 0;
 
@@ -110,14 +115,14 @@ bool Discovery::start(int broadcastPort)
 
     m_socAccept = socket(NodeDevice::local6.addrStorage.ss_family, SOCK_STREAM, 0);
 
-    auto bindAddr = NodeDevice::local6.getAddr(broadcastPort);
+    auto bindAddr = NodeDevice::local6.getAddr(broadcastPort+3);
     if (bind(m_socAccept, (struct sockaddr *) &bindAddr, sizeof(bindAddr)) < 0) {
          LOG(logERROR) << "tcp bind to " <<  bindAddr << " failed!";
          return false;
     }
 
-    if(listen(m_socAccept, UlltraProto::DiscoveryTcpQueue) == 0) {
-        LOG(logERROR) << "tcp listen() on " <<  bindAddr << " failed!";
+    if(listen(m_socAccept, UlltraProto::DiscoveryTcpQueue) != 0) {
+        LOG(logERROR) << "tcp listen() on " <<  bindAddr << " failed! " << lastError();
         return false;
     }
 
@@ -157,6 +162,8 @@ const Discovery::NodeDevice &Discovery::getNode(const sockaddr_storage &addr) co
 void Discovery::tryConnectExplictHosts()
 {
     for(const NodeDevice &n : m_explicitNodes) {
+
+		/*
         auto a = n.getAddr(UlltraProto::DiscoveryPort);
 
         // initiate a non-blocking connection attempt
@@ -176,6 +183,7 @@ void Discovery::tryConnectExplictHosts()
             };
             RttThread();
         }
+		*/
     }
 }
 
@@ -185,7 +193,7 @@ bool Discovery::update(time_t now)
 
     std::vector<const NodeDevice*> newNodes;
 
-    struct sockaddr_storage remote;
+	struct sockaddr_storage remote = {};
 
 	while (true) {
 
@@ -269,12 +277,14 @@ bool Discovery::update(time_t now)
 		}
 	}
 
+	/*
     while(true) {
         int remoteAddrLen = sizeof(remote);
         SOCKET newsockfd = accept(m_socAccept, (struct sockaddr *)&remote, &remoteAddrLen);
         if(newsockfd < 0)
             break;
     }
+	*/
 
 	// auto-purge dead nodes
 	for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
@@ -544,7 +554,7 @@ bool Discovery::initMulticast(int port)
 	memset(&m_multicastAddrSend, 0, sizeof(m_multicastAddrSend));
 
 
-    if (get_multicast_addrs(mcastaddr, std::to_string(port).c_str(), PF_UNSPEC, SOCK_DGRAM, &m_multicastAddrBind, &m_multicastAddrSend) <0)
+    if (get_multicast_addrs(mcastaddr, std::to_string(port).c_str(), SOCK_DGRAM, &m_multicastAddrBind, &m_multicastAddrSend) <0)
 	{
 		LOG(logERROR) << "get_addr error:: could not find multicast "
 			<< "address=[" << mcastaddr << "] port=[" << port << " ]";
@@ -581,7 +591,6 @@ bool Discovery::initMulticast(int port)
 int
 get_multicast_addrs(const char *hostname,
 	const char *service,
-	int         family,
 	int         socktype,
 struct sockaddr_storage *addrToBind,
 struct sockaddr_storage *addrToSend)
@@ -592,21 +601,15 @@ struct sockaddr_storage *addrToSend)
 	retval = -1;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = family;
+	hints.ai_family = AF_INET6;
 	hints.ai_socktype = socktype;
 
-//#ifdef _WIN32
-#define ALT_BIND 1
-//#endif
 
-#if ALT_BIND
 	// see https://msdn.microsoft.com/en-us/library/ms737550(v=vs.85).aspx ('For multicast operations...')
 	// on windows bind to local wildcard, then join the multicast group and send to multicast addrress
 	hints.ai_flags = AI_PASSIVE;
 	n = getaddrinfo(NULL, service, &hints, &res);
-#else
-	n = getaddrinfo(hostname, service, &hints, &res);
-#endif
+
 
 	if (n != 0) {
 		fprintf(stderr,
@@ -619,7 +622,7 @@ struct sockaddr_storage *addrToSend)
 
 	sockfd = -1;
 	while (res) {
-		LOG(logDEBUG) << "trying to bind to " << res->ai_family;
+		LOG(logDEBUG) << "trying to bind to " << res->ai_addr;
 		sockfd = socket(res->ai_family,
 			res->ai_socktype,
 			res->ai_protocol);
@@ -630,7 +633,6 @@ struct sockaddr_storage *addrToSend)
 
 			if ((br) == 0) {
 				memcpy(addrToBind, res->ai_addr, sizeof(*addrToBind));
-#if ALT_BIND
 				// see https://msdn.microsoft.com/en-us/library/ms737550(v=vs.85).aspx ('For multicast operations...')
 				// on windows bind to local wildcard, then join the multicast group and send to multicast addrress
 				struct addrinfo hints2, *res2;
@@ -650,11 +652,6 @@ struct sockaddr_storage *addrToSend)
 					// fallback to bind addr
 					//memcpy(addrToSend, res->ai_addr, sizeof(*addrToSend));
 				}
-#else
-				
-				retval = 0;
-				break;
-#endif
 			}
 			else {
 				LOG(logDEBUG) << "bind failed: " << lastError() << " return val = " << br << " addrlen = " << res->ai_addrlen;

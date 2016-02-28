@@ -55,6 +55,18 @@
     <ClInclude Include="UlltraProto.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="mongoose\mongoose.h">
+      <Filter>Quelldateien</Filter>
+    </ClInclude>
+    <ClInclude Include="HttpClient.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Controller.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="JsonHttpServer.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ulltra.cpp">
@@ -85,6 +97,18 @@
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="UlltraProto.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="mongoose\mongoose.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="HttpClient.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="Controller.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="JsonHttpServer.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
