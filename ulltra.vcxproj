@@ -152,7 +152,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
-    <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Controller.h" />
@@ -160,16 +159,14 @@
     <ClInclude Include="HttpClient.h" />
     <ClInclude Include="JsonHttpServer.h" />
     <ClInclude Include="LinkEval.h" />
-    <ClInclude Include="LLReceiver.h" />
-    <ClInclude Include="LLSender.h" />
-    <ClInclude Include="LowLatencyUDPSocket.h" />
+    <ClInclude Include="LLLink.h" />
+    <ClInclude Include="LLTcp.h" />
+    <ClInclude Include="LLUdpLink.h" />
     <ClInclude Include="mongoose\mongoose.h" />
     <ClInclude Include="networking.h" />
     <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="rtt\rtt.h" />
     <ClInclude Include="SimpleUdpReceiver.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
     <ClInclude Include="UlltraProto.h" />
   </ItemGroup>
   <ItemGroup>
@@ -178,15 +175,21 @@
     <ClCompile Include="HttpClient.cpp" />
     <ClCompile Include="JsonHttpServer.cpp" />
     <ClCompile Include="LinkEval.cpp" />
-    <ClCompile Include="LLReceiver.cpp" />
-    <ClCompile Include="LLSender.cpp" />
-    <ClCompile Include="LowLatencyUDPSocket.cpp" />
+    <ClCompile Include="LLLink.cpp" />
+    <ClCompile Include="LLTcp.cpp" />
+    <ClCompile Include="LLUdpLink.cpp" />
     <ClCompile Include="mongoose\mongoose.c" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="rtt\rtt.cpp" />
     <ClCompile Include="SimpleUdpReceiver.cpp" />
     <ClCompile Include="ulltra.cpp" />
     <ClCompile Include="UlltraProto.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include=".gitmodules" />
+    <None Include="LICENSE" />
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

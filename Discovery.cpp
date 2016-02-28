@@ -19,13 +19,7 @@
 
 
 // multicast utils
-int
-get_multicast_addrs(const char *hostname,
-	const char *service,
-	int         socktype,
-struct sockaddr_storage *addrToBind,
-struct sockaddr_storage *addrToSend);
-
+int get_multicast_addrs(const char *hostname, const char *service, int   socktype, struct sockaddr_storage *addrToBind, struct sockaddr_storage *addrToSend);
 int isMulticast(struct sockaddr_storage *addr);
 int joinGroup(int sockfd, int loopBack, int mcastHop, struct sockaddr_storage *addr);
 
@@ -68,7 +62,6 @@ bool Discovery::start(int broadcastPort)
 	if (m_broadcastPort)
 		return false;
 
-
 	NodeDevice::localAny = NodeDevice(0);
 	NodeDevice::local4 = NodeDevice(AF_INET);
 	NodeDevice::local6 = NodeDevice(AF_INET6);
@@ -83,11 +76,15 @@ bool Discovery::start(int broadcastPort)
 	}
 	LOG(logDEBUG) << "HWID: " << hwid;
 
-
+	initBroadcast(broadcastPort);
     initMulticast(broadcastPort+1);
 
+	return true;
+}
 
-	m_receiver = SimpleUdpReceiver::create(broadcastPort, true);
+bool Discovery::initBroadcast(int port)
+{
+	m_receiver = SimpleUdpReceiver::create(port, true);
 	if (!m_receiver) {
 		LOG(logERROR) << ("Error: could not create receiver socket!") << lastError();
 		return false;
@@ -111,28 +108,6 @@ bool Discovery::start(int broadcastPort)
 	}
 
 	m_socBroadcast4 = soc;
-
-
-    m_socAccept = socket(NodeDevice::local6.addrStorage.ss_family, SOCK_STREAM, 0);
-
-    auto bindAddr = NodeDevice::local6.getAddr(broadcastPort+3);
-    if (bind(m_socAccept, (struct sockaddr *) &bindAddr, sizeof(bindAddr)) < 0) {
-         LOG(logERROR) << "tcp bind to " <<  bindAddr << " failed!";
-         return false;
-    }
-
-    if(listen(m_socAccept, UlltraProto::DiscoveryTcpQueue) != 0) {
-        LOG(logERROR) << "tcp listen() on " <<  bindAddr << " failed! " << lastError();
-        return false;
-    }
-
-    if(!socketSetBlocking(m_socAccept, false)) {
-        return false;
-    }
-
-    LOG(logERROR) << "accepting tcp connections on " <<  bindAddr;
-
-	return true;
 }
 
 const Discovery::NodeDevice &Discovery::getNode(const sockaddr_storage &addr) const
@@ -187,28 +162,101 @@ void Discovery::tryConnectExplictHosts()
     }
 }
 
+bool Discovery::processMessage(const NodeAddr& remote, const char *message, std::vector<const NodeDevice*> &newNodes)
+{
+	bool sendNow = false;
+	std::string act((const char*)message);
+	NodeDevice nd(remote);
+	nd.name = std::string((const char*)&message[act.length() + 1]);
+	nd.id = std::string((const char*)&message[act.length() + nd.name.length() + 2]);
+	nd.sinceVitalSign = 0;
+
+	// check if we somehow received our own broadcast
+	if (nd.id == getHwAddress()) {
+		return false;
+	}
+
+	if ("ULLTRA_DEV_R" == act) { // register
+		auto ex = m_discovered.find(nd.id);
+		if (ex != m_discovered.end()) { // already there?
+			ex->second.sinceVitalSign = 0;
+			return;
+		}
+
+		LOG(logINFO) << "Discovered node " << nd;
+		m_discovered.insert(std::pair<std::string, NodeDevice>(nd.id, nd));
+		send("ULLTRA_DEV_R", nd); // send a discovery message back
+		sendNow = true;
+		newNodes.push_back(&m_discovered.find(nd.id)->second);
+	}
+	else if ("ULLTRA_DEV_Z" == act) { // unregister
+		auto it = m_discovered.find(nd.id);
+		if (it != m_discovered.end()) {
+			LOG(logINFO) << "Lost node " << nd;
+			if (onNodeLost)
+				onNodeLost(it->second);
+			m_discovered.erase(m_discovered.find(nd.id));
+			sendNow = true;
+		}
+	}
+	else if ("ULLTRA_DEV_U" == act) { // heartbeat
+		LOG(logINFO) << "Heartbeat node " << nd;
+		//ProcessHeartbeat(remote.sin_addr, ((HeartBeatData*)&recvBuffer[10]));
+	}
+	else if (m_customHandlers.find(act) != m_customHandlers.end() && m_customHandlers[act])
+	{
+		auto ex = m_discovered.find(nd.id);
+		if (ex == m_discovered.end()) {
+			LOG(logDEBUG1) << "Received custom message " << act << " from unknown " << nd;
+			return false;
+		}
+
+		ex->second.sinceVitalSign = 0;
+
+		LOG(logINFO) << "Custom handler for message " << act << " from node " << nd;
+		m_customHandlers[act](ex->second);
+	}
+	else {
+		LOG(logDEBUG1) << "Received unknown message from " << nd;
+	}
+
+	return sendNow;
+}
+
 bool Discovery::update(time_t now)
 {
 	bool sendNow = false;
-
     std::vector<const NodeDevice*> newNodes;
+	struct sockaddr_storage remote;
 
-	struct sockaddr_storage remote = {};
-
-	while (true) {
-
+	// process incoming broadcast message queue
+	while (m_receiver)
+	{
 		int len;
 		socklen_t remoteAddrLen = sizeof(remote);
+		memset(&remote, 0, sizeof(remote));
+		const uint8_t * recvBuffer = m_receiver->receive(len, remote);
+		if (len == -1 || !recvBuffer)
+			break;
 
-        //const uint8_t * recvBuffer = m_receiver->receive(len, remote);
-        //if (len == -1 || !recvBuffer)
-//			break;
+		// just drop small packets
+		if (len < 20 || recvBuffer[0] == 0)
+			continue;
 
+		if (processMessage(remote, (const char*)recvBuffer, newNodes))
+			sendNow = true;
+	}
 
-		char recvBuffer[1024*2];
+	// process incoming multicast message queue
+	while (m_socMulticast != -1)
+	{
+		int len;
+		socklen_t remoteAddrLen = sizeof(remote);
+		memset(&remote, 0, sizeof(remote));
+
+		char recvBuffer[1024 * 2];
 		memset(recvBuffer, 0, sizeof(recvBuffer));
-		len = recvfrom(m_socMulticast, recvBuffer, sizeof(recvBuffer)-1, 0, (struct sockaddr *)&remote,
-			&remoteAddrLen);
+		len = recvfrom(m_socMulticast, recvBuffer, sizeof(recvBuffer) - 1, 0, (struct sockaddr *)&remote, &remoteAddrLen);
 
 		if (len == -1)
 			break;
@@ -217,76 +265,12 @@ bool Discovery::update(time_t now)
 		if (len < 20 || recvBuffer[0] == 0)
 			continue;
 
-		std::string act((const char*)recvBuffer);
-
-		
-        NodeDevice nd(remote);
-		nd.name = std::string((const char*)&recvBuffer[act.length() + 1]);
-		nd.id = std::string((const char*)&recvBuffer[act.length() + nd.name.length() + 2]);
-        nd.sinceVitalSign = 0;
-
-		// check if we somehow received our own broadcast
-		if (nd.id == getHwAddress()) {
-			continue;
-		}
-
-		if ("ULLTRA_DEV_R" == act) { // register
-
-            auto ex = m_discovered.find(nd.id);
-			// already there?
-            if (ex != m_discovered.end()) {
-                (*ex).second.sinceVitalSign = 0;
-				continue;
-            }
-
-            LOG(logINFO) << "Discovered node " << nd;
-            m_discovered.insert(std::pair<std::string, NodeDevice>(nd.id, nd));
-            send("ULLTRA_DEV_R", nd); // send a discovery message back
-            sendNow = true;
-            newNodes.push_back(&m_discovered.find(nd.id)->second);
-		}
-		else if ("ULLTRA_DEV_Z" == act) { // unregister
-            auto it = m_discovered.find(nd.id);
-            if(it != m_discovered.end()) {
-                LOG(logINFO) << "Lost node " << nd;
-                if (onNodeLost)
-                    onNodeLost(it->second);
-                m_discovered.erase(m_discovered.find(nd.id));
-                sendNow = true;
-            }
-        }
-		else if ("ULLTRA_DEV_H" == act) { // heartbeat
-			LOG(logINFO) << "Heartbeat node " << nd;
-			//ProcessHeartbeat(remote.sin_addr, ((HeartBeatData*)&recvBuffer[10]));
-		}
-		else if (m_customHandlers.find(act) != m_customHandlers.end() && m_customHandlers[act])
-		{
-			auto ex = m_discovered.find(nd.id);
-            if (ex == m_discovered.end()) {
-                 LOG(logDEBUG1) << "Received custom message " << act << " from unknown " << nd;
-				continue;
-            }			 
-
-			ex->second.sinceVitalSign = 0;
-
-			LOG(logINFO) << "Custom handler for message " << act << " from node " << nd;
-			m_customHandlers[act](ex->second);
-		}
-		else {
-            LOG(logDEBUG1) << "Received unknown message from " << nd;
-		}
+		if (processMessage(remote, recvBuffer, newNodes))
+			sendNow = true;
 	}
 
-	/*
-    while(true) {
-        int remoteAddrLen = sizeof(remote);
-        SOCKET newsockfd = accept(m_socAccept, (struct sockaddr *)&remote, &remoteAddrLen);
-        if(newsockfd < 0)
-            break;
-    }
-	*/
-
 	// auto-purge dead nodes
+	auto dt = difftime(now, m_lastUpdateTime);
 	for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
 		const NodeDevice &n = it->second;
         if(difftime(n.sinceVitalSign, 0) > (UlltraProto::BroadcastInterval*3)) {
@@ -296,13 +280,13 @@ bool Discovery::update(time_t now)
 			break;
 		}
 		
+		// count time
 		if(m_updateCounter > 0)
-			it->second.sinceVitalSign += difftime(now, m_lastUpdateTime);
+			it->second.sinceVitalSign += dt;
 	}
 	
 	// broadcast a discovery packet every 10 updates or if something changed
 	// e.g. if a new node appears make current node visible
-	// this needs to be done beffore onNodeDiscovered() call!
 	if (difftime(now, m_lastBroadcast) >= UlltraProto::BroadcastInterval || sendNow) {
 		send("ULLTRA_DEV_R");
         tryConnectExplictHosts();
@@ -340,58 +324,52 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 
 	int dataLen = dp - &data[0];
 
-	
-	if (m_socBroadcast4 != -1) {
-		if (!isMulticast) {
-			auto na = node.getAddr(m_broadcastPort);
-			if (na.ss_family == AF_INET) {
-				if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&na, sizeof(na)) != dataLen) {
-					LOG(logERROR) << "Could not send broadcast message to " << node << lastError();
-					return false;
-				}
-			}
-		}
-		else
-		{
-			// broadcast
-			struct sockaddr_in addr4;
-			memset(&addr4, 0, sizeof(addr4));
-			addr4.sin_family = AF_INET;
-			addr4.sin_port = htons(m_broadcastPort);
-			addr4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
-			if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&addr4, sizeof(addr4)) != dataLen) {
-				LOG(logERROR) << "Could not send broadcast message on INADDR_BROADCAST! " << lastError();
-				return false;
-			}
-
-			// Windows broadcast fix (for ipv4)
-			char ac[200];
-			if (gethostname(ac, sizeof(ac)) == -1)
-				return false;
-
-			struct hostent *phe = gethostbyname(ac);
-			if (phe == 0)
-				return false;
-
-			for (int i = 0; phe->h_addr_list[i] != 0; ++i) {
-				struct in_addr daddr;
-				memcpy(&daddr, phe->h_addr_list[i], sizeof(daddr));
-				addr4.sin_addr.s_addr = daddr.s_addr | (255) << (8 * 3);
-
-				std::string ip4(inet_ntoa(addr4.sin_addr));
-				//std::cout << "broadcast message to " << ip4 << ":" << ntohs(addr4.sin_port) << "" << std::endl;
-
-				if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&addr4, sizeof(addr4)) != dataLen) {
-					LOG(logERROR) << "Could not send broadcast message  to " << ip4 << "!" << std::endl;
-				}
-			}
+	if (!isMulticast) {
+		auto na = node.getAddr(m_broadcastPort);
+		bool ipv6 = (na.ss_family == AF_INET6);
+		if (sendto(ipv6 ? m_socMulticast : m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&na, sizeof(na)) != dataLen) {
+			LOG(logERROR) << "Could not send broadcast message to " << node << lastError();
+			return false;
 		}
 	}
-
-
-	if (isMulticast)
+	else
 	{
+		// ipv4 udp broadcast
+		struct sockaddr_in addr4;
+		memset(&addr4, 0, sizeof(addr4));
+		addr4.sin_family = AF_INET;
+		addr4.sin_port = htons(m_broadcastPort);
+		addr4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+
+		if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&addr4, sizeof(addr4)) != dataLen) {
+			LOG(logERROR) << "Could not send broadcast message on INADDR_BROADCAST! " << lastError();
+			return false;
+		}
+
+		// Windows broadcast fix (for ipv4): send broadcast on each host addr
+		char ac[200];
+		if (gethostname(ac, sizeof(ac)) == -1)
+			return false;
+
+		struct hostent *phe = gethostbyname(ac);
+		if (phe == 0)
+			return false;
+
+		for (int i = 0; phe->h_addr_list[i] != 0; ++i) {
+			struct in_addr daddr;
+			memcpy(&daddr, phe->h_addr_list[i], sizeof(daddr));
+			addr4.sin_addr.s_addr = daddr.s_addr | (255) << (8 * 3);
+
+			std::string ip4(inet_ntoa(addr4.sin_addr));
+			//std::cout << "broadcast message to " << ip4 << ":" << ntohs(addr4.sin_port) << "" << std::endl;
+
+			if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&addr4, sizeof(addr4)) != dataLen) {
+				LOG(logERROR) << "Could not send broadcast message  to " << ip4 << "!" << std::endl;
+			}
+		}
+
+		// ipv6 multicast
 		if (m_socMulticast != -1) {
 			if (sendto(m_socMulticast, data, dataLen, 0,
 				(struct sockaddr *)&m_multicastAddrSend, sizeof(m_multicastAddrSend))
@@ -400,21 +378,12 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 				return false;
 			}
 		}
-		
 
-	}
-
-/*
-	// send to explicit nodes
-	for (NodeDevice n : m_explicitNodes) {
-		auto s = n.getAddr(m_broadcastPort);
-		if (!s) {
-			LOG(logERROR) << "Failed to get address for node " << n;
-			continue;
+		// send to explicit nodes
+		for (NodeDevice n : m_explicitNodes) {
+			send(msg, n);
 		}
-		sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)s, sizeof(*s));
 	}
-	*/
 }
 
 

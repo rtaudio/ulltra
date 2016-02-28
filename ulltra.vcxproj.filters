@@ -1,115 +1,117 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Quelldateien">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Headerdateien">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
     <Filter Include="Ressourcendateien">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="net">
+      <UniqueIdentifier>{99a47e92-350c-457e-8887-7c707b0fa2ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net\http">
+      <UniqueIdentifier>{9deedb63-bbb9-40dd-bb33-50ce5986eb51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net\LL">
+      <UniqueIdentifier>{4907bbdf-e484-4f6c-b7b7-af57d70d2b68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="meta">
+      <UniqueIdentifier>{31a7baf0-ceee-4c34-b513-6aee7339ed90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net\udp">
+      <UniqueIdentifier>{e53f98d1-6868-4b7a-b3f3-a7600a0b65cc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-    <Text Include="CMakeLists.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="stdafx.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkManager.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="Discovery.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="LinkEval.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="rtt\rtt.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="LowLatencyUDPSocket.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="LLSender.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="LLReceiver.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleUdpReceiver.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="networking.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="UlltraProto.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="mongoose\mongoose.h">
-      <Filter>Quelldateien</Filter>
-    </ClInclude>
-    <ClInclude Include="HttpClient.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="Controller.h">
-      <Filter>Headerdateien</Filter>
+      <Filter>net\http</Filter>
     </ClInclude>
     <ClInclude Include="JsonHttpServer.h">
-      <Filter>Headerdateien</Filter>
+      <Filter>net\http</Filter>
+    </ClInclude>
+    <ClInclude Include="HttpClient.h">
+      <Filter>net\http</Filter>
+    </ClInclude>
+    <ClInclude Include="LLUdpLink.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="LLLink.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="Discovery.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="LinkEval.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="networking.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkManager.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="Controller.h" />
+    <ClInclude Include="rtt\rtt.h" />
+    <ClInclude Include="UlltraProto.h" />
+    <ClInclude Include="SimpleUdpReceiver.h">
+      <Filter>net\udp</Filter>
+    </ClInclude>
+    <ClInclude Include="LLTcp.h">
+      <Filter>net\LL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ulltra.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="NetworkManager.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Discovery.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="LinkEval.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="rtt\rtt.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="LowLatencyUDPSocket.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="LLSender.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="LLReceiver.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="SimpleUdpReceiver.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="UlltraProto.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
     <ClCompile Include="mongoose\mongoose.c">
-      <Filter>Quelldateien</Filter>
+      <Filter>net\http</Filter>
     </ClCompile>
     <ClCompile Include="HttpClient.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Controller.cpp">
-      <Filter>Quelldateien</Filter>
+      <Filter>net\http</Filter>
     </ClCompile>
     <ClCompile Include="JsonHttpServer.cpp">
-      <Filter>Quelldateien</Filter>
+      <Filter>net\http</Filter>
     </ClCompile>
+    <ClCompile Include="LLUdpLink.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="LLLink.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="LinkEval.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="Discovery.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="Controller.cpp" />
+    <ClCompile Include="rtt\rtt.cpp" />
+    <ClCompile Include="ulltra.cpp" />
+    <ClCompile Include="UlltraProto.cpp" />
+    <ClCompile Include="SimpleUdpReceiver.cpp">
+      <Filter>net\udp</Filter>
+    </ClCompile>
+    <ClCompile Include="LLTcp.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore">
+      <Filter>meta</Filter>
+    </None>
+    <None Include=".gitmodules">
+      <Filter>meta</Filter>
+    </None>
+    <None Include="LICENSE">
+      <Filter>meta</Filter>
+    </None>
+    <None Include="README.md">
+      <Filter>meta</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt">
+      <Filter>meta</Filter>
+    </Text>
   </ItemGroup>
 </Project>

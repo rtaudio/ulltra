@@ -73,7 +73,7 @@ public:
 	~Discovery();
 	void addExplicitHosts(const std::string &host);
 
-	std::string getHwAddress();
+	
 
 	bool start(int broadcastPort);
 	bool update(time_t now);
@@ -92,33 +92,29 @@ public:
 
     bool send(const std::string &msg, const NodeDevice &node = NodeDevice::none);
 
+	std::string getHwAddress();
+
 private:
-	NodeDevice &getNode(const std::string &id);
+	bool initMulticast(int port);
+	bool initBroadcast(int port);
 
 	void tryConnectExplictHosts();
+	NodeDevice &getNode(const std::string &id);	
+	bool processMessage(const NodeAddr& nd, const char *message, std::vector<const NodeDevice*> &newNodes);
+
 
 	int m_broadcastPort;
-
-	SOCKET m_socBroadcast4, m_socMulticast; //UDP
-    SOCKET m_socAccept; //TCP accept
-    SOCKET m_socConnect; //TCP accept
-
-
-	bool initMulticast(int port);
+	SOCKET m_socBroadcast4, m_socMulticast;	
 	struct sockaddr_storage m_multicastAddrBind, m_multicastAddrSend;
 
-	SimpleUdpReceiver * m_receiver;
-
 	uint32_t m_updateCounter;
+	time_t m_lastBroadcast, m_lastUpdateTime;
 
 	std::map<std::string, NodeDevice> m_discovered;
 	std::vector<NodeDevice> m_explicitNodes;
-
 	std::map<std::string, NodeEventHandler> m_customHandlers;
 
-	time_t m_lastBroadcast, m_lastUpdateTime;
-
-
+	SimpleUdpReceiver * m_receiver;
 };
 
 std::ostream& operator<<(std::ostream &strm, const Discovery::NodeDevice &nd);
