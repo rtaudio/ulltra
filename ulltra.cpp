@@ -35,11 +35,11 @@ int main()
 	g_isRunning = true;
 	signal(SIGINT, sigintHandler);
 
-	NetworkManager netMgr;
+	Controller controller;
 
 	LOG(logINFO) << "ulltra is running ..." << std::endl;
 
-	while (netMgr.isRunning() && g_isRunning) {
+	while (controller.isRunning() && g_isRunning) {
 #ifdef _WIN32
 		Sleep(1000);
 #else

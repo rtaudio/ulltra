@@ -4,6 +4,11 @@
 
 Controller::Controller()
 {
+	m_server.on("link_eval", [](const NodeAddr &addr, const JsonObject &request) {
+		std::string resp;
+
+		return resp;
+	});
 }
 
 
@@ -15,6 +20,8 @@ bool Controller::init()
 {
 	if (!m_server.start(UP::HttpControlPort))
 		return false;
+
+	return true;
 }
 
 bool Controller::update(time_t now)

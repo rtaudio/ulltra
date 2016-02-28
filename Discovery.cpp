@@ -66,6 +66,10 @@ bool Discovery::start(int broadcastPort)
 	NodeDevice::local4 = NodeDevice(AF_INET);
 	NodeDevice::local6 = NodeDevice(AF_INET6);
 
+	char hostname[32];
+	gethostname(hostname, 31);
+	m_hostname = hostname;
+
 	m_broadcastPort = broadcastPort;
 	m_updateCounter = 0;
 
@@ -77,7 +81,7 @@ bool Discovery::start(int broadcastPort)
 	LOG(logDEBUG) << "HWID: " << hwid;
 
 	initBroadcast(broadcastPort);
-    initMulticast(broadcastPort+1);
+    //initMulticast(broadcastPort+1);
 
 	return true;
 }
@@ -180,7 +184,7 @@ bool Discovery::processMessage(const NodeAddr& remote, const char *message, std:
 		auto ex = m_discovered.find(nd.id);
 		if (ex != m_discovered.end()) { // already there?
 			ex->second.sinceVitalSign = 0;
-			return;
+			return false;
 		}
 
 		LOG(logINFO) << "Discovered node " << nd;
@@ -314,12 +318,10 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 	char data[500];
 	char *dp = &data[0];
 
-	char hostname[32];
-	gethostname(hostname, 31);
 
 	// create 0-seperated string list
-	strcpy(dp, msg.c_str()); dp += strlen(dp) + 1;
-	strcpy(dp, hostname); dp += strlen(hostname) + 1;
+	strcpy(dp, msg.c_str()); dp += msg.length() + 1;
+	strcpy(dp, m_hostname.c_str()); dp += m_hostname.length() + 1;
 	strcpy(dp, getHwAddress().c_str());  dp += getHwAddress().length() + 1;
 
 	int dataLen = dp - &data[0];
@@ -336,36 +338,38 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 	else
 	{
 		// ipv4 udp broadcast
-		struct sockaddr_in addr4;
-		memset(&addr4, 0, sizeof(addr4));
-		addr4.sin_family = AF_INET;
-		addr4.sin_port = htons(m_broadcastPort);
-		addr4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-
-		if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&addr4, sizeof(addr4)) != dataLen) {
-			LOG(logERROR) << "Could not send broadcast message on INADDR_BROADCAST! " << lastError();
-			return false;
-		}
-
-		// Windows broadcast fix (for ipv4): send broadcast on each host addr
-		char ac[200];
-		if (gethostname(ac, sizeof(ac)) == -1)
-			return false;
-
-		struct hostent *phe = gethostbyname(ac);
-		if (phe == 0)
-			return false;
-
-		for (int i = 0; phe->h_addr_list[i] != 0; ++i) {
-			struct in_addr daddr;
-			memcpy(&daddr, phe->h_addr_list[i], sizeof(daddr));
-			addr4.sin_addr.s_addr = daddr.s_addr | (255) << (8 * 3);
-
-			std::string ip4(inet_ntoa(addr4.sin_addr));
-			//std::cout << "broadcast message to " << ip4 << ":" << ntohs(addr4.sin_port) << "" << std::endl;
+		if (m_socBroadcast4 != -1) {
+			struct sockaddr_in addr4;
+			memset(&addr4, 0, sizeof(addr4));
+			addr4.sin_family = AF_INET;
+			addr4.sin_port = htons(m_broadcastPort);
+			addr4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 
 			if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&addr4, sizeof(addr4)) != dataLen) {
-				LOG(logERROR) << "Could not send broadcast message  to " << ip4 << "!" << std::endl;
+				LOG(logERROR) << "Could not send broadcast message on INADDR_BROADCAST! " << lastError();
+				return false;
+			}
+
+			// Windows broadcast fix (for ipv4): send broadcast on each host addr
+			char ac[200];
+			if (gethostname(ac, sizeof(ac)) == -1)
+				return false;
+
+			struct hostent *phe = gethostbyname(ac);
+			if (phe == 0)
+				return false;
+
+			for (int i = 0; phe->h_addr_list[i] != 0; ++i) {
+				struct in_addr daddr;
+				memcpy(&daddr, phe->h_addr_list[i], sizeof(daddr));
+				addr4.sin_addr.s_addr = daddr.s_addr | (255) << (8 * 3);
+
+				std::string ip4(inet_ntoa(addr4.sin_addr));
+				//std::cout << "broadcast message to " << ip4 << ":" << ntohs(addr4.sin_port) << "" << std::endl;
+
+				if (sendto(m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&addr4, sizeof(addr4)) != dataLen) {
+					LOG(logERROR) << "Could not send broadcast message  to " << ip4 << "!" << std::endl;
+				}
 			}
 		}
 
@@ -374,7 +378,7 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 			if (sendto(m_socMulticast, data, dataLen, 0,
 				(struct sockaddr *)&m_multicastAddrSend, sizeof(m_multicastAddrSend))
 				!= dataLen) {
-				LOG(logERROR) << "sending multicast message failed! " << lastError();
+				LOG(logERROR) << "sending ipv6 multicast message on " << m_multicastAddrSend << " failed! " << lastError();
 				return false;
 			}
 		}
@@ -516,8 +520,9 @@ std::string Discovery::getHwAddress()
 
 bool Discovery::initMulticast(int port)
 {
-    const char *mcastaddr = "ff08::1"; // "FF01:0:0:0:0:0:0:1"; // all nodes // "FF01::1111";
+    const char *mcastaddr = "ff02::1"; // "FF01:0:0:0:0:0:0:1"; // all nodes // "FF01::1111";
 	//const char *mcastaddr = "FF01:0:0:0:0:0:0:1";
+	//const char *mcastaddr = "FF01::1111";
 
 	memset(&m_multicastAddrBind, 0, sizeof(m_multicastAddrBind));
 	memset(&m_multicastAddrSend, 0, sizeof(m_multicastAddrSend));
@@ -532,7 +537,7 @@ bool Discovery::initMulticast(int port)
 	
 
 	if (!isMulticast(&m_multicastAddrSend)) {
-		LOG(logERROR) << "This address does not seem a multicast address " << mcastaddr;
+		LOG(logERROR) << "This address does not seem a multicast address " << m_multicastAddrSend;
 		return false;
 	}
 
@@ -542,18 +547,19 @@ bool Discovery::initMulticast(int port)
         return false;
 
 
-	if (bind(m_socMulticast, (struct sockaddr *)&m_multicastAddrBind, sizeof(m_multicastAddrBind)) < 0) {
+	/*if (bind(m_socMulticast, (struct sockaddr *)&m_multicastAddrBind, sizeof(m_multicastAddrBind)) < 0) {
 		LOG(logERROR) << "bind error on port " << port;
 		return false;
 	}
 
-	LOG(logDEBUG) << "bound multicast socket to " << mcastaddr << " on port " << port;
+	LOG(logDEBUG) << "bound multicast socket to " << m_multicastAddrBind;
+	*/
 
 	if (joinGroup(m_socMulticast, 0, 8, &m_multicastAddrSend) <0) {
 		LOG(logERROR) << "failed to join multicast group!";
 		return false;
 	}
-
+	
 }
 
 

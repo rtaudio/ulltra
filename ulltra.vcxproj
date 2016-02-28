@@ -156,7 +156,7 @@
   <ItemGroup>
     <ClInclude Include="Controller.h" />
     <ClInclude Include="Discovery.h" />
-    <ClInclude Include="HttpClient.h" />
+    <ClInclude Include="JsonHttpClient.h" />
     <ClInclude Include="JsonHttpServer.h" />
     <ClInclude Include="LinkEval.h" />
     <ClInclude Include="LLLink.h" />
@@ -172,7 +172,7 @@
   <ItemGroup>
     <ClCompile Include="Controller.cpp" />
     <ClCompile Include="Discovery.cpp" />
-    <ClCompile Include="HttpClient.cpp" />
+    <ClCompile Include="JsonHttpClient.cpp" />
     <ClCompile Include="JsonHttpServer.cpp" />
     <ClCompile Include="LinkEval.cpp" />
     <ClCompile Include="LLLink.cpp" />

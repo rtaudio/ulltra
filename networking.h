@@ -22,6 +22,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <string.h>
 #ifndef SOCKET
 #define SOCKET int
 #endif
@@ -152,7 +153,7 @@ inline std::ostream & operator<<(std::ostream &os, const struct sockaddr_storage
 	char host[64], host2[64], serv[32];
 	int r = getnameinfo((const sockaddr*)s, sizeof(*s), host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST);
 	if (r == 0) {
-		if (getnameinfo((const sockaddr*)s, sizeof(*s), host2, sizeof(host2), serv, sizeof(serv), 0) == 0 && strcmp(host, host2) != 0)
+		if (getnameinfo((const sockaddr*)s, sizeof(*s), host2, sizeof(host2), serv, sizeof(serv), 0) == 0 && strcmp(host, host2) != 0 && strcmp("localhost", host2) != 0)
 			os << "[" << host << "]("<< host2 << "):" << serv;
 		else
 			os << "[" << host << "]:" << serv;
@@ -172,7 +173,18 @@ inline std::ostream & operator<<(std::ostream &os, const struct sockaddr_in* s) 
 inline std::ostream & operator<<(std::ostream &os, const struct addrinfo* s)
 {
 	const struct sockaddr_storage *ss = (sockaddr_storage *)s->ai_addr;
+
 	os << *ss;
+	if (s->ai_socktype == SOCK_STREAM) {
+		os << "tcp";
+	}
+	else if (s->ai_socktype == SOCK_DGRAM) {
+		os << "udp";
+	}
+	else if (s->ai_socktype == SOCK_RAW) {
+		os << "raw";
+	}
+
 
 	if (s->ai_canonname) {
 		os << "(" << s->ai_canonname << ")";

@@ -39,7 +39,7 @@ public:
 					LOG(logDEBUG) << "local ipv4 addresses:" << *res;
 				}
 				else if(family == AF_INET6) {
-					LOG(logDEBUG) << "local ipv6 addresses:" << addrStorage;
+					LOG(logDEBUG) << "local ipv6 addresses:" << *res;
 				} else {
 					LOG(logDEBUG) << "local addresses:" << *res;
 				}
@@ -106,6 +106,8 @@ private:
 	int m_broadcastPort;
 	SOCKET m_socBroadcast4, m_socMulticast;	
 	struct sockaddr_storage m_multicastAddrBind, m_multicastAddrSend;
+
+	std::string m_hostname;
 
 	uint32_t m_updateCounter;
 	time_t m_lastBroadcast, m_lastUpdateTime;

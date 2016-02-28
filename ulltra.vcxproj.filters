@@ -28,9 +28,6 @@
     <ClInclude Include="JsonHttpServer.h">
       <Filter>net\http</Filter>
     </ClInclude>
-    <ClInclude Include="HttpClient.h">
-      <Filter>net\http</Filter>
-    </ClInclude>
     <ClInclude Include="LLUdpLink.h">
       <Filter>net\LL</Filter>
     </ClInclude>
@@ -58,12 +55,12 @@
     <ClInclude Include="LLTcp.h">
       <Filter>net\LL</Filter>
     </ClInclude>
+    <ClInclude Include="JsonHttpClient.h">
+      <Filter>net\http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mongoose\mongoose.c">
-      <Filter>net\http</Filter>
-    </ClCompile>
-    <ClCompile Include="HttpClient.cpp">
       <Filter>net\http</Filter>
     </ClCompile>
     <ClCompile Include="JsonHttpServer.cpp">
@@ -93,6 +90,9 @@
     </ClCompile>
     <ClCompile Include="LLTcp.cpp">
       <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="JsonHttpClient.cpp">
+      <Filter>net\http</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

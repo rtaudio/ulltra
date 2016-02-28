@@ -130,25 +130,10 @@ bool LLUdpLink::onBlockingTimeoutChanged(uint64_t timeoutUs)
 	}
 
 
-#ifndef _WIN32
-	const int flags = fcntl(m_socketRx, F_GETFL, 0);
-	if ((flags & O_NONBLOCK) == kblock) {
-		LOG(logDEBUG) << "Kernel blocking mode of socket already set to " << kblock;
-		return true;
-	}
+	if (!socketSetBlocking(m_socketRx, kblock))
+		return false;
 
-	if (-1 == fcntl((SOCKET)m_socketRx, F_SETFL, kblock ? flags ^ O_NONBLOCK : flags | O_NONBLOCK)) {
-		LOG(logERROR) << "Cannot set socket kernel blocking to " << kblock << "!";
-		return false;
-	}
-#else
-	u_long iMode = kblock ? 0 : 1;
-	if (ioctlsocket((SOCKET)m_socketRx, FIONBIO, &iMode) != NO_ERROR)
-	{
-		LOG(logERROR) << "Cannot set socket kernel blocking to " << kblock << "!";
-		return false;
-	}
-#endif
+	return true;
 }
 
 bool LLUdpLink::setRxBlockingMode(BlockingMode mode)

@@ -1,13 +1,16 @@
 #include <string>
 #include "networking.h"
 
+
 #include "JsonHttpServer.h"
 
 
 #define MG_ENABLE_IPV6
 #include "mongoose/mongoose.h"
 
-
+// need to override LOG() macro:
+#undef LOG
+#define LOG(level) if (level > Log::ReportingLevel()) ; else Log().get(level)
 
 JsonHttpServer::JsonHttpServer()
 {
@@ -66,10 +69,15 @@ bool JsonHttpServer::start(int port)
 
 	nc = mg_bind(m_mgr, std::to_string(port).c_str(), JsonHttpServer::ev_handler);
 	if (!nc) {
+		LOG(logERROR) << "Failed to bind mongoose web server to port " << port;
 		return false;
 	}
 	mg_set_protocol_http_websocket(nc);
 	//mg_enable_multithreading(nc);
+
+	LOG(logDEBUG) << "started mongoose on port " << port;
+
+	return true;
 }
 
 
