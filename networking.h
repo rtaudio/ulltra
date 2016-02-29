@@ -115,6 +115,7 @@ inline int socketSelectTimeout(SOCKET &soc, uint64_t toUs)
     tv.tv_sec = (long)(toUs/1000000UL);
     tv.tv_usec = (long)(toUs - tv.tv_sec);
 
+
     FD_ZERO(&myset);
     FD_SET(soc, &myset);
 

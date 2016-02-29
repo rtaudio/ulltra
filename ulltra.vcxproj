@@ -103,7 +103,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;MG_ENABLE_IPV6;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>rtt</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -158,13 +158,13 @@
     <ClInclude Include="Discovery.h" />
     <ClInclude Include="JsonHttpClient.h" />
     <ClInclude Include="JsonHttpServer.h" />
+    <ClInclude Include="JsonNode.h" />
     <ClInclude Include="LinkEval.h" />
     <ClInclude Include="LLLink.h" />
     <ClInclude Include="LLTcp.h" />
     <ClInclude Include="LLUdpLink.h" />
     <ClInclude Include="mongoose\mongoose.h" />
     <ClInclude Include="networking.h" />
-    <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="rtt\rtt.h" />
     <ClInclude Include="SimpleUdpReceiver.h" />
     <ClInclude Include="UlltraProto.h" />
@@ -174,12 +174,12 @@
     <ClCompile Include="Discovery.cpp" />
     <ClCompile Include="JsonHttpClient.cpp" />
     <ClCompile Include="JsonHttpServer.cpp" />
+    <ClCompile Include="JsonNode.cpp" />
     <ClCompile Include="LinkEval.cpp" />
     <ClCompile Include="LLLink.cpp" />
     <ClCompile Include="LLTcp.cpp" />
     <ClCompile Include="LLUdpLink.cpp" />
     <ClCompile Include="mongoose\mongoose.c" />
-    <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="rtt\rtt.cpp" />
     <ClCompile Include="SimpleUdpReceiver.cpp" />
     <ClCompile Include="ulltra.cpp" />

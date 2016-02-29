@@ -1,9 +1,11 @@
 // ulltra.cpp : Definiert den Einstiegspunkt für die Konsolenanwendung.
 //
 
+#define _WINSOCKAPI_  // prevent winsock.h
 #include <rtt.h>
 #include"UlltraProto.h"
 #include "Controller.h"
+
 
 #ifndef _WIN32
 #include <unistd.h>

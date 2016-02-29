@@ -39,13 +39,19 @@ Controller::Controller(const Params &params)
     m_isRunning = true;
     RttThread::Routine updateThread(std::bind(&Controller::updateThreadMain, this, std::placeholders::_1));
     m_updateThread = new RttThread(updateThread);
+	
 
+	
+	m_server.on("hello", [this](const NodeAddr &addr, const JsonNode &request, JsonNode &response) {
+		response["name"] = m_discovery.getSelfName();
+		response["id"] = m_discovery.getHwAddress();
 
-	m_server.on("link_eval", [](const NodeAddr &addr, const JsonObject &request) {
-		std::string resp;
-
-		return resp;
+		return;
 	});
+	/*
+	m_server.on("link_eval", [](const NodeAddr &addr, const JsonObject &request, JsonObject &response) {
+	
+	});*/
 }
 
 
@@ -107,12 +113,22 @@ void Controller::updateThreadMain(void *arg)
 
         for(Discovery::NodeDevice &n : m_explicitNodes)
         {
-            if(!n.alive() && difftime(now, n.timeLastConnectionTry) > 10) {
-                StringMap hello;
-                hello["name"] = m_discovery.getSelfName();
-                hello["id"] = m_discovery.getHwAddress();
-                m_client.request(n.getAddr(UP::HttpControlPort), "hello", hello);
-            }
+			try {
+				if (!n.alive() && difftime(now, n.timeLastConnectionTry) > 10) {
+					n.timeLastConnectionTry = now;
+					JsonNode hello;
+					hello["name"] = m_discovery.getSelfName();
+					hello["id"] = m_discovery.getHwAddress();
+					auto resp = m_client.request(n.getAddr(UP::HttpControlPort), "hello", hello);
+					
+
+					resp["name"];
+					resp["id"];
+				}
+			} 
+			catch (...) {
+
+			}
         }
 
 #ifdef _WIN32

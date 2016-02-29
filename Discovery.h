@@ -31,7 +31,6 @@ public:
 
         /* reflects a non-existing node with a local address wildcard */
         NodeDevice(int family) {
-            sinceVitalSign = -1;
             if(family == -1)
                 return; // none node
             struct addrinfo hints, *res;

@@ -19,27 +19,12 @@ public:
 			statusString = msg;
 		}
 	};
-
-	struct Response {
-		int statusCode;
-		std::string statusString;
-		JsonObject *dataPtr;
-
-		Response() : dataPtr(0) {}
-		
-		Response(const std::string &str);
-
-		~Response() {
-			if(dataPtr)
-				free(dataPtr);
-		}
-	};
-
 	JsonHttpClient();
-	virtual ~JsonHttpClient();
-    const Response &request(const NodeAddr &host, std::string path, const std::string &body);
-    const Response &request(const NodeAddr &host, std::string path, const StringMap &data);
+	virtual ~JsonHttpClient();    
+	const JsonNode &request(const NodeAddr &host, const std::string &method, const JsonNode &data);
 
-	JsonHttpClient::Response m_lastResponse;
+private:
+	const JsonNode &request(const NodeAddr &host, const std::string &method, const std::string &body);
+	JsonNode m_lastData;
 };
 

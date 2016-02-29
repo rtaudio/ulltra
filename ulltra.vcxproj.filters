@@ -43,9 +43,6 @@
     <ClInclude Include="networking.h">
       <Filter>net</Filter>
     </ClInclude>
-    <ClInclude Include="NetworkManager.h">
-      <Filter>net</Filter>
-    </ClInclude>
     <ClInclude Include="Controller.h" />
     <ClInclude Include="rtt\rtt.h" />
     <ClInclude Include="UlltraProto.h" />
@@ -58,6 +55,7 @@
     <ClInclude Include="JsonHttpClient.h">
       <Filter>net\http</Filter>
     </ClInclude>
+    <ClInclude Include="JsonNode.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mongoose\mongoose.c">
@@ -73,9 +71,6 @@
       <Filter>net\LL</Filter>
     </ClCompile>
     <ClCompile Include="LinkEval.cpp">
-      <Filter>net</Filter>
-    </ClCompile>
-    <ClCompile Include="NetworkManager.cpp">
       <Filter>net</Filter>
     </ClCompile>
     <ClCompile Include="Discovery.cpp">
@@ -94,6 +89,7 @@
     <ClCompile Include="JsonHttpClient.cpp">
       <Filter>net\http</Filter>
     </ClCompile>
+    <ClCompile Include="JsonNode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore">

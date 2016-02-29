@@ -65,10 +65,11 @@ bool Discovery::start(int broadcastPort)
 	NodeDevice::local4 = NodeDevice(AF_INET);
 	NodeDevice::local6 = NodeDevice(AF_INET6);
 
+    // TODO: might detect ipv6! (see if can send to multicast address!)
     // prefer ipv6, if we actually have an IPv6 address
     // localAny will be used for bind() later
     if(NodeDevice::local6.addrStorage.ss_family == AF_INET6) {
-        NodeDevice::localAny = NodeDevice::local6;
+        NodeDevice::localAny = NodeDevice::local4;
     } else {
         NodeDevice::localAny = NodeDevice::local4;
     }
@@ -403,6 +404,9 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 
 /* create from a hostname or address */
 Discovery::NodeDevice::NodeDevice(const std::string &host) {
+	sinceVitalSign = -1;
+	timeLastConnectionTry = 0;
+
     int r;
 
     name = host;
