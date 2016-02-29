@@ -1,6 +1,10 @@
 #include "JsonNode.h"
-
+#include <iostream>
+#include <sstream>
 #include "mongoose/mongoose.h"
+
+
+const JsonNode JsonNode::undefined;
 
 JsonNode& JsonNode::operator[](const std::string &key) {
 	if (t == Type::Undefined) {
@@ -21,7 +25,7 @@ JsonNode& JsonNode::operator[](const std::string &key) {
 }
 
 
-inline JsonNode& JsonNode::operator[](const uint64_t &index) {
+JsonNode& JsonNode::operator[](const uint64_t &index) {
 	if (t == Type::Undefined) {
 		t = Type::Array;
 		arr = std::vector<JsonNode>(index + 1, JsonNode());
@@ -33,6 +37,25 @@ inline JsonNode& JsonNode::operator[](const uint64_t &index) {
 		}
 		return arr[index];
 	}
+}
+
+JsonNode const& JsonNode::operator[](const std::string &key) const {
+	if (t != Type::Object) {
+		return undefined;
+	}
+	auto v = obj.find(key);
+	if (v == obj.end()) {
+		return undefined;
+	}
+	return v->second;
+}
+
+
+JsonNode const& JsonNode::operator[](const uint64_t &index) const {
+	if (t != Type::Array || index >= arr.size()) {
+		return undefined;
+	}
+	return arr[index];
 }
 
 
@@ -70,28 +93,37 @@ int fillJson(JsonNode &jn, json_token *cur)
 
 	}
 
+	return 0;
+}
+
+int JsonNode::fill(json_token *tokens)
+{
+	clear();
+	return fillJson(*this, tokens);
 }
 
 bool JsonNode::parse(const std::string &str)
 {
-	clear();
 	json_token tokens[400];
 	int n = parse_json(str.c_str(), str.length(), tokens, sizeof(tokens) / sizeof(tokens[0]));
 	if (n <= 0) {
 		return false;
 	}
-	fillJson(*this, tokens);
+	fill(tokens);
 	return true;
 }
 
 std::ostream& operator<< (std::ostream& stream, const JsonNode& jd) {
+	static const std::string empty("");
+	static const std::string sep(",");
+
 	switch (jd.t) {
 	case JsonNode::Type::Number: stream << jd.num; break;
 	case JsonNode::Type::String: stream << "\"" << jd.str << "\""; break;
 	case JsonNode::Type::Object:
 		stream << "{";
 		for (auto it = jd.obj.begin(); it != jd.obj.end(); it++) {
-			stream << "\"" << it->first << "\":" << it->second << (it == --jd.obj.end() ? "" : ",");
+			stream << "\"" << it->first << "\":" << it->second << (it == --jd.obj.end() ? empty : sep);
 		}
 		stream << "}";
 		break;
@@ -100,9 +132,12 @@ std::ostream& operator<< (std::ostream& stream, const JsonNode& jd) {
 	case JsonNode::Type::Array:
 		stream << "[";
 		for (auto it = jd.arr.begin(); it != jd.arr.end(); it++) {
-			stream << *it << (it == --jd.arr.end() ? "" : ",");
+			stream << *it << (it == --jd.arr.end() ? empty : sep);
 		}
 		stream << "]";
+
+	case JsonNode::Type::Undefined:
+		stream << "null";
 	}
 	return stream;
 }

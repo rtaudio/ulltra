@@ -15,8 +15,11 @@ class Discovery
 public:
 	class NodeDevice {
 	public:
-        inline bool exists() const { return id.length() > 0 || name.length() > 0; }
+		inline bool exists() const { return id.length() > 0 || name.length() > 0; }
+		inline bool known() const { return id.length() > 2; }
         inline bool alive() const { return (sinceVitalSign >= 0 && sinceVitalSign < (UP::BroadcastInterval*2)); }
+
+		inline uint64_t nextRpcId() const { return ++m_rpcId; }
 
         inline const std::string & getId() const { return id; }
 		inline const std::string & getName() const { return name; }
@@ -62,10 +65,10 @@ public:
 
 		std::string name;
 		std::string id;
-
 		struct sockaddr_storage addrStorage;
         time_t sinceVitalSign;//seconds
         time_t timeLastConnectionTry;//seconds
+		mutable uint64_t m_rpcId;
 
 		const struct sockaddr_storage getAddr(int port) const;
 		friend std::ostream & operator<<(std::ostream &os, const NodeDevice& n);
@@ -114,6 +117,8 @@ private:
 	struct sockaddr_storage m_multicastAddrBind, m_multicastAddrSend;
 
 	std::string m_hostname;
+
+	
 
 
 	uint32_t m_updateCounter;

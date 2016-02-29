@@ -21,10 +21,11 @@ public:
 	};
 	JsonHttpClient();
 	virtual ~JsonHttpClient();    
-	const JsonNode &request(const NodeAddr &host, const std::string &method, const JsonNode &data);
+	const JsonNode &rpc(const SocketAddress &host, const std::string &id, const std::string &method, const JsonNode &params);
 
 private:
-	const JsonNode &request(const NodeAddr &host, const std::string &method, const std::string &body);
+	const JsonNode &request(const SocketAddress &host, const std::string &method, const std::string &body);
 	JsonNode m_lastData;
+	int m_connectTimeout;
 };
 

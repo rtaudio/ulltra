@@ -34,6 +34,9 @@ public:
 
 	static const int HttpControlPort = 26080;
 
+	static const int HttpConnectTimeout = 0;// milliseconds
+	static const int HttpResponseTimeout = 1200;// milliseconds
+
 	static const std::string LatencyTestStartToken;
 
 
@@ -249,7 +252,7 @@ inline void spinWait(uint64_t usec)
 // Log, version 0.1: a simple logging class
 enum TLogLevel {
 	logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1,
-	logDEBUG2, logDEBUG3, logDEBUG4
+	logDEBUG2, logDEBUG3, logDEBUG4, logDebugHttp
 };
 
 
@@ -263,12 +266,12 @@ public:
 	}
 
 	inline std::ostream& get(TLogLevel level = logINFO) {
-		std::cout << std::string(level > logDEBUG ? level - logDEBUG : 0, '\t');
+		std::cout << std::string(level > logDEBUG ? (level - logDEBUG)*2 : 0, ' ');
 		return std::cout;
 	}
 
 	inline static TLogLevel ReportingLevel() {
-		return logDEBUG4;
+		return logDEBUG3; // logDebugHttp;
 	}
 };
 

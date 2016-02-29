@@ -53,7 +53,7 @@ int main()
 #endif
 	}
 
-	LOG(logINFO) << "existing..." << std::endl;
+	LOG(logINFO) << "exiting..." << std::endl;
     return 0;
 }
 

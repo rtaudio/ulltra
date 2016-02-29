@@ -30,5 +30,17 @@ private:
 	bool m_isRunning;
 	RttThread *m_updateThread;
 
-    std::vector<Discovery::NodeDevice> m_explicitNodes;
+	std::vector<Discovery::NodeDevice> m_explicitNodes;
+
+	std::vector<Discovery::NodeDevice> m_helloNodes;
+
+	std::map<std::string,Discovery::NodeDevice> m_presentNodes;
+
+	bool firstEncounter(const Discovery::NodeDevice &node);
+
+
+	JsonNode const& rpc(const Discovery::NodeDevice &node, std::string const& method, JsonNode const& params);
+
+
+	Discovery::NodeDevice const& validateOrigin(const SocketAddress &addr, const std::string &id);
 };

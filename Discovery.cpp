@@ -88,7 +88,7 @@ bool Discovery::start(int broadcastPort)
 		LOG(logERROR) << "Not hardware id available!";
 		return false;
 	}
-	LOG(logDEBUG) << "HWID: " << hwid;
+	LOG(logDEBUG4) << "HWID: " << hwid;
 
 	initBroadcast(broadcastPort);
     //initMulticast(broadcastPort+1);
@@ -406,6 +406,7 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 Discovery::NodeDevice::NodeDevice(const std::string &host) {
 	sinceVitalSign = -1;
 	timeLastConnectionTry = 0;
+	m_rpcId = 0;
 
     int r;
 
@@ -433,6 +434,7 @@ Discovery::NodeDevice::NodeDevice(const std::string &host) {
 
 Discovery::NodeDevice::NodeDevice(const sockaddr_storage &s)
 {
+	m_rpcId = 0;
     sinceVitalSign = -1;
     addrStorage = s;
 }
@@ -494,7 +496,7 @@ std::string Discovery::getHwAddress()
 			if (infile.good()) {
 				std::getline(infile, addr);
 				closedir(dir);
-				LOG(logDEBUG) << "Using " << ent->d_name << "'s address";
+				LOG(logDEBUG4) << "Using " << ent->d_name << "'s address";
 				return addr;
 			}
 		}		

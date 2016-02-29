@@ -106,45 +106,73 @@ inline bool socketSetBlocking(SOCKET &soc, bool block) {
 	return true;
 }
 
-inline int socketSelectTimeout(SOCKET &soc, uint64_t toUs)
+inline int socketConnectTimeout(SOCKET &soc, uint64_t toUs)
 {
-    fd_set myset;
-    struct timeval tv;
-    int res;
+	fd_set myset;
+	struct timeval tv;
+	int res;
 
-    tv.tv_sec = (long)(toUs/1000000UL);
-    tv.tv_usec = (long)(toUs - tv.tv_sec);
+	tv.tv_sec = (long)(toUs / 1000000UL);
+	tv.tv_usec = (long)(toUs - tv.tv_sec);
 
 
-    FD_ZERO(&myset);
-    FD_SET(soc, &myset);
+	FD_ZERO(&myset);
+	FD_SET(soc, &myset);
 
-    res = select(soc+1/* this is ignored on windows*/, NULL, &myset, NULL, &tv);
+	res = select(soc + 1/* this is ignored on windows*/, NULL, &myset, NULL, &tv);
 
-    if(res == -1) {
-        LOG(logERROR) << "error while select: " << lastError();
-        return -1;
-    }
+	if (res == -1) {
+		LOG(logERROR) << "error while select: " << lastError();
+		return -1;
+	}
 
-    if(res == 0) {
-        LOG(logDEBUG1) << "timeout during select";
-        return 0;
-    }
+	if (res == 0) {
+		LOG(logDEBUG1) << "timeout during connect select";
+		return 0;
+	}
 
-    socklen_t olen = sizeof(int);
-    int o = -1;
-    if (getsockopt(soc, SOL_SOCKET, SO_ERROR, (char*)(&o), &olen) < 0) {
-        LOG(logERROR) << "Error in getsockopt() " << lastError();
-        return -1;
-    }
+	socklen_t olen = sizeof(int);
+	int o = -1;
+	if (getsockopt(soc, SOL_SOCKET, SO_ERROR, (char*)(&o), &olen) < 0) {
+		LOG(logERROR) << "Error in getsockopt() " << lastError();
+		return -1;
+	}
 
-    // some error occured
-    if(o != 0) {
-        return -1;
-    }
+	// some error occured
+	if (o != 0) {
+		return -1;
+	}
 
-    return res;
- }
+	return res;
+}
+
+inline int socketSelect(SOCKET &soc, uint64_t toUs)
+{
+	fd_set myset;
+	struct timeval tv;
+	int res;
+
+	tv.tv_sec = (long)(toUs / 1000000UL);
+	tv.tv_usec = (long)(toUs - tv.tv_sec);
+
+
+	FD_ZERO(&myset);
+	FD_SET(soc, &myset);
+
+	res = select(soc+1/* this is ignored on windows*/, &myset, NULL, NULL, &tv);
+
+	if (res == -1) {
+		LOG(logERROR) << "error while select: " << lastError();
+		return -1;
+	}
+
+	if (res == 0) {
+		LOG(logDEBUG1) << "timeout during select";
+		return 0;
+	}
+
+	return res;
+}
 
 
 
@@ -217,6 +245,11 @@ union SocketAddress {
             sin.sin_port = htons(port);
     }
 
+	inline int getFamily() const { return sa.sa_family; }
+	inline int getPort() const {
+		return ntohs((sa.sa_family == AF_INET6) ? sin6.sin6_port : sin.sin_port);
+	}
+
     inline std::string toString() const {
         char host[64], serv[32];
         int r = getnameinfo((const sockaddr*)&sin6, sizeof(sin6), host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV);
@@ -231,5 +264,19 @@ union SocketAddress {
             return std::string(host) + ":" + std::string(serv);
         }
     }
+
+
+	//inline friend std::ostream & operator<<(std::ostream &os, const SocketAddress& s) { return os << s.toString(); }
 };
+
+inline std::ostream & operator<<(std::ostream &os, const SocketAddress& s) { return os << s.toString(); }
+
+inline bool operator==(const SocketAddress& s1, const SocketAddress& s2) {
+	return s1.getFamily() == s2.getFamily()
+		&& memcmp(&s1, &s2, (s1.getFamily() == AF_INET6) ? sizeof(s1.sin6) : sizeof(s1.sin)) == 0;
+}
+
+inline bool operator!=(const SocketAddress& s1, const SocketAddress& s2) {
+	return !(s1 == s2);
+}
 
