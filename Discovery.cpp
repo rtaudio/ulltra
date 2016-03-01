@@ -339,7 +339,7 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 
 	if (!isMulticast) {
 		auto na = node.getAddr(m_broadcastPort);
-		bool ipv6 = (na.ss_family == AF_INET6);
+		bool ipv6 = (na.getFamily() == AF_INET6);
 		if (sendto(ipv6 ? m_socMulticast : m_socBroadcast4, data, dataLen, 0, (struct sockaddr*)&na, sizeof(na)) != dataLen) {
 			LOG(logERROR) << "Could not send broadcast message to " << node << lastError();
 			return false;
@@ -439,7 +439,7 @@ Discovery::NodeDevice::NodeDevice(const sockaddr_storage &s)
     addrStorage = s;
 }
 
-const struct sockaddr_storage Discovery::NodeDevice::getAddr(int port) const {
+const SocketAddress Discovery::NodeDevice::getAddr(int port) const {
     struct sockaddr_storage s = addrStorage;
 
 	if (s.ss_family == AF_INET6) {		

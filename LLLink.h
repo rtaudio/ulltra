@@ -11,7 +11,7 @@ public:
 	virtual ~LLLink();
 
 	/* common */
-	virtual bool connect(const LinkEndpoint &addr) = 0;
+	virtual bool connect(const LinkEndpoint &addr, bool isMaster) = 0;
 	virtual void toString(std::ostream& stream) const = 0;
 
 	/* rx */
@@ -25,6 +25,7 @@ public:
 
 	inline friend std::ostream& operator<< (std::ostream& stream, const LLLink& lll) {
 		lll.toString(stream);
+		return stream;
 	}
 protected:
 	uint64_t m_receiveBlockingTimeoutUs;

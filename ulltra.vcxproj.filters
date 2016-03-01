@@ -56,6 +56,9 @@
       <Filter>net\http</Filter>
     </ClInclude>
     <ClInclude Include="JsonNode.h" />
+    <ClInclude Include="LLCustomBlock.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mongoose\mongoose.c">
@@ -90,6 +93,9 @@
       <Filter>net\http</Filter>
     </ClCompile>
     <ClCompile Include="JsonNode.cpp" />
+    <ClCompile Include="LLCustomBlock.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore">

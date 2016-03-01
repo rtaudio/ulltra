@@ -4,8 +4,6 @@
 #include<iostream>
 
 
-const std::string UlltraProto::LatencyTestStartToken = "LATENCY_TEST_START";
-
 #ifdef _WIN32
 LARGE_INTEGER UlltraProto::timerFreq;
 VOID(WINAPI*UlltraProto::myGetSystemTime)(_Out_ LPFILETIME);

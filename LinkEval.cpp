@@ -25,44 +25,12 @@ struct TestDataHeader {
 
 typedef std::function<LLUdpLink *(LinkEndpoint end)> LinkGenerator;
 
-void runTestAsMaster(const Discovery::NodeDevice &nd, const LinkGenerator &linkGen);
-void runTestAsSlave(const Discovery::NodeDevice &nd, const LinkGenerator &linkGen);
+void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName);
+void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link);
 
 
 LinkEval::LinkEval()
 {
-    std::map<std::string, LinkGenerator> linkCandidates;
-	/*
-	linkCandidates["udp"] = [](const NodeAddr &other) {
-		new LLUdpLink();
-	};
-
-    
-    transmitters["udp"] = [](const NodeAddr &other) {
-        auto lls = new LLSender(other, UlltraProto::LinkEvalPort);
-        return lls;
-    };
-
-    transmitters["udp_qos"] = [](const NodeAddr &other) {
-        auto lls = new LLSender(other, UlltraProto::LinkEvalPort);
-        //lls->enableQos();
-        return lls;
-    };
-
-    transmitters["udp_qos"] = [](const NodeAddr &other) {
-        //auto lls = new LLSenderTCP(other, UlltraProto::LinkEvalPort);
-        //lls->enableQos();
-        return lls;
-    };
-
-    auto initReceiver = [](const NodeAddr &other) {
-        auto llr = new LLReceiver(other, UlltraProto::LinkEvalPort);
-        llr.setBlocking(BlockingMode::UserBlock);
-        return llr;
-    };
-
-    std::vector<LinkCandidate> linkCandidates;
-    */
 }
 
 bool LinkEval::init()
@@ -78,60 +46,62 @@ void LinkEval::update(time_t now)
 {
 }
 
-void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
+void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd, bool master)
 {
-	LOG(logDEBUG) << "Starting link evaluation (MASTER) with node " << nd;
+	int i = 0;
+	for (auto &c : candidates) {
+		LOG(logINFO) << "setup evaluation of " << c.first << "...";
+		LLLink *ll = c.second();
+		auto &testName = c.first;
 
-	std::function<void(void)> f([this, &nd]() {
-		//LLSender lls(nd.addr, UlltraProto::LinkEvalPort);
-		//LLReceiver llr(UlltraProto::LinkEvalPort, 4000);
-		//LLRxGenerator
+		usleep(1000 * 200);
 
-		// linux performs better with user space blocking! (at least on non RT)
-#ifndef _WIN32
-		//llr.setBlocking(BlockingMode::UserBlock);
-#else
-		//llr.setBlocking(BlockingMode::KernelBlock);
-#endif
+		do {
+			if (!ll) {
+				LOG(logERROR) << "link generation for " << testName << " failed!";
+				break;
+			}
 
-		//runTestAsMaster(nd, tx, rx);
+			if (!ll->connect(nd.getAddr(UP::LinkEvalPort+i), master)) {
+				LOG(logERROR) << "Connection failed! (port " << (UP::LinkEvalPort+i) << ")";
+				break;
+			}
 
-	});
+			if (!ll->setBlockingTimeout(master ? 2000 : (2000*5))) {
+				LOG(logERROR) << "Failed to set blocking mode!";
+				break;
+			}
 
-	{RttThread t(f, true); }
-	LOG(logINFO) << "latency test thread ended";
+			LOG(logINFO) << "evaluating [" << (master ? "MASTER" : "SLAVE") << "] me  <-- " << testName << ":" << *ll << " -->  " << nd.getName() << " [" << (!master ? "MASTER" : "SLAVE") << "]";
+
+			if (master) {
+				// discard any queued packets
+				ll->flushReceiveBuffer();
+			}
+
+			std::function<void(void)> f([this, &nd, master, ll, testName]() {
+				if (master)
+					runTestAsMaster(nd, ll, testName);
+				else
+					runTestAsSlave(nd, ll);
+			});
+
+			{RttThread t(f, true); }
+
+		} while (0);
+				
+
+		delete ll;
+		i++;
+	}
 }
 
-void LinkEval::latencyTestSlave(const Discovery::NodeDevice &nd)
-{
-	LOG(logDEBUG) << "Starting link evaluation (SLAVE) for node " << nd << " (MASTER)";
 
-	std::function<void(void)> f([this, &nd]() {
-		/*LLSender lls(nd.addr, UlltraProto::LinkEvalPort);
-		LLReceiver llr(UlltraProto::LinkEvalPort, UlltraProto::LinkEvalTimeoutMS * 1000);
-
-
-		// TODO: need to check if user block performs better on linux!
-#ifndef _WIN32
-		llr.setBlocking(BlockingMode::UserBlock);
-#else
-		llr.setBlocking(BlockingMode::KernelBlock);
-#endif
-
-		runTestSlave(nd, tx, rx); */
-	});
-
-	{ RttThread t(f, true); }
-	LOG(logDEBUG1) << "Link evaluation ended";
-}
-
-void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
+void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName)
 {
 	static const int nPasses = 200;
 	static const int blockSizes[] = {
-		//32, 64, 128, 256, 512, 1024, //, 2048
-		//32
-		1024
+		32, 64, 128, 256, 512, 1024, //, 2048
 	};
 
 	
@@ -143,7 +113,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 	int packetsSend = 0, packetsReceived = 0;
 	uint64_t bytesSentTotal = 0;
 	int bytesInFlight = 0, packetsInFlight = 0;
-
+	uint64_t tLastReceive = 0;
 
 #ifdef _DEBUG
 	std::vector<std::vector<float>> statMat(nBlockSizes, std::vector<float>(nPasses + 1, 0.0f));
@@ -159,9 +129,6 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 		dataBlocks[i] = 1 + (rand() % 254); // dont send zeros (0 means end of test)
 	}
 
-	// discard any queued packets
-	link->flushReceiveBuffer();
-
 	for (int bsi = 0; bsi < sizeof(blockSizes) / sizeof(*blockSizes); bsi++) {
 		for (int pi = 0; pi < nPasses; pi++) {
 			int blockSize = blockSizes[bsi];
@@ -169,10 +136,11 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 			uint64_t now = UlltraProto::getSystemTimeNanoSeconds();
 
 			bool skipSend = false;
-			if (bytesInFlight > 512) {
+			if (bytesInFlight > 1024*2) {
 				skipSend = true;
 			}
 
+			
 
 			if (!finalPass && !skipSend) {
 				TestDataHeader tdh;
@@ -195,8 +163,8 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 			}
 
 			const uint8_t *receivedData;
-			int recvLen;
-			while ((receivedData = link->receive(recvLen)))
+			int recvLen = 0;
+			while (packetsInFlight > 0 && (receivedData = link->receive(recvLen)))
 			{
 				if (recvLen < sizeof(TestDataHeader)) {
 					LOG(logINFO) << "Received packet with invalid size " << recvLen << ", ignoring.";
@@ -207,7 +175,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 
 				// dont expect packages to arrive in-order, just check when it was sent!
 				if (tdh->testRunKey != key) {
-					LOG(logINFO) << "Received with different session key, ignoring.";
+					LOG(logINFO) << "Received with different session key, ignoring. (sent " << ((UlltraProto::getSystemTimeNanoSeconds() - tdh->tSent)/1000) << " us ago)";
 					continue;
 				}
 
@@ -220,14 +188,26 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 				packetsReceived++;
 				packetsInFlight--;
 				bytesInFlight -= (int)recvLen;
+				tLastReceive = now;
 
-				uint64_t sentAt = *reinterpret_cast<const uint64_t*>(&receivedData[1 + sizeof(int)]);
-				if (sentAt > 0 && statMatIdx[tdh->blockSizeIndex] < nPasses) {
-					//uint64_t rtt = UP::getMicroSeconds() - sentAt;
-					uint64_t rtt = UP::getSystemTimeNanoSeconds() - sentAt;
+				if (tdh->tSent > 0 && statMatIdx[tdh->blockSizeIndex] < nPasses) {
+					//uint64_t rtt = UP::getMicroSeconds() - tdh->tSent;
+					uint64_t rtt = UP::getSystemTimeNanoSeconds() - tdh->tSent;
 					if (rtt > 0)
 						statMat[tdh->blockSizeIndex][statMatIdx[tdh->blockSizeIndex]++] = rtt;
 				}
+			}
+
+			if (recvLen == -1) {
+				LOG(logINFO) << "Link broke, cancelling!";
+				cancel = true;
+				break;
+			}
+
+			if ((now - tLastReceive) > 1000 * 1000 * 1000) {
+				LOG(logINFO) << "Not receiving anything, cancelling!";
+				cancel = true;
+				break;
 			}
 
 			if (cancel)
@@ -239,19 +219,15 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 
 	delete dataBlocks;
 
-	// let slave know that its over
-	uint8_t z[32];
-	memset(z, 0, sizeof(z));
-	*reinterpret_cast<int*>(z + 1) = key;
-	link->send(z, sizeof(z));
+	// let slave know that its ove
+	TestDataHeader tdh;
+	memset(&tdh, 0, sizeof(tdh));
+	tdh.testRunKey = key;
+	link->send((const uint8_t*)&tdh, sizeof(tdh));
 
 	LOG(logDEBUG) << "Packets send: " << packetsSend << " ( " << ((float)bytesSentTotal / 1000.0f / 1000.0f) << " MB), recv: " << packetsReceived;
 
 
-	if (cancel) {
-		LOG(logDEBUG) << "Test cancelled due to errors!";
-		return;
-	}
 
 	float packetLoss = 1.0f - (float)(packetsReceived) / (float)packetsSend;
 
@@ -270,16 +246,21 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link)
 	char hostname[32];
 	gethostname(hostname, 31);
 
-	std::string fn("./out/latencies_" + nd.getName() + "_" + std::to_string(UlltraProto::getMicroSeconds()) + ".m");
+	std::string fn("./out/"+ testName+"_" + nd.getName() + "_" + std::to_string(UlltraProto::getMicroSeconds()) + ".m");
 	std::ofstream f(fn);
 	if (f.good()) {
 		f << "figure; l=(" << statMat << "');" << std::endl;
 		f << "  plot(medfilt1(l, 25), '-*', 'LineWidth', 4); hold on;  grid on; ylim([1000, 10000]*1000);" << std::endl;
 		f << " ax = gca; ax.ColorOrderIndex = 1; plot(l, 'LineWidth', 1); " << std::endl;
-		f << "legend(" << legend << "); title('latency " << hostname << " <-[" << link << "]-> " << nd << "'); ";
+		f << "legend(" << legend << "); title('latency " << hostname << " <-[" << *link << "]-> " << nd << "'); ";
 		LOG(logDEBUG) << "data written to " << fn;
 	}
 #endif	
+
+	if (cancel) {
+		LOG(logDEBUG) << "Test cancelled due to errors!";
+		return;
+	}
 }
 
 
@@ -298,9 +279,18 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 		len = 0;
 		for (int i = 0; i <= MaxTimeouts; i++) {
 			data = link->receive(len);
+
+			if (len == -1) {
+				LOG(logINFO) << "Link broke, cancelling!";
+				break;
+			}
+
 			if (data) break;
 			LOG(logDEBUG) << "Timeout during latency test, retrying.";
 		}
+
+		if (len == -1)
+			break;
 
 		if (!data) {
 			LOG(logERROR) << "Reached max number of " << MaxTimeouts << " timeouts after receiving " << nPackets << " packets, canceling.";
@@ -318,7 +308,7 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 			key = tdh->testRunKey;
 		}
 		else if (key != tdh->testRunKey) {
-			LOG(logINFO) << "Received with different session key, ignoring.";
+			LOG(logINFO) << "Received with different session key, ignoring. (sent " << ((UlltraProto::getSystemTimeNanoSeconds() - tdh->tSent) / 1000) << " us ago)";
 			continue;
 		}		
 
@@ -329,8 +319,8 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 
 		nPackets++;
 
-		if (link->send(data, len) != len) { // just send it back
-			LOG(logERROR) << "send failed, cancelling!";
+		if (!link->send(data, len)) { // just send it back
+			LOG(logERROR) << "send failed, cancelling after " << nPackets << " packets " << *link;
 			break;
 		}
 		//LOG(logDEBUG1) << "bounced " << len;

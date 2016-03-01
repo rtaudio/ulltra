@@ -7,6 +7,8 @@
 #include "JsonHttpClient.h"
 #include <rtt.h>
 
+class LLLink;
+
 class Controller
 {
 public:
@@ -18,6 +20,14 @@ public:
 	bool init();
 
 	inline bool isRunning() const { return m_isRunning; }
+
+	inline bool isSlave(Discovery::NodeDevice const& other) {
+		return other.getId().length() > 2 && other.getId() > m_discovery.getHwAddress();
+	}
+
+	inline bool isInPresentList(Discovery::NodeDevice const& other) {
+		return m_presentNodes.find(other.getId()) != m_presentNodes.end();
+	}
 
 private:
 	void updateThreadMain(void *arg);
@@ -34,6 +44,8 @@ private:
 
 	std::vector<Discovery::NodeDevice> m_helloNodes;
 
+	std::vector<std::function<void(void)>> m_asyncActions;
+
 	std::map<std::string,Discovery::NodeDevice> m_presentNodes;
 
 	bool firstEncounter(const Discovery::NodeDevice &node);
@@ -43,4 +55,8 @@ private:
 
 
 	Discovery::NodeDevice const& validateOrigin(const SocketAddress &addr, const std::string &id);
+
+	LLLinkGeneratorSet m_linkCandidates;
+
+	void defaultLinkCandidates();
 };

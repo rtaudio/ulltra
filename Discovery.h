@@ -28,6 +28,8 @@ public:
 
         /* create from a hostname or address (used for explicit host discovery) */
         NodeDevice(const std::string &host);
+
+		const SocketAddress getAddr(int port) const;
 	private:
         friend class Discovery;
         friend class Controller;
@@ -70,7 +72,7 @@ public:
         time_t timeLastConnectionTry;//seconds
 		mutable uint64_t m_rpcId;
 
-		const struct sockaddr_storage getAddr(int port) const;
+
 		friend std::ostream & operator<<(std::ostream &os, const NodeDevice& n);
 		friend std::ostream & operator<<(std::ostream &os, const NodeDevice* n);
 	};

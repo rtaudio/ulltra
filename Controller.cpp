@@ -34,7 +34,7 @@ Controller::Controller(const Params &params)
         //m_discovery.addExplicitHosts(nh);
     }
 
-
+	defaultLinkCandidates();
 
     m_isRunning = true;
     RttThread::Routine updateThread(std::bind(&Controller::updateThreadMain, this, std::placeholders::_1));
@@ -57,7 +57,8 @@ Controller::Controller(const Params &params)
 				Discovery::NodeDevice nd(*(sockaddr_storage*)&addr);
 				nd.id = clienId;
 				nd.name = request["name"].str;
-				m_helloNodes.push_back(nd);
+				firstEncounter(nd);
+				//m_helloNodes.push_back(nd);
 			}
 		}
 
@@ -78,6 +79,26 @@ Controller::Controller(const Params &params)
 		return;
 	});
 
+
+	
+	m_server.on("link_choose", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, id);
+		if (!n.exists()) {
+			response["error"] = "Who are you?";
+			return;
+		}
+
+		m_asyncActions.push_back([this, n]() {
+			m_linkEval.chooseLinkCandidate(m_linkCandidates, n, false);
+		});
+
+		int i = 0;
+		for (auto &c : m_linkCandidates) {
+			response["candidates"][i++] = c.first;
+		}
+	});
+
+
 	m_server.on("link_eval", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
 		auto n = validateOrigin(addr, id);
 		if (!n.exists()) {
@@ -85,13 +106,25 @@ Controller::Controller(const Params &params)
 			return;
 		}
 
-		if (request["candidate"].str.empty()) {
+		auto cand = request["candidate"].str;
+
+		if (cand.empty()) {
 			LOG(logERROR) << addr << " requested link eval without specifying a candidate! " << request;
 			response["error"] = "Specifiy candidate";
 			return;
 		}
 
-		m_linkEval.latencyTestSlave(n);
+		if (m_linkCandidates.find(cand) == m_linkCandidates.end()) {
+			LOG(logERROR) << addr << " requested link eval of unknown " << cand;
+			response["error"] = "Unknown candidate " + cand;
+			return;
+		}
+
+		m_asyncActions.push_back([this, n]() {
+			m_linkEval.chooseLinkCandidate(m_linkCandidates, n, false);
+		});
+
+		response["candidates"] = "ok";
 	});
 }
 
@@ -99,6 +132,11 @@ Controller::Controller(const Params &params)
 Controller::~Controller()
 {
 	m_isRunning = false;
+	if (!m_updateThread->Join(4000)) {
+		LOG(logINFO) << "joining update thread failed, killing.";
+		m_updateThread->Kill();
+		LOG(logDEBUG1) << "thread killed!";
+	}
 	delete m_updateThread;
 }
 
@@ -136,15 +174,29 @@ Discovery::NodeDevice const& Controller::validateOrigin(const SocketAddress &add
 
 void Controller::updateThreadMain(void *arg)
 {
-	//m_discovery.onNodeDiscovered = std::bind(&Controller::firstEncounter, this, std::placeholders::_1); 
+	// we use 2-stage discovery: after actual discovery must say hello over tcp
+	// any inital actions are done in on("hello") handler
+	m_discovery.onNodeDiscovered = [this](const Discovery::NodeDevice &node) {
+		try {
+			if (isSlave(node)) {
+				auto resp = rpc(node, "hello", JsonNode({
+					"name", m_discovery.getSelfName(),
+					"id", m_discovery.getHwAddress()
+				}));
+				firstEncounter(node);
+			}
+		}
+		catch (...) {
+
+		}
+	};
+		
+		//std::bind(&Controller::firstEncounter, this, std::placeholders::_1);
 	
     m_discovery.onNodeLost = [this](const Discovery::NodeDevice &node) {
 		m_presentNodes.erase(node.getId());
     };
 
-    m_discovery.on(UlltraProto::LatencyTestStartToken, [this](const Discovery::NodeDevice &node) {
-        m_linkEval.latencyTestSlave(node);
-    });
 
     if (!m_discovery.start(UlltraProto::DiscoveryPort)) {
         m_isRunning = false;
@@ -172,13 +224,27 @@ void Controller::updateThreadMain(void *arg)
     while (m_isRunning) {
         now = time(NULL);
 
+		if (m_helloNodes.size()) {
+			for (auto &n : m_helloNodes) {
+				firstEncounter(n);
+			}
+			m_helloNodes.clear();
+		}
+
+
+		if (m_asyncActions.size()) {
+			for (auto &f : m_asyncActions) {
+				f();
+			}
+			m_asyncActions.clear();
+		}
+
+
         m_discovery.update(now);
         //m_linkEval.update(now);
         m_server.update();
 
-		for (auto &n : m_helloNodes) {
-			firstEncounter(n);
-		}
+
 
         for(Discovery::NodeDevice &n : m_explicitNodes)
         {
@@ -240,19 +306,18 @@ bool Controller::firstEncounter(const Discovery::NodeDevice &node)
 
 	LOG(logINFO) << "first encounter with " << node;
 
-	if (node.getId() > m_discovery.getHwAddress()) {
+	if (isSlave(node)) {
 		LOG(logINFO) << "initiating link evaluation to node " << node;
 
 		try {
-			auto res = rpc(node, "link_eval", JsonNode({"candidate", "udp"}));
-			m_linkEval.latencyTestMaster(node);
+			auto res = rpc(node, "link_choose", JsonNode({}));
+			m_asyncActions.push_back([this, node]() {
+				m_linkEval.chooseLinkCandidate(m_linkCandidates, node, true);
+			});			
 		}
 		catch (const JsonHttpClient::Exception &ex) {
 			LOG(logDEBUG1) << "request failed: " << ex.statusString;
 		}
-
-		// request a latency test start
-		m_linkEval.latencyTestMaster(node);
 	}
 
 	return true;
@@ -263,4 +328,70 @@ JsonNode const& Controller::rpc(Discovery::NodeDevice const& node, std::string c
 	// auto-retry!
 	auto id = m_discovery.getHwAddress() + '-' + node.getId() + '@' + std::to_string(node.nextRpcId());
 	return m_client.rpc(node.getAddr(UP::HttpControlPort), id, method, params);
+}
+
+#include "LLUdpLink.h"
+#include "LLTcp.h"
+
+//#define DeleteSafe(p) p ?
+void Controller::defaultLinkCandidates()
+{
+	auto &candidates(m_linkCandidates);
+
+	candidates["udp_kblock"] = ([]() {
+		LLUdpLink *ll = new LLUdpLink();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::KernelBlock)) {
+			delete ll;
+			return (ll = 0);
+		}
+		return ll;
+	});
+
+
+	candidates["tcp_block"] = ([]() {
+		auto ll = new LLTcp();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::Select)) {
+			delete ll;
+			return (ll = 0);
+		}
+		return ll;
+	});
+
+
+
+	return;
+
+	candidates["udp_sblock"] = ([]() {
+		LLUdpLink *ll = new LLUdpLink();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::Select)) {
+			delete ll;
+			return (ll = 0);
+		}
+		return ll;
+	});
+
+
+
+	candidates["udp_ublock"] = ([]() {
+		LLUdpLink *ll = new LLUdpLink();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::UserBlock)) {
+			delete ll;
+			return (ll = 0);
+		}
+		return ll;
+	});
+
+
+
+	/*
+	candidates["tcp_kblock"] = ([](Discovery::NodeDevice const& nd, int port, uint64_t timeout) {
+		LLTcp *ll = new LLTcp();
+		ll->connect(nd.getAddr(port));
+		bool res = ll->setRxBlockingMode(LLCustomBlock::Mode::Select);
+		if (!res || !ll->setBlockingTimeout(timeout)) {
+			delete ll;
+			return ll = 0;
+		}
+		return ll;
+	}); */
 }

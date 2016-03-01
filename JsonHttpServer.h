@@ -35,6 +35,7 @@ private:
 
 	struct mg_mgr *m_mgr;
 	struct mg_connection *nc;
+	int m_mgEv;
 
 	std::map<std::string, RequestHandler> m_handlers;
 };

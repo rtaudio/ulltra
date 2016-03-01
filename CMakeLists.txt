@@ -13,7 +13,7 @@ add_library(rtt rtt/rtt.cpp)
 add_library(mongoose mongoose/mongoose.c)
 add_library(ulltra-cntrl Controller.cpp JsonHttpClient.cpp JsonHttpServer.cpp JsonNode.cpp)
 add_library(ulltra-net Discovery.cpp SimpleUdpReceiver.cpp LinkEval.cpp)
-add_library(ulltra-ll LLLink.cpp LLUdpLink.cpp LLTcp.cpp)
+add_library(ulltra-ll LLLink.cpp LLCustomBlock.cpp LLUdpLink.cpp LLTcp.cpp)
 add_library(ulltra-proto UlltraProto.cpp)
 
 

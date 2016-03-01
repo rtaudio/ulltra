@@ -8,7 +8,7 @@
 
 // need to override LOG() macro:
 #undef LOG
-#define LOG(level) if (level > Log::ReportingLevel()) ; else Log().get(level)
+#define LOG(level) if (level > Log::ReportingLevel()) ; else Log(level).get()
 
 
 JsonHttpClient::JsonHttpClient()
@@ -51,7 +51,9 @@ const JsonNode &JsonHttpClient::rpc(const SocketAddress &host, const std::string
 
 const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::string &method, const std::string &body)
 {
-	LOG(logDebugHttp) << "http request to " << host << " /" << method << " " << body;
+	LOG(logDEBUG1) << "http request to " << host << " /" << method << " " << body;
+	auto tStart =  UP::getMicroSeconds();
+
 	SOCKET soc = socket(host.getFamily(), SOCK_STREAM, IPPROTO_TCP);
 	try {
 		int res;
@@ -112,6 +114,10 @@ const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::st
 			buf << chunk;
 		}
 		close(soc);
+
+		auto tEnd = UP::getMicroSeconds();
+
+		LOG(logDEBUG3) << "response after " << ((tEnd - tStart) / 1000) << " ms";
 
 		str = buf.str();
 		buf.str(""); buf.clear();

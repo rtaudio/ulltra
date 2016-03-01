@@ -76,10 +76,6 @@ inline std::string lastError( int err=0)
 }
 
 
-struct LinkEndpoint {
-	struct addrinfo addr;
-	int port;
-};
 
 
 inline bool socketSetBlocking(SOCKET &soc, bool block) {
@@ -127,7 +123,7 @@ inline int socketConnectTimeout(SOCKET &soc, uint64_t toUs)
 	}
 
 	if (res == 0) {
-		LOG(logDEBUG1) << "timeout during connect select";
+		LOG(logDEBUG1) << "timeout during connect select " << toUs;
 		return 0;
 	}
 
@@ -160,14 +156,23 @@ inline int socketSelect(SOCKET &soc, uint64_t toUs)
 	FD_SET(soc, &myset);
 
 	res = select(soc+1/* this is ignored on windows*/, &myset, NULL, NULL, &tv);
-
+	//LOG(logDEBUG1) << "res= " << res;
 	if (res == -1) {
 		LOG(logERROR) << "error while select: " << lastError();
 		return -1;
 	}
 
+	socklen_t olen = sizeof(int);
+	int o = -1;
+	if (getsockopt(soc, SOL_SOCKET, SO_ERROR, (char*)(&o), &olen) < 0) {
+		LOG(logERROR) << "Error in getsockopt() " << lastError();
+		return -1;
+	}
+
+	//LOG(logDEBUG1) << "o = " << o;
+
 	if (res == 0) {
-		LOG(logDEBUG1) << "timeout during select";
+		LOG(logDEBUG1) << "timeout during select " << toUs;
 		return 0;
 	}
 
@@ -233,10 +238,15 @@ union SocketAddress {
     struct sockaddr_in6 sin6;
     // union! no more fields!
 
-    SocketAddress(const sockaddr_storage &ss)
-    {
-        memcpy(&sa, &ss, sizeof(sin6));
-    }
+	SocketAddress(const sockaddr_storage &ss)
+	{
+		memcpy(&sa, &ss, sizeof(sin6));
+	}
+
+	SocketAddress()
+	{
+		memset(&sa, 0, sizeof(sin6));
+	}
 
     inline void setPort(int port) {
         if(sa.sa_family == AF_INET6)
@@ -279,4 +289,8 @@ inline bool operator==(const SocketAddress& s1, const SocketAddress& s2) {
 inline bool operator!=(const SocketAddress& s1, const SocketAddress& s2) {
 	return !(s1 == s2);
 }
+
+
+
+typedef SocketAddress LinkEndpoint;
 

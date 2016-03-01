@@ -7,7 +7,11 @@
 #include <vector>
 #include <algorithm>
 
+#include "LLLink.h"
 
+typedef std::function<LLLink*()> LLLinkGenerator;
+
+typedef std::map<std::string, LLLinkGenerator> LLLinkGeneratorSet;
 
 class SimpleUdpReceiver;
 class LLReceiver;
@@ -97,8 +101,8 @@ public:
     bool init();
 
 	void update(time_t now);
-	void latencyTestMaster(const Discovery::NodeDevice &nd);
-	void latencyTestSlave(const Discovery::NodeDevice &nd);
+
+	void chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd, bool master);
 
 private:
 

@@ -4,7 +4,7 @@
 
 
 LLUdpLink::LLUdpLink()
-	: LLLink(-1), m_socketRx(-1), m_socketTx(-1)
+	: LLCustomBlock(-1), m_socketRx(-1), m_socketTx(-1)
 {
 	memset(&m_addr, 0, sizeof(m_addr));
 }
@@ -19,17 +19,20 @@ LLUdpLink::~LLUdpLink()
 }
 
 
-bool LLUdpLink::connect(const LinkEndpoint &end)
+bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 {
-	if (end.addr.ai_family != AF_INET6 && end.addr.ai_family != AF_INET) {
+	if (end.getFamily() != AF_INET6 &&end.getFamily() != AF_INET) {
 		LOG(logERROR) << "Unknown address family (not IPv4 nor IPv6)!";
 		return false;
 	}
 
-	bool ipv6 = (end.addr.ai_family == AF_INET6);
+	// store endpoint address (used for sending later)
+	m_addr = end;
+
+	bool ipv6 = (m_addr.getFamily() == AF_INET6);
 
 	addrinfo addrHints = {}, *addrRes;
-	addrHints.ai_family = end.addr.ai_family;
+	addrHints.ai_family = m_addr.getFamily();
 	addrHints.ai_socktype = SOCK_DGRAM;
 	addrHints.ai_protocol = IPPROTO_UDP;
 
@@ -41,24 +44,23 @@ bool LLUdpLink::connect(const LinkEndpoint &end)
 		LOG(logERROR) << "Cannot create socket!";
 		return false;
 	}
-
+	
 	// bind rx socket
 	addrHints.ai_flags = AI_PASSIVE; // passive for bind()
-	getaddrinfo(NULL, std::to_string(end.port).c_str(), &addrHints, &addrRes);
+	getaddrinfo(NULL, std::to_string(m_addr.getPort()).c_str(), &addrHints, &addrRes);
 	int rv = bind(m_socketRx, (struct sockaddr *)addrRes->ai_addr, addrRes->ai_addrlen);
 	if (rv != 0) {
-		LOG(logERROR) << "Cannot bind UDP socket to port " << end.port;
+		LOG(logERROR) << "Cannot bind UDP socket to port " << m_addr.getPort();
 		return false;
 	}
 	freeaddrinfo(addrRes);
 
-	// create tx address
-	getaddrinfo(NULL, std::to_string(end.port).c_str(), &end.addr, &addrRes);
-	if (addrRes->ai_addrlen != sizeof(m_addr)) {
-		LOG(logERROR) << "addrinfo too long!";
+
+	// apply the timeout
+	if (m_receiveBlockingTimeoutUs != -1) {
+		if (!onBlockingTimeoutChanged(m_receiveBlockingTimeoutUs))
+			return false;
 	}
-    memcpy(&m_addr, addrRes->ai_addr, (std::min)((int)addrRes->ai_addrlen, (int)sizeof(m_addr)));
-	freeaddrinfo(addrRes);
 
 
 	/* setup QoS */
@@ -71,7 +73,7 @@ bool LLUdpLink::connect(const LinkEndpoint &end)
 
 	int so_priority = 7;
 	if (setsockopt(m_socketTx, SOL_SOCKET, SO_PRIORITY, &so_priority, sizeof(so_priority)) < 0) {
-		LOG(logERROR) << "Error: could not set socket SO_PRIORITY! " << lastError();;
+		LOG(logERROR) << "Error: could not set socket SO_PRIORITY to  " << so_priority << "! " << lastError();;
 	}
 	else {
 		LOG(logDEBUG) << "Set SO_PRIORITY to " << so_priority;
@@ -104,58 +106,49 @@ bool LLUdpLink::connect(const LinkEndpoint &end)
 
 bool LLUdpLink::onBlockingTimeoutChanged(uint64_t timeoutUs)
 {
+	if (m_socketRx == -1)
+		return true;
+
 	bool nonBlock = (timeoutUs == 0);
 
-	if (!nonBlock && m_rxBlockingMode == BlockingMode::Undefined) {
+	if (!nonBlock && m_rxBlockingMode == LLCustomBlock::Mode::Undefined) {
 		LOG(logERROR) << ("Cannot set timeout, blocking mode not set!");
 		return false;
 	}
 
-	bool kblock = (!nonBlock && m_rxBlockingMode == BlockingMode::KernelBlock);
+	// set kernel blocking for kernel-block mode and select
+	bool kblock = (!nonBlock && m_rxBlockingMode != LLCustomBlock::Mode::UserBlock);
+
+	bool socketTimeout = (m_rxBlockingMode == LLCustomBlock::Mode::KernelBlock);
 
 
+	if (!socketTimeout) timeoutUs = 0;
 	// set timeout
 #ifndef _WIN32
 	struct timeval tv;
 	tv.tv_sec = 0;
-	tv.tv_usec = timeoutUs;
+	tv.tv_usec = timeoutUs; // o means no timeout
 #else
-	int tv = timeoutUs < 1000 ? 1UL : (timeoutUs / 1000UL);
+	int tv = (timeoutUs < 1000 ? 1UL : (timeoutUs / 1000UL));
 #endif
 
 
 	if (setsockopt(m_socketRx, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) < 0) {
-		LOG(logERROR) << ("Cannot set recvtimeo!");
+		LOG(logERROR) << "Cannot set recvtimeo to " << timeoutUs << "us! " << lastError();
 		return false;
 	}
+
+	LOG(logDEBUG3) << "Set  SO_RCVTIMEO of socket (" << m_socketRx << ") to " << timeoutUs << "us";
 
 
 	if (!socketSetBlocking(m_socketRx, kblock))
 		return false;
 
-	return true;
-}
-
-bool LLUdpLink::setRxBlockingMode(BlockingMode mode)
-{
-	if (mode == BlockingMode::Undefined || m_rxBlockingMode == mode)
-		return false;
-	m_rxBlockingMode = mode;
-
-
-	if (!onBlockingTimeoutChanged(m_receiveBlockingTimeoutUs))
-		return false;
-
-#if _DEBUG
-	if (mode == BlockingMode::KernelBlock) {
-		LOG(logDEBUG1) << "socket blocking mode set to kernel blocking";
-	} else {
-		LOG(logDEBUG1) << "socket blocking mode set to user blocking";
-	}
-#endif
 
 	return true;
 }
+
+
 
 
 inline int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize)
@@ -173,10 +166,27 @@ inline int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize)
 
 const uint8_t *LLUdpLink::receive(int &receivedBytes)
 {
-	if (m_rxBlockingMode != BlockingMode::UserBlock) {
+	if (m_rxBlockingMode != LLCustomBlock::Mode::UserBlock) {
+		if (m_rxBlockingMode == LLCustomBlock::Mode::Select) {
+			int res = socketSelect(m_socketRx, m_receiveBlockingTimeoutUs);
+			if (res == 0) {
+				return 0; // timeout!
+			}
+
+			if (res < 0) {
+				LOG(logERROR) << "Select failed " << res;
+				receivedBytes = -1; //link broke!
+				return 0; // this should not happen!
+			}
+
+			// now we can receive!
+		}
+
 		receivedBytes = socketReceive(m_socketRx, m_rxBuffer, sizeof(m_rxBuffer));
-		if (receivedBytes == -1)
+		if (receivedBytes == -1) {
+			receivedBytes = 0;
 			return 0;
+		}
 		return m_rxBuffer;
 	}
 
@@ -196,6 +206,7 @@ const uint8_t *LLUdpLink::receive(int &receivedBytes)
 		if ((i % 10) == 0) {
 			auto t1 = UlltraProto::getMicroSecondsCoarse();
 			if ((t1 - t0) > m_receiveBlockingTimeoutUs) {
+				receivedBytes = 0;
 				return 0;
 			}
 		}
@@ -205,7 +216,13 @@ const uint8_t *LLUdpLink::receive(int &receivedBytes)
 
 bool LLUdpLink::send(const uint8_t *data, int dataLength)
 {
-	return sendto(m_socketTx, (const char *)data, dataLength, 0, (struct sockaddr*)&m_addr, sizeof(m_addr)) == dataLength;
+	int ret = sendto(m_socketTx, (const char *)data, dataLength, 0, (struct sockaddr*)&m_addr, sizeof(m_addr));
+
+	if (ret == dataLength)
+		return true;
+
+	LOG(logDEBUG1) << "sendto " << m_addr << " failed: " << ret << " != " << dataLength;
+	return false;
 }
 
 
@@ -213,4 +230,6 @@ bool LLUdpLink::send(const uint8_t *data, int dataLength)
 void LLUdpLink::toString(std::ostream& stream) const
 {
 	stream << "udplink(rxblock=" << m_rxBlockingMode << ",to=" << m_receiveBlockingTimeoutUs << "us)";
+	if (m_socketRx != -1)
+		stream << " to " << m_addr;
 }

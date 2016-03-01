@@ -135,9 +135,10 @@ std::ostream& operator<< (std::ostream& stream, const JsonNode& jd) {
 			stream << *it << (it == --jd.arr.end() ? empty : sep);
 		}
 		stream << "]";
-
+		break;
 	case JsonNode::Type::Undefined:
 		stream << "null";
+		break;
 	}
 	return stream;
 }

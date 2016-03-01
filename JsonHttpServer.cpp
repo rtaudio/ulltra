@@ -9,10 +9,11 @@
 #undef LOG
 #include "mongoose/mongoose.h"
 #undef LOG // need to override LOG() macro:
-#define LOG(level) if (level > Log::ReportingLevel()) ; else Log().get(level)
+#define LOG(level) if (level > Log::ReportingLevel()) ; else Log(level).get()
 
 JsonHttpServer::JsonHttpServer()
 {
+	m_mgEv = 0;
 	m_mgr = new mg_mgr();
 	mg_mgr_init(m_mgr, this);
 }
@@ -26,7 +27,12 @@ JsonHttpServer::~JsonHttpServer()
 
 void JsonHttpServer::update()
 {
-	mg_mgr_poll(m_mgr, 1);
+	// poll untill all events processed
+	do {
+		m_mgEv = 0;
+		mg_mgr_poll(m_mgr, 1);
+	} while (m_mgEv != 0);
+//	std::cout << "update done" << std::endl;
 }
 
 
@@ -102,10 +108,11 @@ int  JsonHttpServer::rpc_dispatch(const char *buf, int len, char *dst, int dst_l
 		return mg_rpc_create_std_error(dst, dst_len, &req, JSON_RPC_INVALID_REQUEST_ERROR);
 	}
 
+	LOG(logDEBUG1) << "rpc_dispatch: " << method;
 	auto f = hit->second;
 	f(*nodeAddr, id.str, jreq, jres);
 
-	LOG(logDebugHttp) << "response body: " << jres;
+	LOG(logDEBUG2) << "sending response: " << jres;
 
 
 	std::stringstream ss;
@@ -146,6 +153,9 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 
 	JsonHttpServer *jhs = (JsonHttpServer*)nc->mgr->user_data;
 	struct http_message *hm = (struct http_message *) ev_data;
+
+	if (ev != 0) jhs->m_mgEv = ev;
+	//std::cout << "ev" << ev << std::endl;
 
 	switch (ev) {
 	case MG_EV_HTTP_REQUEST:

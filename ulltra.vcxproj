@@ -160,6 +160,7 @@
     <ClInclude Include="JsonHttpServer.h" />
     <ClInclude Include="JsonNode.h" />
     <ClInclude Include="LinkEval.h" />
+    <ClInclude Include="LLCustomBlock.h" />
     <ClInclude Include="LLLink.h" />
     <ClInclude Include="LLTcp.h" />
     <ClInclude Include="LLUdpLink.h" />
@@ -176,6 +177,7 @@
     <ClCompile Include="JsonHttpServer.cpp" />
     <ClCompile Include="JsonNode.cpp" />
     <ClCompile Include="LinkEval.cpp" />
+    <ClCompile Include="LLCustomBlock.cpp" />
     <ClCompile Include="LLLink.cpp" />
     <ClCompile Include="LLTcp.cpp" />
     <ClCompile Include="LLUdpLink.cpp" />

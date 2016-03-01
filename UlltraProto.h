@@ -26,7 +26,7 @@ class UlltraProto {
 public:
 	static const int DiscoveryPort = 26025;
 	static const int BroadcastInterval = 2; //seconds
-	static const int LinkEvalPort = 26026;
+	static const int LinkEvalPort = 26100;
 	static const int LinkEvalTimeoutMS = 200; // milliseconds
 
     static const int DiscoveryTcpQueue = 8;
@@ -35,9 +35,7 @@ public:
 	static const int HttpControlPort = 26080;
 
 	static const int HttpConnectTimeout = 0;// milliseconds
-	static const int HttpResponseTimeout = 1200;// milliseconds
-
-	static const std::string LatencyTestStartToken;
+	static const int HttpResponseTimeout = 8000;// milliseconds
 
 
 	static bool init();
@@ -259,14 +257,22 @@ enum TLogLevel {
 class Log
 {
 public:
-	inline Log() {}
+	const TLogLevel &lv;
+
+	inline Log(TLogLevel level = logINFO) : lv(level) {}
+
+	
+
 
 	inline ~Log() {
-		std::cout << std::endl << std::flush;
+		std::cout << "\e[0m" << std::endl << std::flush;
 	}
 
-	inline std::ostream& get(TLogLevel level = logINFO) {
-		std::cout << std::string(level > logDEBUG ? (level - logDEBUG)*2 : 0, ' ');
+	inline std::ostream& get() {
+		std::string cl;
+		if (lv == logERROR)
+			cl = "\e[91m";
+		std::cout << (cl + std::string(lv > logDEBUG ? (lv - logDEBUG)*2 : 0, ' '));
 		return std::cout;
 	}
 
@@ -275,7 +281,7 @@ public:
 	}
 };
 
-#define LOG(level) if (level > Log::ReportingLevel()) ; else Log().get(level)
+#define LOG(level) if (level > Log::ReportingLevel()) ; else Log(level).get()
 
 
 #ifdef _DEBUG
