@@ -98,6 +98,8 @@ const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::st
 			socketSetBlocking(soc, true);
 
 		while (true) {
+			int to = UP::HttpResponseTimeout * 1000;
+			to += (to / 4) + rand() % (to / 4);
 			res = socketSelect(soc, UP::HttpResponseTimeout * 1000);
 			if (res == 0) {
 				throw Exception("Server " + host.toString() + " did not send a response within " + std::to_string(UP::HttpResponseTimeout) + " ms!");

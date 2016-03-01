@@ -176,7 +176,7 @@ void Discovery::tryConnectExplictHosts()
     }
 }
 
-bool Discovery::processMessage(const NodeAddr& remote, const char *message, std::vector<const NodeDevice*> &newNodes)
+bool Discovery::processMessage(const NodeAddr& remote, const char *message, std::vector<NodeDevice> &newNodes)
 {
 	bool sendNow = false;
 	std::string act((const char*)message);
@@ -201,7 +201,7 @@ bool Discovery::processMessage(const NodeAddr& remote, const char *message, std:
 		m_discovered.insert(std::pair<std::string, NodeDevice>(nd.id, nd));
 		send("ULLTRA_DEV_R", nd); // send a discovery message back
 		sendNow = true;
-		newNodes.push_back(&m_discovered.find(nd.id)->second);
+		newNodes.push_back(m_discovered.find(nd.id)->second);
 	}
 	else if ("ULLTRA_DEV_Z" == act) { // unregister
 		auto it = m_discovered.find(nd.id);
@@ -240,7 +240,7 @@ bool Discovery::processMessage(const NodeAddr& remote, const char *message, std:
 bool Discovery::update(time_t now)
 {
 	bool sendNow = false;
-    std::vector<const NodeDevice*> newNodes;
+    std::vector<NodeDevice> newNodes;
 	struct sockaddr_storage remote;
 
 	// process incoming broadcast message queue
@@ -308,9 +308,9 @@ bool Discovery::update(time_t now)
 	}
 
 	// delayed callback dispatch
-    for (const NodeDevice *nd : newNodes) {
+    for (NodeDevice &nd : newNodes) {
 		if (onNodeDiscovered)
-            onNodeDiscovered(*nd);
+            onNodeDiscovered(nd);
 	}
 
 	m_updateCounter++;

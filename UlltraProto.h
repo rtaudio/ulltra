@@ -35,7 +35,10 @@ public:
 	static const int HttpControlPort = 26080;
 
 	static const int HttpConnectTimeout = 0;// milliseconds
-	static const int HttpResponseTimeout = 8000;// milliseconds
+	static const int HttpResponseTimeout = 800;// milliseconds
+
+
+	static const int TcpConnectTimeout = 4000; // milliseconds
 
 
 	static bool init();
@@ -257,21 +260,43 @@ enum TLogLevel {
 class Log
 {
 public:
-	const TLogLevel &lv;
+	const TLogLevel lv;
+#ifdef _WIN32
+	CONSOLE_SCREEN_BUFFER_INFO scbi;
+#endif
 
-	inline Log(TLogLevel level = logINFO) : lv(level) {}
-
-	
+	inline Log(TLogLevel level = logINFO) : lv(level) {
+	}	
 
 
 	inline ~Log() {
-		std::cout << "\e[0m" << std::endl << std::flush;
+
+#ifndef _WIN32
+		if (lv == logERROR)
+			std::cout << "\e[0m ";
+#endif
+
+		std::cout << std::endl << std::flush;
+#ifdef _WIN32
+		if (lv == logERROR)
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), scbi.wAttributes);
+#endif
 	}
 
 	inline std::ostream& get() {
 		std::string cl;
+
+#ifdef _WIN32
+		if (lv == logERROR) {
+			GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &scbi);
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_INTENSITY);
+		}
+#else
 		if (lv == logERROR)
 			cl = "\e[91m";
+#endif
+
+
 		std::cout << (cl + std::string(lv > logDEBUG ? (lv - logDEBUG)*2 : 0, ' '));
 		return std::cout;
 	}

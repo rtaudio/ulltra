@@ -50,7 +50,7 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 {
 	int i = 0;
 	for (auto &c : candidates) {
-		LOG(logINFO) << "setup evaluation of " << c.first << "...";
+		LOG(logINFO) << "### setup evaluation of " << c.first << "...";
 		LLLink *ll = c.second();
 		auto &testName = c.first;
 
@@ -89,7 +89,8 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 			{RttThread t(f, true); }
 
 		} while (0);
-				
+		
+		LOG(logINFO) << "evaluation of " << c.first << " ended ###";
 
 		delete ll;
 		i++;
@@ -99,7 +100,7 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 
 void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName)
 {
-	static const int nPasses = 200;
+	static const int nPasses = 2000;
 	static const int blockSizes[] = {
 		32, 64, 128, 256, 512, 1024, //, 2048
 	};
@@ -238,11 +239,18 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 
 
 #ifdef _DEBUG
+	LOG(logINFO) << std::endl << "# Results for " << testName << ":";
 	for (int bsi = 0; bsi < sizeof(blockSizes) / sizeof(*blockSizes); bsi++) {
 		int blockSize = blockSizes[bsi];
-		//statMat[bsi] = stats[bsi].getAccTS<float>();
-		legend[bsi] = "bs " + std::to_string(blockSize);
+
+		std::sort(statMat[bsi].begin(), statMat[bsi].end());
+		auto median = statMat[bsi][statMat[bsi].size() / 2];
+		LOG(logINFO) << "\tBS " << std::setw(8) << blockSize << " median RTT: " << (int)(median/1000.0f) << " us";
+
+		legend[bsi] = "bs " + std::to_string(blockSize) + " med=" + std::to_string(median);
 	}
+	LOG(logINFO) << std::endl;
+
 	char hostname[32];
 	gethostname(hostname, 31);
 
@@ -274,6 +282,8 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 	const uint8_t *data;
 	int len = 0;
 
+	uint64_t tLastReceive = UP::getMicroSecondsCoarse();
+
 	// just bounce packages until end flag received (or timeouts)
 	while (true) {
 		len = 0;
@@ -286,7 +296,16 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 			}
 
 			if (data) break;
-			LOG(logDEBUG) << "Timeout during latency test, retrying.";
+			
+			auto dt((UP::getMicroSecondsCoarse() - tLastReceive));
+			if (dt > 1000 * 1000) {
+				LOG(logDEBUG) << "Not receiving anything, cancel!";
+				len = -1;
+				break;
+			}
+			else {
+				LOG(logDEBUG) << "Timeout during latency test, retrying. " << nPackets << "|" << dt;
+			}
 		}
 
 		if (len == -1)
@@ -318,6 +337,7 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 		}
 
 		nPackets++;
+		tLastReceive = UP::getMicroSecondsCoarse();
 
 		if (!link->send(data, len)) { // just send it back
 			LOG(logERROR) << "send failed, cancelling after " << nPackets << " packets " << *link;

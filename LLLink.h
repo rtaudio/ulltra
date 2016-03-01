@@ -27,6 +27,8 @@ public:
 		lll.toString(stream);
 		return stream;
 	}
+
+	static bool enableHighQoS(SOCKET soc);
 protected:
 	uint64_t m_receiveBlockingTimeoutUs;
 };

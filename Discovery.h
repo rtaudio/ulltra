@@ -111,7 +111,7 @@ private:
 
 	void tryConnectExplictHosts();
 	NodeDevice &getNode(const std::string &id);	
-	bool processMessage(const NodeAddr& nd, const char *message, std::vector<const NodeDevice*> &newNodes);
+	bool processMessage(const NodeAddr& nd, const char *message, std::vector<NodeDevice> &newNodes);
 
 
 	int m_broadcastPort;

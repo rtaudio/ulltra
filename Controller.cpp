@@ -20,7 +20,6 @@ Controller::Controller(const Params &params)
     }
 #endif
 
-
     LOG(logDEBUG) << "Node file: " << params.nodesFileName;
     std::ifstream nfs(params.nodesFileName);
     while(nfs.good() && !nfs.eof()) {
@@ -338,9 +337,17 @@ void Controller::defaultLinkCandidates()
 {
 	auto &candidates(m_linkCandidates);
 
-	candidates["udp_kblock"] = ([]() {
+	
+	// chose best known block modes (linux better in user space)
+	candidates["udp_ablock"] = ([]() {
 		LLUdpLink *ll = new LLUdpLink();
-		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::KernelBlock)) {
+		if (!ll->setRxBlockingMode(
+#ifndef _WIN32
+			LLCustomBlock::Mode::UserBlock
+#else
+			LLCustomBlock::Mode::KernelBlock
+#endif
+			)) {
 			delete ll;
 			return (ll = 0);
 		}
@@ -360,6 +367,15 @@ void Controller::defaultLinkCandidates()
 
 
 	return;
+
+	candidates["udp_kblock"] = ([]() {
+		LLUdpLink *ll = new LLUdpLink();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::KernelBlock)) {
+			delete ll;
+			return (ll = 0);
+		}
+		return ll;
+	});
 
 	candidates["udp_sblock"] = ([]() {
 		LLUdpLink *ll = new LLUdpLink();

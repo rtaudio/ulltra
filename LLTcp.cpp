@@ -10,37 +10,6 @@ LLTcp::LLTcp()
 {
 	m_soc = -1;
 	m_socAccept = -1;
-	//m_socAccept = socket(NodeDevice::local6.addrStorage.ss_family, SOCK_STREAM, 0);
-
-	/*
-	auto bindAddr = NodeDevice::local6.getAddr(broadcastPort + 3);
-	if (bind(m_socAccept, (struct sockaddr *) &bindAddr, sizeof(bindAddr)) < 0) {
-		LOG(logERROR) << "tcp bind to " << bindAddr << " failed!";
-		return false;
-	}
-
-	if(listen(m_socAccept, UlltraProto::DiscoveryTcpQueue) != 0) {
-	LOG(logERROR) << "tcp listen() on " <<  bindAddr << " failed! " << lastError();
-	return false;
-	}
-	if(!socketSetBlocking(m_socAccept, false)) {
-	return false;
-	}
-
-
-	LOG(logERROR) << "accepting tcp connections on " <<  bindAddr;
-
-	*/
-
-
-	/*
-	while(true) {
-	int remoteAddrLen = sizeof(remote);
-	SOCKET newsockfd = accept(m_socAccept, (struct sockaddr *)&remote, &remoteAddrLen);
-	if(newsockfd < 0)
-	break;
-	}
-	*/
 }
 
 
@@ -63,7 +32,7 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 	LOG(logDEBUG1) << "setting up tcp link to " << end;
 
 
-	if (!isMaster)
+	if (isMaster)
 	{
 		m_socAccept = socket(end.getFamily(), SOCK_STREAM, 0);
 
@@ -71,7 +40,7 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 		int optval = 1;
 		if (setsockopt(m_socAccept, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof optval) != 0) {
 			LOG(logERROR) << "tcp socket set SO_REUSEADDR failed! " << lastError();
-			close(m_socAccept);
+			close(m_socAccept); m_socAccept = -1;
 			return false;
 		}
 
@@ -79,13 +48,13 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 		auto bindAddr = Discovery::NodeDevice::localAny.getAddr(end.getPort());
 		if (bind(m_socAccept, (struct sockaddr *) &bindAddr, sizeof(bindAddr)) < 0) {
 			LOG(logERROR) << "tcp bind to " << bindAddr << " failed! " << lastError();
-			close(m_socAccept);
+			close(m_socAccept); m_socAccept = -1;
 			return false;
 		}
 
 		if (listen(m_socAccept, UlltraProto::DiscoveryTcpQueue) != 0) {
 			LOG(logERROR) << "tcp listen() on " << bindAddr << " failed! " << lastError();
-			close(m_socAccept);
+			close(m_socAccept); m_socAccept = -1;
 			return false;
 		}
 
@@ -95,6 +64,9 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 		SocketAddress client;
 		socklen_t len = sizeof(client);
 		int clientSocket;
+
+		auto t0 = UP::getMicroSecondsCoarse();
+
 		while (1) {
 			clientSocket = accept(m_socAccept, &client.sa, &len);
 
@@ -105,11 +77,17 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 				client.setPort(end.getPort()); // ignore the port of transfer
 				if (client != end) {
 					LOG(logERROR) << " invalid client " << client << " connected, expected " << end;
-					close(clientSocket);
+					close(clientSocket); clientSocket = -1;
 					continue;
 				}
 
 				break;
+			}
+
+			if ((UP::getMicroSecondsCoarse() - t0) > (UP::TcpConnectTimeout*1000)) {
+				LOG(logERROR) << " accept() timed out after  " << UP::TcpConnectTimeout << " ms waiting for " << end;
+				close(m_socAccept); m_socAccept = -1;
+				return false;
 			}
 
 			usleep(100);
@@ -131,24 +109,35 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 
 		LOG(logDEBUG2) << "connecting to " << server;
 
-		socketSetBlocking(m_soc, false);
-		::connect(m_soc, &server.sa, len);
-		int res = socketConnectTimeout(m_soc, 1000 * 4000);
+		//socketSetBlocking(m_soc, true);
+		int res;
 
-		if (res == 0) { // timeout
-			close(m_soc);
-			return false;
+		for (int i = 0; i < 10; i++) {
+			res = ::connect(m_soc, &server.sa, len);
+			/*res = socketConnectTimeout(m_soc, 1000 * UP::TcpConnectTimeout);
+			if (res == 0) { // timeout
+				LOG(logERROR) << " connect() timed out after  " << UP::TcpConnectTimeout << " ms waiting for " << end;
+				close(m_soc); m_soc = -1;
+				return false;
+			}*/
+
+
+			if (res == 0)
+				break;
+
+			LOG(logDEBUG3) << "Connection failed, retry...";
+			usleep(10000);
 		}
 
 		if (res < 0) { // error
-			close(m_soc);
+			close(m_soc); m_soc = -1;
 			return false;
 		}
 
 		//socketSetBlocking(m_soc, true);
 
 
-		LOG(logDEBUG3) << "connected to " << server;
+		LOG(logDEBUG3) << "connected ("<<res<<") to server " << server;
 	}
 
 
@@ -162,6 +151,20 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 	}
 
 	LOG(logDEBUG3) << "enabled TCP_NODELAY!";
+
+
+	enableHighQoS(m_soc);
+
+	// set the buffer size, is this necessary?
+	int n = 1024 * 1;
+	if (setsockopt(m_soc, SOL_SOCKET, SO_RCVBUF, (const char *)&n, sizeof(n)) == -1
+		|| setsockopt(m_soc, SOL_SOCKET, SO_SNDBUF, (const char *)&n, sizeof(n)) == -1) {
+		LOG(logERROR) << ("Cannot set rcvbuf size!");
+		return false;
+	}
+	else {
+		LOG(logDEBUG) << "Set rcvbuf size to " << n;
+	}
 	
 	return true;
 }
