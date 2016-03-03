@@ -28,7 +28,18 @@ public:
 		return stream;
 	}
 
+    static int s_timeStampingEnabled;
 	static bool enableHighQoS(SOCKET soc);
+    bool enableTimeStamps(SOCKET soc, bool enable=true);
+    int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize);
+
+
+    inline std::vector<int> const& getStackDelayHistogramUs() {
+        return m_stackDelayHist;
+    }
+
+ private:
+    std::vector<int> m_stackDelayHist;
 protected:
 	uint64_t m_receiveBlockingTimeoutUs;
 };

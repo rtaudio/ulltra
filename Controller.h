@@ -32,6 +32,8 @@ public:
 private:
 	void updateThreadMain(void *arg);
 
+	void listNodes();
+
 	Discovery m_discovery;
 	LinkEval m_linkEval;
 	JsonHttpClient m_client;

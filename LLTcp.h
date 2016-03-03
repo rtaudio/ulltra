@@ -24,5 +24,9 @@ private:
 	SOCKET m_socAccept; //TCP accept
 	SOCKET m_soc; //TCP connection
 	uint8_t  m_rxBuffer[1024 * 8 + 1];
+
+	std::string m_desc;
+
+	int m_recvTimeoutUs;
 };
 

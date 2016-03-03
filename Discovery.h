@@ -17,7 +17,7 @@ public:
 	public:
 		inline bool exists() const { return id.length() > 0 || name.length() > 0; }
 		inline bool known() const { return id.length() > 2; }
-        inline bool alive() const { return (sinceVitalSign >= 0 && sinceVitalSign < (UP::BroadcastInterval*2)); }
+        inline bool alive() const { return (sinceVitalSign >= 0 && sinceVitalSign < (UP::BroadcastIntervalMs*1000*2)); }
 
 		inline uint64_t nextRpcId() const { return ++m_rpcId; }
 
@@ -86,7 +86,7 @@ public:
 	
 
 	bool start(int broadcastPort);
-	bool update(time_t now);
+	bool update(uint64_t now);
 
 
     const NodeDevice &getNode(const std::string &id) const;
@@ -124,7 +124,7 @@ private:
 
 
 	uint32_t m_updateCounter;
-	time_t m_lastBroadcast, m_lastUpdateTime;
+	uint64_t m_lastBroadcast, m_lastUpdateTime;
 
 	std::map<std::string, NodeDevice> m_discovered;
 	std::vector<NodeDevice> m_explicitNodes;

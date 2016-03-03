@@ -25,9 +25,10 @@ void sigintHandler(int sig)
 	g_isRunning = false;
 }
 
-int main()
+int main(int argc, const char* argv[])
 {
 	RttThread::Init();
+
 
 	if (!UlltraProto::init()) {
 		std::cerr << "Failed to initialize ulltra protocol!" << std::endl;

@@ -12,7 +12,7 @@ add_executable(ulltra ulltra.cpp)
 add_library(rtt rtt/rtt.cpp)
 add_library(mongoose mongoose/mongoose.c)
 add_library(ulltra-cntrl Controller.cpp JsonHttpClient.cpp JsonHttpServer.cpp JsonNode.cpp)
-add_library(ulltra-net Discovery.cpp SimpleUdpReceiver.cpp LinkEval.cpp)
+add_library(ulltra-net Discovery.cpp SimpleUdpReceiver.cpp LinkEval.cpp stress/stress.cpp)
 add_library(ulltra-ll LLLink.cpp LLCustomBlock.cpp LLUdpLink.cpp LLTcp.cpp)
 add_library(ulltra-proto UlltraProto.cpp)
 
@@ -30,7 +30,7 @@ target_compile_definitions(mongoose PRIVATE -DMG_ENABLE_IPV6)
 
 
 find_path (JACK_INC jack/jack.h)
-find_library(JACK_LIB NAMES jack  )
+find_library(JACK_LIB NAMES jack )
 
 find_library(PTHREAD_LIB NAMES pthread )
 

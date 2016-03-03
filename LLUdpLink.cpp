@@ -1,6 +1,7 @@
 #include "LLUdpLink.h"
 
 #include <algorithm>
+#include <rtt.h>
 
 
 LLUdpLink::LLUdpLink()
@@ -63,12 +64,13 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 	}
 
 
-	enableHighQoS(m_socketTx);
-	enableHighQoS(m_socketRx);
+    if( !enableHighQoS(m_socketTx) || !enableHighQoS(m_socketRx)) {
+        LOG(logERROR) << "QoS setup not completed!";
+    }
 
 
 	// set the buffer size, is this necessary?
-	int n = 1024 * 2;
+	int n = 64 * 2;
 	if (setsockopt(m_socketRx, SOL_SOCKET, SO_RCVBUF, (const char *)&n, sizeof(n)) == -1
 		|| setsockopt(m_socketTx, SOL_SOCKET, SO_SNDBUF, (const char *)&n, sizeof(n)) == -1) {
 		LOG(logERROR) << ("Cannot set rcvbuf size!");
@@ -76,6 +78,16 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 	}
 	else {
 		LOG(logDEBUG) << "Set rcvbuf size to " << n;
+	}
+
+
+    // timestamping
+	if (m_rxBlockingMode == Mode::KernelBlock || m_rxBlockingMode == Mode::Select) {
+		if (!enableTimeStamps(m_socketRx, true))
+			return false;
+	}
+	else {
+		LOG(logINFO) << "timestamping currently only for kernel block and select!";
 	}
 
 	return true;
@@ -128,18 +140,6 @@ bool LLUdpLink::onBlockingTimeoutChanged(uint64_t timeoutUs)
 
 
 
-inline int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize)
-{
-	struct sockaddr_storage remote;
-	// todo: use connect + recv
-#ifndef _WIN32
-	socklen_t addr_len = sizeof(remote);
-	return recvfrom((SOCKET)soc, buffer, bufferSize - 1, 0, (struct sockaddr *) &remote, &addr_len);
-#else
-	int addr_len = sizeof(remote);
-	return recvfrom((SOCKET)soc, (char*)buffer, bufferSize - 1, 0, (struct sockaddr *) &remote, &addr_len);
-#endif	
-}
 
 const uint8_t *LLUdpLink::receive(int &receivedBytes)
 {
@@ -177,7 +177,19 @@ const uint8_t *LLUdpLink::receive(int &receivedBytes)
 		if (receivedBytes >= 0)
 			return m_rxBuffer;
 
+
+
+		//Windows to be better with a sleep, than yield
+		
+#ifndef _WIN32
 		std::this_thread::yield();
+#else
+		nsleep(1);
+#endif
+
+		//nsleep(1); // nanosleep on linux seems to be quiete good too (depending on the system!)
+		
+	
 
 		// check for timeout every 10 cycles
 		if ((i % 10) == 0) {

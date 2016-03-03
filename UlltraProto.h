@@ -13,19 +13,28 @@
 #include <iostream>
 
 
-#ifdef _DEBUG
+#define MATLAB_REPORTS
+#ifdef MATLAB_REPORTS
 #include<fstream>
 #include<vector>
 #endif
 
+
 #include <thread>
+
+
+// for trim function:
+#include <algorithm>
+#include <functional>
+#include <cctype>
+#include <locale>
 
 
 
 class UlltraProto {
 public:
 	static const int DiscoveryPort = 26025;
-	static const int BroadcastInterval = 2; //seconds
+	static const int BroadcastIntervalMs = 2000; //milliseconds
 	static const int LinkEvalPort = 26100;
 	static const int LinkEvalTimeoutMS = 200; // milliseconds
 
@@ -35,7 +44,10 @@ public:
 	static const int HttpControlPort = 26080;
 
 	static const int HttpConnectTimeout = 0;// milliseconds
-	static const int HttpResponseTimeout = 800;// milliseconds
+	static const int HttpResponseTimeout = 1200;// milliseconds
+	static const int HttpResponseTimeoutRand = 400;// milliseconds
+
+	static const int UpdateIntervalUS = 200*1000;
 
 
 	static const int TcpConnectTimeout = 4000; // milliseconds
@@ -49,7 +61,7 @@ public:
 		uint64_t t;
 		struct timeval tv;
 		gettimeofday(&tv, 0);
-		t = (uint64_t)tv.tv_sec * 1000000 + (uint64_t)tv.tv_usec;
+        t = (uint64_t)tv.tv_sec * (uint64_t)1e6 + (uint64_t)tv.tv_usec;
 		return t;
 #else
 		LARGE_INTEGER t1;
@@ -65,7 +77,7 @@ public:
 		uint64_t t;
 		struct timeval tv;
 		gettimeofday(&tv, 0);
-		t = (uint64_t)tv.tv_sec * 1000000 + (uint64_t)tv.tv_usec;
+        t = (uint64_t)tv.tv_sec * (uint64_t)1e6 + (uint64_t)tv.tv_usec;
 		return t;
 #else
 		LARGE_INTEGER t1;
@@ -78,11 +90,9 @@ public:
 	inline static uint64_t getSystemTimeNanoSeconds()
 	{
 #ifndef _WIN32
-		uint64_t t;
-		struct timeval tv;
-		gettimeofday(&tv, 0);
-		t = (uint64_t)tv.tv_sec * 1000000 + (uint64_t)tv.tv_usec;
-		return t;
+        struct timespec time;
+        clock_gettime(CLOCK_REALTIME, &time);
+        return (uint64_t) time.tv_sec * (uint64_t) 1e9 + (uint64_t) time.tv_nsec;
 #else
 		FILETIME tm;
 		(*myGetSystemTime)(&tm);
@@ -309,8 +319,8 @@ public:
 #define LOG(level) if (level > Log::ReportingLevel()) ; else Log(level).get()
 
 
-#ifdef _DEBUG
 
+#ifdef MATLAB_REPORTS
 inline std::ostream& operator << (std::ostream& os, const std::vector<std::string>& v)
 {
 	os << "";
@@ -328,26 +338,40 @@ inline std::ostream& operator << (std::ostream& os, const std::vector<std::strin
 template < typename T >
 std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
 {
-	os << "[";
-	for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
-	{
-		os << " " << *ii;
-	}
-	os << "]'";
-	return os;
+	int i = 0;
+    os << "[";
+    for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+    {
+        os << " " << *ii;
+		i++;
+		if (i%50 == 0)
+			os << " ..." << std::endl;
+    }
+    os << "]'";
+    return os;
 }
+
+
+template < typename T >
+T sum(const std::vector<T>& v)
+{
+    T s = 0;
+    for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+    {
+        s += *ii;
+    }
+    return s;
+}
+
+#endif
 
 //inline std::ostream& operator << (std::ostream& os, const std::vector<float>& v);
 
 //std::ostream& operator<<(std::ostream &strm, const std::vector<float> &fv);
 //std::ostream& operator<<(std::ostream &strm, const std::vector<std::vector<float>> &fm);
 
-#endif
 
-#include <algorithm>
-#include <functional>
-#include <cctype>
-#include <locale>
+
 
 // trim from start
 static inline std::string &ltrim(std::string &s) {

@@ -10,6 +10,25 @@ LLTcp::LLTcp()
 {
 	m_soc = -1;
 	m_socAccept = -1;
+
+	static int init = 1;
+
+
+#ifndef _WIN32
+	if (init) {
+		init = 0;
+		pclose(popen("sysctl -w net.ipv4.tcp_window_scaling=0", "r"));
+		pclose(popen("sysctl -w net.ipv4.tcp_low_latency=1", "r"));
+		pclose(popen("sysctl -w net.ipv4.tcp_sack=0", "r"));
+		pclose(popen("sysctl -w net.ipv4.tcp_timestamps=0", "r"));
+		pclose(popen("sysctl -w net.ipv4.tcp_fastopen=1", "r"));
+		pclose(popen("sysctl -w net.core.rmem_default=10000000", "r"));
+		pclose(popen("sysctl -w net.core.wmem_default=10000000", "r"));
+		pclose(popen("sysctl -w net.core.rmem_max=16777216", "r"));
+		pclose(popen("sysctl -w net.core.wmem_max=16777216", "r"));
+		//ernel.sched_wakeup_granularity_ns=2000000
+	}
+#endif
 }
 
 
@@ -31,6 +50,7 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 
 	LOG(logDEBUG1) << "setting up tcp link to " << end;
 
+	m_recvTimeoutUs = isMaster ? 20000 : 60000;
 
 	if (isMaster)
 	{
@@ -140,9 +160,13 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 		LOG(logDEBUG3) << "connected ("<<res<<") to server " << server;
 	}
 
+#if _WIN32
+	DWORD  flagYes = 1;
+#else
+	int flagYes = 1;
+#endif
 
-	int flag = 1;
-	int result = setsockopt(m_soc, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
+	int result = setsockopt(m_soc, IPPROTO_TCP, TCP_NODELAY, (char *)&flagYes, sizeof(flagYes));
 	if (result < 0) {
 		LOG(logERROR) << "failed to enable TCP_NODELAY! " << lastError();
 		close(m_socAccept);
@@ -151,12 +175,32 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 	}
 
 	LOG(logDEBUG3) << "enabled TCP_NODELAY!";
+	m_desc += ",nodelay";
+
+#ifdef TCP_EXPEDITED_1122
+	result = setsockopt(m_soc, IPPROTO_TCP, TCP_EXPEDITED_1122, (char *)&flagYes, sizeof(flagYes));
+	if (result < 0) {
+		LOG(logERROR) << "failed to enable TCP_EXPEDITED_1122! " << lastError();
+		close(m_socAccept);
+		m_socAccept = -1;
+		return false;
+	}
+	LOG(logDEBUG3) << "enabled TCP_EXPEDITED_1122!";
+	m_desc += ",exp1122";
+#endif
 
 
-	enableHighQoS(m_soc);
 
+
+
+	if(enableHighQoS(m_soc))
+		m_desc += ",qos";
+	else
+		m_desc += ",NOqos";
+
+	/*
 	// set the buffer size, is this necessary?
-	int n = 1024 * 1;
+	int n = 256; // 1024 * 8;
 	if (setsockopt(m_soc, SOL_SOCKET, SO_RCVBUF, (const char *)&n, sizeof(n)) == -1
 		|| setsockopt(m_soc, SOL_SOCKET, SO_SNDBUF, (const char *)&n, sizeof(n)) == -1) {
 		LOG(logERROR) << ("Cannot set rcvbuf size!");
@@ -164,15 +208,17 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 	}
 	else {
 		LOG(logDEBUG) << "Set rcvbuf size to " << n;
+
+		m_desc += ",bufs=" + std::to_string(n);
 	}
-	
+	*/
 	return true;
 }
 
 
 const uint8_t *LLTcp::receive(int &receivedBytes)
 {
-	int res = socketSelect(m_soc, 1000*40);
+	int res = socketSelect(m_soc, m_recvTimeoutUs);
 	if (res == 0) {
 		return 0; // timeout
 	}
@@ -194,14 +240,18 @@ const uint8_t *LLTcp::receive(int &receivedBytes)
 
 bool LLTcp::send(const uint8_t *data, int dataLength)
 {
-	return ::send(m_soc, (const char*)data, dataLength, 0) == dataLength;
+	int res = ::send(m_soc, (const char*)data, dataLength, 0);
+	if (res == dataLength)
+		return true;
+	LOG(logDEBUG) << "TCP send failed: " << res << "" << lastError();
+	return false;
 }
 
 
 
 void LLTcp::toString(std::ostream& stream) const
 {
-	stream << "tcp";
+	stream << "tcp(" + m_desc + ")";
 }
 
 

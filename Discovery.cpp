@@ -16,7 +16,7 @@
 
 #include <rtt.h>
 
-
+#include <algorithm>
 
 // multicast utils
 int get_multicast_addrs(const char *hostname, const char *service, int   socktype, struct sockaddr_storage *addrToBind, struct sockaddr_storage *addrToSend);
@@ -237,7 +237,7 @@ bool Discovery::processMessage(const NodeAddr& remote, const char *message, std:
 	return sendNow;
 }
 
-bool Discovery::update(time_t now)
+bool Discovery::update(uint64_t now)
 {
 	bool sendNow = false;
     std::vector<NodeDevice> newNodes;
@@ -284,24 +284,26 @@ bool Discovery::update(time_t now)
 	}
 
 	// auto-purge dead nodes
-	auto dt = difftime(now, m_lastUpdateTime);
+	long dt = (now - m_lastUpdateTime);
 	for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
 		const NodeDevice &n = it->second;
-        if(difftime(n.sinceVitalSign, 0) > (UlltraProto::BroadcastInterval*3)) {
+        if(n.sinceVitalSign > (UlltraProto::BroadcastIntervalMs *1000*10)) {
             LOG(logINFO) << "Dead node " << n;
+			if (onNodeLost)
+				onNodeLost(it->second);
 			m_discovered.erase(it);
 			sendNow = true;
 			break;
 		}
 		
-		// count time
+		// count time, dont use real 
 		if(m_updateCounter > 0)
-			it->second.sinceVitalSign += dt;
+			it->second.sinceVitalSign += std::min((long)dt, (long)UlltraProto::UpdateIntervalUS);
 	}
 	
 	// broadcast a discovery packet every 10 updates or if something changed
 	// e.g. if a new node appears make current node visible
-	if (difftime(now, m_lastBroadcast) >= UlltraProto::BroadcastInterval || sendNow) {
+	if ((now - m_lastBroadcast) >= (UlltraProto::BroadcastIntervalMs *1000) || sendNow) {
 		send("ULLTRA_DEV_R");
         tryConnectExplictHosts();
 		m_lastBroadcast = now;
@@ -475,9 +477,9 @@ std::string Discovery::getHwAddress()
 		return addr;
 	}
 
-	infile = std::ifstream("/sys/class/net/wl*/address");
-	if (infile.good()) {
-		std::getline(infile, addr);
+    std::ifstream infile2("/sys/class/net/wl*/address");
+    if (infile2.good()) {
+        std::getline(infile2, addr);
 		return addr;
 	}
 
@@ -492,9 +494,9 @@ std::string Discovery::getHwAddress()
 		if (ent->d_name[0] == '.' || strlen(ent->d_name) < 4)
 			continue;
 		if ((ent->d_name[0] == 'w' && ent->d_name[1] == 'l') || ent->d_name[0] == 'e') {
-			infile = std::ifstream("/sys/class/net/" + std::string(ent->d_name )+"/address");
-			if (infile.good()) {
-				std::getline(infile, addr);
+            std::ifstream if3("/sys/class/net/" + std::string(ent->d_name )+"/address");
+            if (if3.good()) {
+                std::getline(if3, addr);
 				closedir(dir);
 				LOG(logDEBUG4) << "Using " << ent->d_name << "'s address";
 				return addr;

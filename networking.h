@@ -1,5 +1,6 @@
 #pragma once
 
+#define NOMINMAX
 
 
 #ifdef _WIN32
@@ -9,6 +10,8 @@
 #include <Windows.h>
 #include <Iphlpapi.h>
 #include <Assert.h>
+#include <strsafe.h>
+#include<codecvt>
 #pragma comment(lib, "iphlpapi.lib")
 
 #define close closesocket
@@ -71,7 +74,43 @@ inline std::string lastError( int err=0)
 #ifdef EUNATCH
 	case EUNATCH: return("EUNATCH\n"); break;
 #endif
-	default: return("UNKNOWN\n"); break;
+	default: 
+#ifdef _WIN32
+		LPVOID lpMsgBuf;
+		LPVOID lpDisplayBuf;
+		DWORD dw = GetLastError();
+
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			dw,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR)&lpMsgBuf,
+			0, NULL);
+
+		// Display the error message and exit the process
+
+		lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
+			(lstrlen((LPCTSTR)lpMsgBuf) + 40) * sizeof(TCHAR));
+		StringCchPrintf((LPTSTR)lpDisplayBuf,
+			LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+			TEXT("%s failed with error %d: %s"),
+			"[]", dw, lpMsgBuf);
+
+		std::wstring  msg((LPCTSTR)lpDisplayBuf);
+		LocalFree(lpMsgBuf);
+		LocalFree(lpDisplayBuf);
+
+		//setup converter
+		typedef std::codecvt_utf8<wchar_t> convert_type;
+		std::wstring_convert<convert_type, wchar_t> converter;
+		return converter.to_bytes(msg);
+#endif
+		
+		
+		return("UNKNOWN\n"); break;
 	}
 }
 
@@ -172,7 +211,7 @@ inline int socketSelect(SOCKET &soc, uint64_t toUs)
 	//LOG(logDEBUG1) << "o = " << o;
 
 	if (res == 0) {
-		LOG(logDEBUG1) << "timeout during select " << toUs;
+		//LOG(logDEBUG1) << "timeout during select " << toUs;
 		return 0;
 	}
 

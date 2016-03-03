@@ -59,6 +59,7 @@
     <ClInclude Include="LLCustomBlock.h">
       <Filter>net\LL</Filter>
     </ClInclude>
+    <ClInclude Include="stress\stress.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mongoose\mongoose.c">
@@ -96,6 +97,8 @@
     <ClCompile Include="LLCustomBlock.cpp">
       <Filter>net\LL</Filter>
     </ClCompile>
+    <ClCompile Include="stress\stress.cpp" />
+    <ClCompile Include="stress\forknt.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore">

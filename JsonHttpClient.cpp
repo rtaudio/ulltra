@@ -97,12 +97,12 @@ const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::st
 		if (m_connectTimeout > 0)
 			socketSetBlocking(soc, true);
 
+		int to = UP::HttpResponseTimeout + rand() % (UP::HttpResponseTimeoutRand);
+
 		while (true) {
-			int to = UP::HttpResponseTimeout * 1000;
-			to += (to / 4) + rand() % (to / 4);
-			res = socketSelect(soc, UP::HttpResponseTimeout * 1000);
+			res = socketSelect(soc, to * 1000);
 			if (res == 0) {
-				throw Exception("Server " + host.toString() + " did not send a response within " + std::to_string(UP::HttpResponseTimeout) + " ms!");
+				throw Exception("Server " + host.toString() + " did not send a response within " + std::to_string(to) + " ms!");
 			}
 
 			if (res < 0) {
@@ -119,7 +119,7 @@ const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::st
 
 		auto tEnd = UP::getMicroSeconds();
 
-		LOG(logDEBUG3) << "response after " << ((tEnd - tStart) / 1000) << " ms";
+		LOG(logDEBUG3) << "response after " << ((tEnd - tStart) / 1000) << " ms, timeout was " << to << " ms";
 
 		str = buf.str();
 		buf.str(""); buf.clear();

@@ -10,6 +10,8 @@
 
 Controller::Controller(const Params &params)
 {
+	m_linkEval.systemLatencyEval();
+
 #if _WIN32
     static bool needWSInit = true;
 
@@ -56,8 +58,9 @@ Controller::Controller(const Params &params)
 				Discovery::NodeDevice nd(*(sockaddr_storage*)&addr);
 				nd.id = clienId;
 				nd.name = request["name"].str;
-				firstEncounter(nd);
-				//m_helloNodes.push_back(nd);
+				m_asyncActions.push_back([this, nd]() {
+					firstEncounter(nd);
+				});
 			}
 		}
 
@@ -171,6 +174,15 @@ Discovery::NodeDevice const& Controller::validateOrigin(const SocketAddress &add
 }
 
 
+void Controller::listNodes()
+{
+	LOG(logINFO) << "Present nodes:";
+	for (auto &n : m_presentNodes) {
+		LOG(logINFO) << "    " << n.second;
+	}
+	LOG(logINFO) << std::endl;
+}
+
 void Controller::updateThreadMain(void *arg)
 {
 	// we use 2-stage discovery: after actual discovery must say hello over tcp
@@ -193,7 +205,9 @@ void Controller::updateThreadMain(void *arg)
 		//std::bind(&Controller::firstEncounter, this, std::placeholders::_1);
 	
     m_discovery.onNodeLost = [this](const Discovery::NodeDevice &node) {
-		m_presentNodes.erase(node.getId());
+		LOG(logDEBUG) << "Discovery said " << node << " is lost, ignoring";
+		listNodes();
+		//m_presentNodes.erase(node.getId());
     };
 
 
@@ -222,6 +236,7 @@ void Controller::updateThreadMain(void *arg)
 
     while (m_isRunning) {
         now = time(NULL);
+		uint64_t nowUs = UP::getMicroSeconds();
 
 		if (m_helloNodes.size()) {
 			for (auto &n : m_helloNodes) {
@@ -239,7 +254,7 @@ void Controller::updateThreadMain(void *arg)
 		}
 
 
-        m_discovery.update(now);
+        m_discovery.update(nowUs);
         //m_linkEval.update(now);
         m_server.update();
 
@@ -274,7 +289,7 @@ void Controller::updateThreadMain(void *arg)
 			}
         }
 		
-        usleep(1000*100);
+        usleep(UP::UpdateIntervalUS);
     }
 
 
@@ -312,12 +327,15 @@ bool Controller::firstEncounter(const Discovery::NodeDevice &node)
 			auto res = rpc(node, "link_choose", JsonNode({}));
 			m_asyncActions.push_back([this, node]() {
 				m_linkEval.chooseLinkCandidate(m_linkCandidates, node, true);
-			});			
+			});	
+			LOG(logINFO) << "queued deferred start of link evaluation with" << node;
 		}
 		catch (const JsonHttpClient::Exception &ex) {
 			LOG(logDEBUG1) << "request failed: " << ex.statusString;
 		}
 	}
+
+	listNodes();
 
 	return true;
 }
@@ -343,14 +361,14 @@ void Controller::defaultLinkCandidates()
 		LLUdpLink *ll = new LLUdpLink();
 		if (!ll->setRxBlockingMode(
 #ifndef _WIN32
-			LLCustomBlock::Mode::UserBlock
+            LLCustomBlock::Mode::KernelBlock // UserBlock
 #else
-			LLCustomBlock::Mode::KernelBlock
+            LLCustomBlock::Mode::KernelBlock
 #endif
 			)) {
 			delete ll;
 			return (ll = 0);
-		}
+		} 
 		return ll;
 	});
 
@@ -365,8 +383,7 @@ void Controller::defaultLinkCandidates()
 	});
 
 
-
-	return;
+    return;
 
 	candidates["udp_kblock"] = ([]() {
 		LLUdpLink *ll = new LLUdpLink();

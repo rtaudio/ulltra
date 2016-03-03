@@ -4,7 +4,6 @@
 #include <map>
 
 #include <math.h>
-#include "UlltraProto.h"
 
 #ifndef NAN
 #define NAN NaN
@@ -36,8 +35,6 @@ struct JsonNode {
 			std::string k(*it);
 			(*this)[k] = *(++it);
 		}
-
-		LOG(logDEBUG2) << "init from list: " << *this;
 	}
 
 	JsonNode& operator[](const std::string &key);

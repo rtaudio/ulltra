@@ -6,8 +6,9 @@
 #include <thread>
 #include <chrono>
 #include <rtt.h>
+#include "stress/stress.h"
 
-
+#include<fstream>
 
 #include "UlltraProto.h"
 #include "SimpleUdpReceiver.h"
@@ -46,6 +47,160 @@ void LinkEval::update(time_t now)
 {
 }
 
+
+void LinkEval::systemLatencyEval()
+{
+    static const uint64_t runTimeMs = 1e3*1; // 1e3 * 1;
+	static const uint64_t nsStep = 1000;
+	static const int stressStartDelayUs = 20 * 1000;
+
+	std::vector<std::vector<uint64_t>> hMat(6, std::vector<uint64_t>(1e4, 0));
+	//volatile bool err = false;
+
+	
+	std::function<void(std::vector<uint64_t>*, int wait)> measure([](std::vector<uint64_t> *hCur, int wait) {
+		uint64_t tl = UP::getSystemTimeNanoSeconds(), t, dt;
+		uint64_t te = tl + runTimeMs*(uint64_t)1e6;
+		while (tl < te) {
+			if (wait == 0)
+				std::this_thread::yield();
+			else if(wait > 0)
+				nsleep(wait);
+			t = UP::getSystemTimeNanoSeconds();
+			dt = (t - tl) / nsStep; // dt in 100ns = (1/10)us
+
+			if (dt > 1e10 / nsStep) {
+				LOG(logERROR) << "system latency too high or timer broken. cancel test";
+				//err = true;
+				break;
+			}
+
+			if (dt >= hCur->size()) {
+				hCur->resize(10 + dt + dt / 6, 0);
+				(*hCur)[dt]++;
+				tl = UP::getSystemTimeNanoSeconds();
+				continue;
+			}
+
+			tl = t;
+			(*hCur)[dt]++;
+		}
+
+		stressStop();
+		//{LOG(logINFO) << (tl - te); }
+	});
+
+	{
+		stressStartSetFlag();
+		int numHogs = RttThread::GetSystemNumCores()+1;
+
+		LOG(logINFO) << "Stressing systems for " << (runTimeMs) << " ms with " << numHogs << " workers per task. Tasks are: cpu,vm";
+
+
+		{
+			// create measuremnet (non-rt & rt)
+			//RttThread mt4([&measure, &hMat]() { measure(&hMat[4], 1); }, false); // sleep 1us
+			//RttThread mt0([&measure, &hMat]() { measure(&hMat[0], 0); }, false, "mt0");  // yield			
+			
+
+			RttThread rtSleep([&measure, &hMat]() {	measure(&hMat[5], 1); }, true); // sleep 1us
+			RttThread rtYield([&measure, &hMat]() {	measure(&hMat[1], 0); }, true, "mt1"); // yield
+
+			//RttThread mt2([&measure, &hMat]() { measure(&hMat[2], -1); }, false);  // no yield/sleep
+			RttThread mt3([&measure, &hMat]() {	measure(&hMat[3], -1); }, true);
+			
+
+			
+			// give the measurement threads time to spin up
+			usleep(stressStartDelayUs);
+
+			
+			std::vector<RttThread> stressCpu(numHogs, RttThreadPrototype([]() { usleep(stressStartDelayUs); hogcpu(); }, false, "cpu_hog"));
+			std::vector<RttThread> stressVm(numHogs, RttThreadPrototype([numHogs]() { usleep(stressStartDelayUs); hogvm(256 / numHogs * 1024 * 1024, 4069, -1, 0); }, false, "vm_hog"));
+
+#if !defined(_WIN32) && 0
+			LOG(logWARNING) << "WARNING: Running hoghdd, this might wear your SSD!";
+			std::vector<RttThread> stressIo(numHogs, RttThreadPrototype([]() {usleep(stressStartDelayUs);  hogio(); }, false, "io_hog"));
+			std::vector<RttThread> stressHdd(2, RttThreadPrototype([]() {
+				usleep(stressStartDelayUs);
+				hoghdd(1024 * 1024 * 2);
+				LOG(logINFO) << "hdd worker finished!";
+			}, false, "hdd_hog"));
+#endif 
+
+			/*rtSleep.Join();
+			rtYield.Join();
+			mt3.Join();
+			stressStop(); */
+		}
+
+		stressStop();
+	}
+
+	LOG(logDEBUG) << "Test done.";
+
+	//if (err)
+	//	return;
+
+	auto hits1 = sum(hMat[0]);
+	auto hits2 = sum(hMat[1]);
+
+	std::vector<std::string> legend({
+		"yield   ", "yield-rt",
+		"busy    ", "busy-rt ",
+		"nsleep1 ", "nslp1-rt"
+	});
+
+	uint32_t best = -1;
+
+	// make equal length
+	int len = 0, vi = 0;
+	for (auto &v : hMat) {
+		int maxNon0;
+		for (maxNon0 = v.size()-1; maxNon0 > 0; maxNon0--) {
+			if (v[maxNon0] > 0) break;
+		}
+
+		uint64_t hits = sum(v);
+
+		if (maxNon0 == 0 && hits == 0)
+			maxNon0 = -1;
+
+		std::string leg = "max: " + std::to_string(maxNon0*nsStep / 1000) + " us";
+		legend[vi++] += leg;
+		LOG(logDEBUG) << std::setw(30) << legend[vi-1] << "   (hits " << std::setw(8) << (hits/1000) << "k)";
+
+		if (maxNon0 > 1 && hits > 1000 && maxNon0 < best) {
+			best = maxNon0;
+		}
+
+		if (maxNon0 > len)
+			len = maxNon0;
+	}
+
+	// avoid big files
+	if (len > 30000)
+		len = 30000;
+
+	for (auto &v : hMat) v.resize(len,0);
+
+	std::string fn("./out/sys_wakeup" + std::to_string(2) + ".m");
+	std::ofstream fs(fn);
+	if (fs.good()) {
+		fs << "h=(" << hMat << ")';";
+		fs << "figure; semilogy(1+h); title('thread wakeup (" << nsStep << "ns)'); grid on; legend(" << legend << "); xlim([-10 "<<(1e6/ nsStep) << "]);";
+		LOG(logINFO) << "wkaeup data written to " << fn;
+	}
+	else {
+		LOG(logERROR) << "failed to write to " << fn;
+	}
+
+
+	if (best > 900) { // us
+		LOG(logERROR) << " !!! System has poor real-time performance !!! ";
+	}
+}
+
 void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd, bool master)
 {
 	int i = 0;
@@ -67,7 +222,7 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 				break;
 			}
 
-			if (!ll->setBlockingTimeout(master ? 2000 : (2000*5))) {
+			if (!ll->setBlockingTimeout(master ? 2000 : (2000*20))) {
 				LOG(logERROR) << "Failed to set blocking mode!";
 				break;
 			}
@@ -84,6 +239,8 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 					runTestAsMaster(nd, ll, testName);
 				else
 					runTestAsSlave(nd, ll);
+
+                outputExtendedLinkStats(ll, testName);
 			});
 
 			{RttThread t(f, true); }
@@ -100,9 +257,12 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 
 void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName)
 {
-	static const int nPasses = 2000;
+    static const int nPasses = 4000;
+	//static const int nPasses = 200;
 	static const int blockSizes[] = {
-		32, 64, 128, 256, 512, 1024, //, 2048
+		//32, 64, 128, 256, 512, 1024, //, 2048
+	//	32, 128, 512
+		64,128,512
 	};
 
 	
@@ -114,30 +274,31 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 	int packetsSend = 0, packetsReceived = 0;
 	uint64_t bytesSentTotal = 0;
 	int bytesInFlight = 0, packetsInFlight = 0;
-	uint64_t tLastReceive = 0;
+	uint64_t tLastReceive = UlltraProto::getSystemTimeNanoSeconds();
 
-#ifdef _DEBUG
+#ifdef MATLAB_REPORTS
 	std::vector<std::vector<float>> statMat(nBlockSizes, std::vector<float>(nPasses + 1, 0.0f));
 	std::vector<int> statMatIdx(nPasses, 0);
 	std::vector<std::string> legend(nBlockSizes, "");
 #endif
 
-
+    const static int nRandBlocks = 16;
 	// generate random data blocks
 	int key = rand();
-	auto dataBlocks = new uint8_t[1024 * nPasses];
-	for (int i = 0; i < 1024 * nPasses; i++) {
+    auto dataBlocks = new uint8_t[1024 * nRandBlocks];
+    for (int i = 0; i < 1024 * nRandBlocks; i++) {
 		dataBlocks[i] = 1 + (rand() % 254); // dont send zeros (0 means end of test)
 	}
 
+	for (int pi = 0; pi < nPasses; pi++) {
 	for (int bsi = 0; bsi < sizeof(blockSizes) / sizeof(*blockSizes); bsi++) {
-		for (int pi = 0; pi < nPasses; pi++) {
+		
 			int blockSize = blockSizes[bsi];
 			bool finalPass = (pi == nPasses - 1);
 			uint64_t now = UlltraProto::getSystemTimeNanoSeconds();
 
 			bool skipSend = false;
-			if (bytesInFlight > 1024*2) {
+			if (bytesInFlight > 1024) {
 				skipSend = true;
 			}
 
@@ -149,9 +310,9 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 				tdh.blockSizeIndex = bsi;
 				tdh.testRunKey = key;
 				tdh.tSent = now;
-				*reinterpret_cast<TestDataHeader*>(&dataBlocks[blockSize * pi]) = tdh;
+                *reinterpret_cast<TestDataHeader*>(&dataBlocks[blockSize * (pi % nRandBlocks)]) = tdh;
 
-				if (!link->send(&dataBlocks[blockSize * pi], blockSize)) {
+                if (!link->send(&dataBlocks[blockSize * (pi % nRandBlocks)], blockSize)) {
 					LOG(logERROR) << "Failed sending data block during latency test, cancelling!";
 					cancel = true;
 					break;
@@ -191,11 +352,13 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 				bytesInFlight -= (int)recvLen;
 				tLastReceive = now;
 
-				if (tdh->tSent > 0 && statMatIdx[tdh->blockSizeIndex] < nPasses) {
+				if (tdh->tSent > 0) {
 					//uint64_t rtt = UP::getMicroSeconds() - tdh->tSent;
 					uint64_t rtt = UP::getSystemTimeNanoSeconds() - tdh->tSent;
-					if (rtt > 0)
+#ifdef MATLAB_REPORTS
+					if (rtt > 0 && statMatIdx[tdh->blockSizeIndex] < nPasses)
 						statMat[tdh->blockSizeIndex][statMatIdx[tdh->blockSizeIndex]++] = rtt;
+#endif
 				}
 			}
 
@@ -205,11 +368,16 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 				break;
 			}
 
-			if ((now - tLastReceive) > 1000 * 1000 * 1000) {
-				LOG(logINFO) << "Not receiving anything, cancelling!";
+
+			// 1 second timeout
+			if ((now - tLastReceive) > 6e9) {
+				LOG(logINFO) << "Not receiving anything for 6 s, cancelling!";
 				cancel = true;
 				break;
 			}
+
+			if (!packetsInFlight)
+				usleep(1000);
 
 			if (cancel)
 				break;
@@ -238,14 +406,25 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 	}
 
 
-#ifdef _DEBUG
+#ifdef MATLAB_REPORTS
 	LOG(logINFO) << std::endl << "# Results for " << testName << ":";
 	for (int bsi = 0; bsi < sizeof(blockSizes) / sizeof(*blockSizes); bsi++) {
 		int blockSize = blockSizes[bsi];
 
 		std::sort(statMat[bsi].begin(), statMat[bsi].end());
+		std::reverse(statMat[bsi].begin(), statMat[bsi].end());
+
+		int rttmin = 0;
 		auto median = statMat[bsi][statMat[bsi].size() / 2];
-		LOG(logINFO) << "\tBS " << std::setw(8) << blockSize << " median RTT: " << (int)(median/1000.0f) << " us";
+		auto max = statMat[bsi][0];
+		auto max1 = statMat[bsi][statMat[bsi].size() / (100 / 1)];
+		if (max) { int i = 0; while (!(rttmin = (int)statMat[bsi][statMat[bsi].size() - 1 - i])) { i++; }; }
+		LOG(logINFO) << "\tBS " << std::setw(8) << blockSize << "  RTT "
+			<< "     min: " << std::setw(5) << (int)(rttmin / 1000.0f) << " us"
+			<< "     med: " << std::setw(5) << (int)(median / 1000.0f) << " us"
+			<< "     max: " << std::setw(5) << (int)(max / 1000.0f) << " us"
+			<< "     max(1%): " << std::setw(5) << (int)(max1 / 1000.0f) << " us"
+			<< "     max(1): " << std::setw(5) << (int)(statMat[bsi][1] / 1000.0f) << " us";
 
 		legend[bsi] = "bs " + std::to_string(blockSize) + " med=" + std::to_string(median);
 	}
@@ -254,15 +433,18 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 	char hostname[32];
 	gethostname(hostname, 31);
 
-	std::string fn("./out/"+ testName+"_" + nd.getName() + "_" + std::to_string(UlltraProto::getMicroSeconds()) + ".m");
+    auto now = UlltraProto::getMicroSeconds();
+
+    std::string fn("./out/"+ testName+"_" + nd.getName() + "_" + std::to_string(now) + ".m");
 	std::ofstream f(fn);
 	if (f.good()) {
 		f << "figure; l=(" << statMat << "');" << std::endl;
-		f << "  plot(medfilt1(l, 25), '-*', 'LineWidth', 4); hold on;  grid on; ylim([1000, 10000]*1000);" << std::endl;
-		f << " ax = gca; ax.ColorOrderIndex = 1; plot(l, 'LineWidth', 1); " << std::endl;
+		f << "  plot(medfilt1(l, 25), '-*', 'LineWidth', 4); hold on;  grid on; ylim([1000, 10000]*1000); xlim(size(l,1)*[-0.005 0.05]);" << std::endl;
+		f << " ax = gca; ax.ColorOrderIndex = 1; plot(l, 'LineWidth', 1);  " << std::endl;
 		f << "legend(" << legend << "); title('latency " << hostname << " <-[" << *link << "]-> " << nd << "'); ";
 		LOG(logDEBUG) << "data written to " << fn;
 	}
+
 #endif	
 
 	if (cancel) {
@@ -274,7 +456,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 
 void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 {
-	const int MaxTimeouts = 10;
+	const int MaxTimeouts = 50;
 
 	uint32_t nPackets = 0;
 	int key;
@@ -298,8 +480,8 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 			if (data) break;
 			
 			auto dt((UP::getMicroSecondsCoarse() - tLastReceive));
-			if (dt > 1000 * 1000) {
-				LOG(logDEBUG) << "Not receiving anything, cancel!";
+			if (dt > 1000 * 1000 * 6) {
+				LOG(logDEBUG) << "Not receiving anything for 6 s, cancel!";
 				len = -1;
 				break;
 			}
@@ -348,6 +530,38 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 }
 
 
+
+void LinkEval::outputExtendedLinkStats(LLLink *link, std::string const& testName)
+{
+    auto &hist = link->getStackDelayHistogramUs();
+    if(hist.size() <= 2) {
+        LOG(logINFO) << "NO stack delay data available!";
+        return;
+    }
+
+    auto hits = sum(hist);
+    if(hits < 100) {
+        LOG(logINFO) << "Stack delay hist consists of " << hits << " hits, need 100 at least for output!";
+        return;
+    }
+
+	int maxNon0;
+	for (maxNon0 = hist.size() - 1; maxNon0 > 0; maxNon0--) {
+		if (hist[maxNon0] > 0) break;
+	}
+
+	LOG(logINFO) << "Max stack delay: " << maxNon0 << " us";
+	
+    std::string fn("./out/stack_delay_"+ testName+"_" + std::to_string(UP::getSystemTimeNanoSeconds()/1000/1000) + ".m");
+    std::ofstream f(fn);
+    if (f.good()) {
+        f << "stack_delay_hist_usec=(" << hist<< ");";
+        f << "figure; plot(stack_delay_hist_usec(1:max(find(stack_delay_hist_usec)))); title('stack delay (us) histogram " << *link << "'); grid on;";
+        LOG(logINFO) << "stack delay hist written to " << fn << " (" << hits << " hits)";
+    } else {
+        LOG(logERROR) << "failed to write to " <<fn;
+    }
+}
 
 #if 0
 

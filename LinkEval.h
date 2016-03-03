@@ -104,8 +104,10 @@ public:
 
 	void chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd, bool master);
 
+	void systemLatencyEval();
+
 private:
 
-
+    void outputExtendedLinkStats(LLLink *link, std::string const& testName);
 };
 
