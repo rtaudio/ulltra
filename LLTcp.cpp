@@ -191,9 +191,10 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 
 
 
+	// assume 2 channel 32-bit @ 48Khz
+	int bitsPerSecond = 48000 * 2 * sizeof(float) * 8;
 
-
-	if(enableHighQoS(m_soc))
+	if(enableHighQoS(m_soc, bitsPerSecond).valid())
 		m_desc += ",qos";
 	else
 		m_desc += ",NOqos";

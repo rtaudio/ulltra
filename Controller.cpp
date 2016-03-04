@@ -3,10 +3,12 @@
 #include <rtt.h>
 #include<time.h>
 #include<iostream>
+#include<fstream>
+
 
 #include"UlltraProto.h"
+#include "AudioDriverStream.h"
 
-#include<fstream>
 
 Controller::Controller(const Params &params)
 {
@@ -350,14 +352,32 @@ JsonNode const& Controller::rpc(Discovery::NodeDevice const& node, std::string c
 
 #include "LLUdpLink.h"
 #include "LLTcp.h"
+#include "LLUdpQWave.h"
 
 //#define DeleteSafe(p) p ?
 void Controller::defaultLinkCandidates()
 {
 	auto &candidates(m_linkCandidates);
 
+	/*
+	// chose best known block modes (linux better in user space)
+	candidates["udp_ablock"] = ([]() {
 
-	
+
+#ifndef _WIN32
+		LLUdpLink *ll = new LLUdpLink();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::KernelBlock)) {
+			delete ll;
+			return (ll = 0);
+		}
+#else
+		LLUdpQWave *ll = new LLUdpQWave();
+#endif
+
+		return ll;
+	});
+	**/
+
 	// chose best known block modes (linux better in user space)
 	candidates["udp_ablock"] = ([]() {
 		LLUdpLink *ll = new LLUdpLink();
@@ -422,7 +442,7 @@ void Controller::defaultLinkCandidates()
 			delete ll;
 			return (ll = 0);
 		}
-		return ll;
+		return ll; 
 	});
 
 

@@ -60,6 +60,11 @@
       <Filter>net\LL</Filter>
     </ClInclude>
     <ClInclude Include="stress\stress.h" />
+    <ClInclude Include="LLUdpQWave.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowsMM.h" />
+    <ClInclude Include="AudioDriverStream.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mongoose\mongoose.c">
@@ -99,6 +104,11 @@
     </ClCompile>
     <ClCompile Include="stress\stress.cpp" />
     <ClCompile Include="stress\forknt.cpp" />
+    <ClCompile Include="LLUdpQWave.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowsMM.cpp" />
+    <ClCompile Include="AudioDriverStream.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore">
@@ -118,5 +128,8 @@
     <Text Include="CMakeLists.txt">
       <Filter>meta</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="admin.xml" />
   </ItemGroup>
 </Project>

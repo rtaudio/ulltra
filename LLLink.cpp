@@ -9,6 +9,10 @@
 
 #include <sys/types.h>
 #include <ifaddrs.h>
+#else
+#include <mswsock.h>
+#include <qos2.h> //qwave
+HANDLE LLLink::s_qosHandle = NULL;
 #endif
 
 #include<iomanip>
@@ -16,6 +20,8 @@
 #include "UlltraProto.h"
 
 int LLLink::s_timeStampingEnabled = 0;
+
+LLLink::QosHandle LLLink::QosHandle::invalid(-1);
 
 std::string getInterfaceName(int index);
 
@@ -38,21 +44,21 @@ bool LLLink::setBlockingTimeout(uint64_t timeoutUs) {
 
 bool LLLink::flushReceiveBuffer() {
 	auto t = m_receiveBlockingTimeoutUs;
-	if (t != 0) setBlockingTimeout(0);
+	if (t != 0) setBlockingTimeout(0); // 0 means asyc!
 	int recvLen;
 	while (receive(recvLen)) {}
 	if (t != 0) return setBlockingTimeout(t); // restore previous timeout
 	return true;
 }
 
-bool LLLink::enableHighQoS(SOCKET soc)
+LLLink::QosHandle LLLink::enableHighQoS(SOCKET soc, int bitsPerSecond)
 {
 #ifndef _WIN32
 	SocketAddress sa;
 	socklen_t len = sizeof(sa);
 	if (getsockname(soc, &sa.sa, &len) != 0) {
 		LOG(logERROR) << " getsockname failed!" << lastError();
-		return false;
+		return  QosHandle::invalid;
 	}
 
 	bool ipv6 = sa.getFamily() == AF_INET6;
@@ -68,7 +74,7 @@ bool LLLink::enableHighQoS(SOCKET soc)
 	int so_priority = 7;
 	if (setsockopt(soc, SOL_SOCKET, SO_PRIORITY, &so_priority, sizeof(so_priority)) < 0) {
 		LOG(logERROR) << "Error: could not set socket SO_PRIORITY to  " << so_priority << "! " << lastError();
-		return false;
+		return  QosHandle::invalid;
 	}
 	else {
 		LOG(logDEBUG) << "Set SO_PRIORITY to " << so_priority;
@@ -80,16 +86,103 @@ bool LLLink::enableHighQoS(SOCKET soc)
 	// have to use qWave API instead
 	if (setsockopt(soc, ipv6 ? IPPROTO_IPV6 : SOL_IP, ipv6 ? IPV6_TCLASS : IP_TOS, &iptos, sizeof(iptos)) < 0) {
 		LOG(logERROR) << "Error: could not set socket IP_TOS priority to  IPTOS_LOWDELAY | IPTOS_PREC_CRITIC_ECP | IPTOS_THROUGHPUT! " << lastError();
-		return false;
+		return  QosHandle::invalid;
 	}
 	else {
 		LOG(logDEBUG) << "Set IP_TOS to  IPTOS_LOWDELAY | IPTOS_PREC_CRITIC_ECP | IPTOS_THROUGHPUT";
 	}
 
-	return true;
+	return QosHandle(1); // linux dont have handles for QoS
 #else
-    LOG(logERROR) << "No QoS imple on Windows yet! Ignoring.";
-    return true;
+
+	if (!s_qosHandle) {
+		static QOS_VERSION QosVersion = { 1 , 0 };
+		if (FALSE == QOSCreateHandle(&QosVersion, &s_qosHandle)) {
+			fprintf(stderr, "%s:%d - QOSCreateHandle failed (%d)\n",
+				__FILE__, __LINE__, GetLastError());
+			return QosHandle::invalid;
+		}
+	}
+
+	QOS_FLOWID flowID = 0;
+	BOOL result = QOSAddSocketToFlow(s_qosHandle,
+		soc,
+		NULL, // destination (use from WSAConnect)
+		QOSTrafficTypeVoice, //QOSTrafficTypeControl, //QOSTrafficTypeVoice, //QOSTrafficTypeExcellentEffort, // TODO
+		QOS_NON_ADAPTIVE_FLOW, // no Experiments!
+		&flowID);
+	if (result == FALSE) {
+		LOG(logERROR) << "QOSAddSocketToFlow failed: " << lastError();
+		// if 87 error, connection failed, a destination in QOSAddSocketToFlow must be specified then!
+		fprintf(stderr, "%s:%d - QOSAddSocketToFlow failed (%d)\n",
+			__FILE__, __LINE__, GetLastError());
+		return QosHandle::invalid;
+	}
+
+	//ERROR_BAD_NET_NAME
+
+	QOS_FLOWRATE_OUTGOING       flowRate;
+
+	// Calculate the real bandwidth we will need to be shaped to.
+	flowRate.Bandwidth = bitsPerSecond;
+
+	// Set shaping characteristics on our QOS flow to smooth out our bursty
+	// traffic.
+	flowRate.ShapingBehavior = QOSShapeAndMark;
+
+	// The reason field is not applicable for the initial call.
+	flowRate.Reason = QOSFlowRateNotApplicable;
+	result = QOSSetFlow(s_qosHandle,
+		flowID,
+		QOSSetOutgoingRate,
+		sizeof(flowRate),
+		&flowRate,
+		0,
+		NULL);
+	if (result == FALSE) {
+		fprintf(stderr, "%s:%d - QOSSetFlow failed (%d)\n",
+			__FILE__, __LINE__, GetLastError());
+		return QosHandle::invalid;
+	}
+
+	// DSCP Bits						
+	//						/ IP-Pr.
+	//						|		/ 1=LowDelay
+	//						|		|	/ 1=HighThroughput
+	//						|		|	|	/ 1=High Reliability
+	//						|		|	|	|	/ 1= Minimise Monetary cost
+	//						V		V	V	V	V	/ = 0
+	//bool dscpBits[] = { 1,0,1,	    1,   1,	0,	0,	0 };
+
+	// its reverse: (dscpVal = 46, see cisco link above)
+	bool dscpBits[] = { 0,1,1,	   1,	0,	1,	0,	0 };
+
+	DWORD dscpVal = 0;
+	for (int i = 0; i < sizeof(dscpBits); i++) {
+		dscpVal |= dscpBits[i] << i;
+	}
+
+	dscpVal = 63;
+	//ERROR_ACCESS_DISABLED_BY_POLICY
+	result = QOSSetFlow(s_qosHandle,
+		flowID,
+		QOSSetOutgoingDSCPValue,
+		sizeof(dscpVal),
+		&dscpVal,
+		0,
+		NULL);
+	if (result == FALSE) {
+		LOG(logERROR) << lastError();
+		fprintf(stderr, "%s:%d - QOSSetFlow(QOSSetOutgoingDSCPValue) failed (%d)\n",
+			__FILE__, __LINE__, GetLastError());
+		
+		return QosHandle::invalid;
+	}
+
+	// TODO:
+	// 101 1 0 1 0 0
+
+	return QosHandle(flowID);
 #endif
 }
 

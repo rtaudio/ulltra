@@ -56,6 +56,12 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 	}
 	freeaddrinfo(addrRes);
 
+	// connect tx socket
+	if (::connect(m_socketTx, &end.sa, sizeof(end)) != 0) {
+		LOG(logERROR) << "Connect failed: " << lastError();
+		return false;
+	}
+
 
 	// apply the timeout
 	if (m_receiveBlockingTimeoutUs != -1) {
@@ -63,8 +69,8 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 			return false;
 	}
 
-
-    if( !enableHighQoS(m_socketTx) || !enableHighQoS(m_socketRx)) {
+	int bitsPerSecond = 48000 * 2 * sizeof(float) * 8;
+    if( !enableHighQoS(m_socketTx, bitsPerSecond).valid() || !enableHighQoS(m_socketRx, bitsPerSecond).valid()) {
         LOG(logERROR) << "QoS setup not completed!";
     }
 
@@ -92,7 +98,7 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 	}
 
 
-	// On Linux: blocking send sockets perform better!
+	// On Linux: blocking send sockets perform better?
 	if (!socketSetBlocking(m_socketTx, false))
 		return false;
 	m_desc += ",txasync";
@@ -223,10 +229,11 @@ bool LLUdpLink::send(const uint8_t *data, int dataLength)
 	if (ret == dataLength)
 		return true;
 
-	if (ret == -1 && errno == EAGAIN || errno == EWOULDBLOCK)
+	auto le = WSAGetLastError();
+	if (ret == -1 && errno == EAGAIN || errno == EWOULDBLOCK || le == WSAEWOULDBLOCK || le == ERROR_IO_PENDING)
 		return true;
 
-	LOG(logDEBUG1) << "sendto " << m_addr << " failed: " << ret << " != " << dataLength;
+	LOG(logDEBUG1) << "sendto " << m_addr << " failed: " << ret << " != " << dataLength << lastError();
 	return false;
 }
 

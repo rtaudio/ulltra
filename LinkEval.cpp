@@ -430,7 +430,7 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 
 void runTimedMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName)
 {
-	static const int testDurationMs = 120000;
+	static const int testDurationMs = 420000;
 	static const int blockSizes[] = {
 		64,128,512
 	};

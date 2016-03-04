@@ -14,6 +14,8 @@
 #include <iostream>
 #include<signal.h>
 
+#include "WindowsMM.h"
+
 bool g_isRunning;
 
 #ifdef _WIN32
@@ -29,11 +31,14 @@ int main(int argc, const char* argv[])
 {
 	RttThread::Init();
 
-
 	if (!UlltraProto::init()) {
 		std::cerr << "Failed to initialize ulltra protocol!" << std::endl;
 		return 1;
 	}
+
+	auto wmm = new WindowsMM();
+	wmm->init();
+	LOG(logINFO) << "Available streams: " << wmm->getStreams();
 		
 
 	g_isRunning = true;

@@ -7,6 +7,14 @@
 class LLLink
 {
 public:
+	struct QosHandle {
+		unsigned long handle;
+		static QosHandle invalid;
+		inline bool valid() { return handle != -1; }
+
+		QosHandle(unsigned long h=-1) : handle(h) {}
+	};
+
 	inline LLLink(uint64_t defaultBlockingTimeout) : m_receiveBlockingTimeoutUs(defaultBlockingTimeout) {}
 	virtual ~LLLink();
 
@@ -29,7 +37,7 @@ public:
 	}
 
     static int s_timeStampingEnabled;
-	static bool enableHighQoS(SOCKET soc);
+	static QosHandle enableHighQoS(SOCKET soc, int bitsPerSeconds);
     bool enableTimeStamps(SOCKET soc, bool enable=true);
     int socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize);
 
@@ -40,7 +48,13 @@ public:
 
  private:
     std::vector<int> m_stackDelayHist;
+
+
 protected:
 	uint64_t m_receiveBlockingTimeoutUs;
+
+#ifdef _WIN32
+	static HANDLE s_qosHandle;
+#endif
 };
 

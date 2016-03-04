@@ -57,7 +57,7 @@ inline std::string lastError( int err=0)
 	case EBADF: return("EBADF\n"); break;
 	case ECONNABORTED: return("ECONNABORTED\n"); break;
 	case EINVAL: return("EINVAL\n"); break;
-	case EIO: return("EIO\n"); break;
+	//case EIO: return("EIO\n"); break;
 	case ENOBUFS: return("ENOBUFS\n"); break;
 	case ENOPROTOOPT: return("ENOPROTOOPT\n"); break;
 	case ENOTCONN: return("ENOTCONN\n"); break;

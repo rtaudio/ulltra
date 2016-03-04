@@ -21,7 +21,6 @@ public:
 
 	/* rx */
 	bool onBlockingTimeoutChanged(uint64_t timeoutUs);
-	bool flushBuffer();
 	const uint8_t *receive(int &receivedBytes);
 
 	/* tx */
