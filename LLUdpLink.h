@@ -31,5 +31,6 @@ private:
 	SOCKET m_socketRx, m_socketTx;
 	uint8_t  m_rxBuffer[1024 * 8 + 1];
 	SocketAddress m_addr;
+	std::string m_desc;
 };
 

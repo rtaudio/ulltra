@@ -198,7 +198,7 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 	else
 		m_desc += ",NOqos";
 
-	/*
+	
 	// set the buffer size, is this necessary?
 	int n = 256; // 1024 * 8;
 	if (setsockopt(m_soc, SOL_SOCKET, SO_RCVBUF, (const char *)&n, sizeof(n)) == -1
@@ -211,7 +211,7 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 
 		m_desc += ",bufs=" + std::to_string(n);
 	}
-	*/
+
 	return true;
 }
 

@@ -247,10 +247,11 @@ void Controller::updateThreadMain(void *arg)
 
 
 		if (m_asyncActions.size()) {
-			for (auto &f : m_asyncActions) {
+			auto aa = m_asyncActions; // work on a copy!
+			m_asyncActions.clear();
+			for (auto &f : aa) {
 				f();
 			}
-			m_asyncActions.clear();
 		}
 
 
@@ -355,6 +356,7 @@ void Controller::defaultLinkCandidates()
 {
 	auto &candidates(m_linkCandidates);
 
+
 	
 	// chose best known block modes (linux better in user space)
 	candidates["udp_ablock"] = ([]() {
@@ -372,7 +374,16 @@ void Controller::defaultLinkCandidates()
 		return ll;
 	});
 
-
+	return;
+	
+	candidates["tcp_block"] = ([]() {
+		auto ll = new LLTcp();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::Select)) {
+			delete ll;
+			return (ll = 0);
+		}
+		return ll;
+	});
 	candidates["tcp_block"] = ([]() {
 		auto ll = new LLTcp();
 		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::Select)) {

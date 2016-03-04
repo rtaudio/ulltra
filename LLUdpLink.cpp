@@ -70,7 +70,8 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 
 
 	// set the buffer size, is this necessary?
-	int n = 64 * 2;
+	
+	int n = 32;
 	if (setsockopt(m_socketRx, SOL_SOCKET, SO_RCVBUF, (const char *)&n, sizeof(n)) == -1
 		|| setsockopt(m_socketTx, SOL_SOCKET, SO_SNDBUF, (const char *)&n, sizeof(n)) == -1) {
 		LOG(logERROR) << ("Cannot set rcvbuf size!");
@@ -78,8 +79,8 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 	}
 	else {
 		LOG(logDEBUG) << "Set rcvbuf size to " << n;
+		m_desc += ",bufs=" + std::to_string(n);
 	}
-
 
     // timestamping
 	if (m_rxBlockingMode == Mode::KernelBlock || m_rxBlockingMode == Mode::Select) {
@@ -89,6 +90,12 @@ bool LLUdpLink::connect(const LinkEndpoint &end, bool isMaster)
 	else {
 		LOG(logINFO) << "timestamping currently only for kernel block and select!";
 	}
+
+
+	// On Linux: blocking send sockets perform better!
+	if (!socketSetBlocking(m_socketTx, false))
+		return false;
+	m_desc += ",txasync";
 
 	return true;
 }
@@ -203,11 +210,20 @@ const uint8_t *LLUdpLink::receive(int &receivedBytes)
 	}
 }
 
+
+// windows does niot have MSG_DONTWAIT, but socket is marked non-blocking anyway
+#ifndef MSG_DONTWAIT
+#define MSG_DONTWAIT 0
+#endif
+
 bool LLUdpLink::send(const uint8_t *data, int dataLength)
 {
-	int ret = sendto(m_socketTx, (const char *)data, dataLength, 0, (struct sockaddr*)&m_addr, sizeof(m_addr));
+	int ret = sendto(m_socketTx, (const char *)data, dataLength, MSG_DONTWAIT, (struct sockaddr*)&m_addr, sizeof(m_addr));
 
 	if (ret == dataLength)
+		return true;
+
+	if (ret == -1 && errno == EAGAIN || errno == EWOULDBLOCK)
 		return true;
 
 	LOG(logDEBUG1) << "sendto " << m_addr << " failed: " << ret << " != " << dataLength;
@@ -218,7 +234,7 @@ bool LLUdpLink::send(const uint8_t *data, int dataLength)
 
 void LLUdpLink::toString(std::ostream& stream) const
 {
-	stream << "udplink(rxblock=" << m_rxBlockingMode << ",to=" << m_receiveBlockingTimeoutUs << "us)";
+	stream << "udplink(rxblock=" << m_rxBlockingMode << ",to=" << m_receiveBlockingTimeoutUs << "us" << m_desc << ")";
 	if (m_socketRx != -1)
 		stream << " to " << m_addr;
 }

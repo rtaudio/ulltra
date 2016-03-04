@@ -7,7 +7,7 @@
 #include <chrono>
 #include <rtt.h>
 #include "stress/stress.h"
-
+#include <math.h>
 #include<fstream>
 
 #include "UlltraProto.h"
@@ -21,6 +21,157 @@ struct TestDataHeader {
 	int testRunKey;
 	uint8_t blockSizeIndex;
 	uint64_t tSent;
+};
+
+
+// from http://stackoverflow.com/questions/11376288/fast-computing-of-log2-for-64-bit-integers
+static const int tab64[64] = {
+	63,  0, 58,  1, 59, 47, 53,  2,
+	60, 39, 48, 27, 54, 33, 42,  3,
+	61, 51, 37, 40, 49, 18, 28, 20,
+	55, 30, 34, 11, 43, 14, 22,  4,
+	62, 57, 46, 52, 38, 26, 32, 41,
+	50, 36, 17, 19, 29, 10, 13, 21,
+	56, 45, 25, 31, 35, 16,  9, 12,
+	44, 24, 15,  8, 23,  7,  6,  5 };
+
+
+
+struct Histogram {
+	std::vector<uint64_t> h;
+    uint64_t maxVal, s, maxValLog;
+
+	static const int P = 50, R = 1, B = 100;
+
+	Histogram() {
+		s = 1e4;
+		maxVal = 0;
+        maxValLog = 0;
+		h.resize(s, 0);
+	}
+
+
+	static int log2_64(uint64_t value)
+	{
+		value |= value >> 1;
+		value |= value >> 2;
+		value |= value >> 4;
+		value |= value >> 8;
+		value |= value >> 16;
+		value |= value >> 32;
+		return tab64[((uint64_t)((value - (value >> 1)) * 0x07EDD5E59A4E28C2)) >> 58];
+	}
+
+
+	// returns >0 if reached a new max, this could caused a memory intensive resize
+    uint64_t addLog(uint64_t v) {
+		uint64_t d;
+
+        auto logV = (int)(std::log10( (float)((v / (uint64_t)B)*(uint64_t)B +(uint64_t)R)  )*(float)P);// v/1000UL; // log2_64(v*1000UL);
+        if(v > maxVal) {
+            d = v - maxVal;
+            maxVal = v;
+            maxValLog = logV;
+        } else {
+            d = 0;
+        }
+
+        if (logV >= s) {
+            h.resize(logV + logV / 6 + 10, 0);
+            s = h.size();
+        }
+
+		h[logV]++;
+
+		return d;
+	}
+
+
+	// returns >0 if reached a new max, this could caused a memory intensive resize
+	uint64_t addLin(uint64_t v) {
+		uint64_t d;
+		if (v > maxVal) {
+			d = v - maxVal;
+			maxVal = v;
+			if (v >= s) {
+				h.resize(v + v / 6UL + 10UL, 0);
+				s = h.size();
+			}
+		}
+		else {
+			d = 0;
+		}
+		h[v]++;
+		return d;
+	}
+
+	uint64_t hits() {
+		return sum(h);
+	}
+
+    int64_t maxLin() {
+        if (maxVal == 0 && h[0] == 0)
+            return -1;
+        return maxVal;
+    }
+
+    int64_t maxLog() {
+        if (maxVal == 0 && h[0] == 0)
+            return 0;
+        return maxValLog;
+    }
+
+
+	static void equalize(std::vector<Histogram> &hist, uint64_t maxLen=100000)
+	{
+		uint64_t m = 0;
+		for (auto &h : hist) {
+            if (h.maxLog() > m)
+                m = h.maxLog();
+		}
+
+		if (m > maxLen)
+			m = maxLen;
+
+		for (auto &h : hist) {
+			h.h.resize(m+2, 0);
+		}
+	}
+
+	inline friend std::ostream& operator << (std::ostream& os, const std::vector<Histogram>& v)
+	{
+		os << "h=(";
+
+		{
+			int i = 0;
+			os << "[";
+			for (std::vector<Histogram>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+			{
+				os << " " << ii->h;
+				i++;
+				if (i % 50 == 0)
+					os << " ..." << std::endl;
+			}
+			os << "]'";
+		}
+		
+		os << ")';" << std::endl << std::endl;
+
+        int len = v[0].h.size();
+        std::vector<float> x(len,0.0f);
+        for(int i = 0; i < len; i++) {
+            x[i] = (std::pow(10.0f, ((float)i)/(float)P)-(float)R);
+        }
+
+		os << "x=(" << x << ");" << std::endl << std::endl;
+		os << "o=ceil(" << std::log10(1.0+R) * (float)P << ")+1;" << std::endl;
+
+        os << "figure; loglog(x(o:end,:), 1+h(o:end,:), 'LineWidth',2); grid on; " << std::endl;
+
+
+		return os;
+	}
+
 };
 
 
@@ -47,18 +198,62 @@ void LinkEval::update(time_t now)
 {
 }
 
+void systemTimerAccuracy()
+{
+    const static int tDurationUs = 1e6;
+	LOG(logINFO) << "evaluating timer for  " << (tDurationUs /1000) << " ms";
+
+	int numHits = 0;
+	int *pNumHits = &numHits;
+	Histogram h;
+
+	
+	uint64_t lt = 0;
+
+	{
+		RttTimer t([&numHits, &h, &lt]() {
+			uint64_t t = UP::getSystemTimeNanoSeconds();
+			if (lt > 0)
+			{
+                h.addLog(t - lt);
+				numHits++;
+			}
+			lt = t;
+			
+			return true;
+        }, 1e6); // 1ms
+		{LOG(logDEBUG) << "sleep..."; }
+		usleep(tDurationUs);
+		{LOG(logDEBUG) << "waiting for timer thread to shutdown"; }
+	}
+
+
+	std::vector<Histogram> hv(1,h);
+	Histogram::equalize(hv);
+
+	std::string fn("./out/timer_acc.m");
+	std::ofstream fs(fn);
+	if (fs.good()) {
+        fs << hv << "title('timer period (ns)');";
+		LOG(logINFO) << "timer histogram with " << numHits << " hits data written to " << fn;
+	}
+	LOG(logINFO) << "timer evaluation done!";
+}
+
 
 void LinkEval::systemLatencyEval()
 {
+	systemTimerAccuracy();
+
     static const uint64_t runTimeMs = 1e3*1; // 1e3 * 1;
 	static const uint64_t nsStep = 1000;
 	static const int stressStartDelayUs = 20 * 1000;
 
-	std::vector<std::vector<uint64_t>> hMat(6, std::vector<uint64_t>(1e4, 0));
+	std::vector<Histogram> hMat(6);
 	//volatile bool err = false;
 
 	
-	std::function<void(std::vector<uint64_t>*, int wait)> measure([](std::vector<uint64_t> *hCur, int wait) {
+	std::function<void(Histogram*, int wait)> measure([](Histogram *hCur, int wait) {
 		uint64_t tl = UP::getSystemTimeNanoSeconds(), t, dt;
 		uint64_t te = tl + runTimeMs*(uint64_t)1e6;
 		while (tl < te) {
@@ -67,23 +262,15 @@ void LinkEval::systemLatencyEval()
 			else if(wait > 0)
 				nsleep(wait);
 			t = UP::getSystemTimeNanoSeconds();
-			dt = (t - tl) / nsStep; // dt in 100ns = (1/10)us
+            dt = (t - tl); // dt in 100ns = (1/10)us
 
-			if (dt > 1e10 / nsStep) {
+            if (dt > 1e10) {
 				LOG(logERROR) << "system latency too high or timer broken. cancel test";
 				//err = true;
 				break;
 			}
 
-			if (dt >= hCur->size()) {
-				hCur->resize(10 + dt + dt / 6, 0);
-				(*hCur)[dt]++;
-				tl = UP::getSystemTimeNanoSeconds();
-				continue;
-			}
-
-			tl = t;
-			(*hCur)[dt]++;
+            tl = hCur->addLog(dt) ? UP::getSystemTimeNanoSeconds() : t;
 		}
 
 		stressStop();
@@ -140,10 +327,9 @@ void LinkEval::systemLatencyEval()
 	LOG(logDEBUG) << "Test done.";
 
 	//if (err)
-	//	return;
+//		LOG(logWARNING) << "... with errors!";
 
-	auto hits1 = sum(hMat[0]);
-	auto hits2 = sum(hMat[1]);
+    Histogram::equalize(hMat);
 
 	std::vector<std::string> legend({
 		"yield   ", "yield-rt",
@@ -151,44 +337,25 @@ void LinkEval::systemLatencyEval()
 		"nsleep1 ", "nslp1-rt"
 	});
 
-	uint32_t best = -1;
 
-	// make equal length
-	int len = 0, vi = 0;
+	// generate legend and compute best
+	uint32_t best = -1, len = 0, vi = 0;
 	for (auto &v : hMat) {
-		int maxNon0;
-		for (maxNon0 = v.size()-1; maxNon0 > 0; maxNon0--) {
-			if (v[maxNon0] > 0) break;
-		}
-
-		uint64_t hits = sum(v);
-
-		if (maxNon0 == 0 && hits == 0)
-			maxNon0 = -1;
-
-		std::string leg = "max: " + std::to_string(maxNon0*nsStep / 1000) + " us";
+		uint64_t hits = v.hits();
+        std::string leg = "max: " + std::to_string(v.maxLin() / 1000) + " us";
 		legend[vi++] += leg;
 		LOG(logDEBUG) << std::setw(30) << legend[vi-1] << "   (hits " << std::setw(8) << (hits/1000) << "k)";
 
-		if (maxNon0 > 1 && hits > 1000 && maxNon0 < best) {
-			best = maxNon0;
+        if (v.maxLin() > 1 && hits > 1000 && v.maxLin() < best) {
+            best = v.maxLin();
 		}
-
-		if (maxNon0 > len)
-			len = maxNon0;
 	}
 
-	// avoid big files
-	if (len > 30000)
-		len = 30000;
-
-	for (auto &v : hMat) v.resize(len,0);
 
 	std::string fn("./out/sys_wakeup" + std::to_string(2) + ".m");
 	std::ofstream fs(fn);
 	if (fs.good()) {
-		fs << "h=(" << hMat << ")';";
-		fs << "figure; semilogy(1+h); title('thread wakeup (" << nsStep << "ns)'); grid on; legend(" << legend << "); xlim([-10 "<<(1e6/ nsStep) << "]);";
+		fs << hMat << "title('thread wakeup (" << nsStep << "ns)'); legend(" << legend << ");"; // xlim([-10 "<<(1e6/ nsStep) << "]); ";
 		LOG(logINFO) << "wkaeup data written to " << fn;
 	}
 	else {
@@ -196,10 +363,13 @@ void LinkEval::systemLatencyEval()
 	}
 
 
-	if (best > 900) { // us
+	if (best > 900*1000) { // us
 		LOG(logERROR) << " !!! System has poor real-time performance !!! ";
 	}
 }
+
+void runTimedAsSlave(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName);
+void runTimedMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName);
 
 void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd, bool master)
 {
@@ -235,10 +405,13 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 			}
 
 			std::function<void(void)> f([this, &nd, master, ll, testName]() {
+				//if (master)	runTestAsMaster(nd, ll, testName);
+				//else runTestAsSlave(nd, ll);
+
 				if (master)
-					runTestAsMaster(nd, ll, testName);
+					runTimedMaster(nd, ll, testName);
 				else
-					runTestAsSlave(nd, ll);
+					runTimedAsSlave(nd, ll, testName);
 
                 outputExtendedLinkStats(ll, testName);
 			});
@@ -255,9 +428,236 @@ void LinkEval::chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const D
 }
 
 
+void runTimedMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName)
+{
+	static const int testDurationMs = 120000;
+	static const int blockSizes[] = {
+		64,128,512
+	};
+	std::vector<std::string> legend({ "64", "128", "512" });
+	
+	static const int nBlockSizes = sizeof(blockSizes) / sizeof(*blockSizes);
+
+	std::vector<Histogram> timerHist(nBlockSizes);
+
+	bool cancel = false;
+
+	int nSent = 0;
+	
+	uint8_t dataBlock[1024 * 2];
+	uint8_t *pDataBlock = dataBlock;
+	int testKey = rand();
+	for (int i = 0; i < sizeof(dataBlock); i++) {
+		dataBlock[i] = 1 + (rand() % 254);
+	}
+
+
+	for (int ii = 0; ii < 10; ii++) { // interleave!
+
+		for (int bsi = 0; bsi < nBlockSizes; bsi++) {
+			uint64_t tLast = 0;
+
+			RttTimer t([testKey, pDataBlock, bsi, &nSent, link, &timerHist, &tLast]() {
+				int blockSize = blockSizes[bsi];
+				auto now = UlltraProto::getSystemTimeNanoSeconds();
+
+				TestDataHeader tdh;
+				tdh.moreData = 1;
+				tdh.blockSizeIndex = bsi;
+				tdh.testRunKey = testKey;
+				tdh.tSent = now;
+				*reinterpret_cast<TestDataHeader*>(pDataBlock) = tdh;
+
+				if (!link->send(pDataBlock, blockSize)) {
+					LOG(logERROR) << "Failed sending data block during latency test, cancelling!";
+					return false;
+				}
+
+				if (tLast > 0) {
+					timerHist[bsi].addLog((now - tLast));
+				}
+
+				tLast = now;
+
+				nSent++;
+				return true;
+			}, 1e6);
+
+			usleep(testDurationMs * 1000 / nBlockSizes / 10);
+		}
+	}
+
+	// let slave know that its over
+	TestDataHeader tdh;
+	memset(&tdh, 0, sizeof(tdh));
+	tdh.testRunKey = testKey;
+	link->send((const uint8_t*)&tdh, sizeof(tdh));
+
+	LOG(logDEBUG) << "Packets send: " << nSent;
+
+
+	auto now = UlltraProto::getMicroSeconds();
+	char hostname[32];
+	gethostname(hostname, 31);
+
+	
+
+
+	{
+		std::string fn("./out/timed_master_hist_" + testName + "_" + nd.getName() + "_" + std::to_string(now) + ".m");
+		std::ofstream f(fn);
+		if (f.good()) {
+			f << timerHist << "legend(" << legend << "); title('latency (100us) " << hostname << " <-[" << *link << "]-> " << nd << "'); ";
+			LOG(logDEBUG) << "data written to " << fn;
+		}
+	}
+}
+
+
+const uint8_t *slaveReceive(LLLink *link, int &testRunKey, uint64_t &tLastReceive, int dataLen)
+{
+	const int MaxTimeouts = 50;
+	const uint8_t *data;
+
+	if(tLastReceive == 0)
+		tLastReceive = UP::getMicroSecondsCoarse();;
+
+	for (int i = 0; i <= MaxTimeouts; i++) {
+		data = link->receive(dataLen);
+
+		if (dataLen == -1) {
+			LOG(logINFO) << "Link broke, cancelling!";
+			return 0;
+		}
+
+		if (data) {
+
+			if (dataLen < sizeof(TestDataHeader)) {
+				LOG(logINFO) << "received small package, ignoring.";
+				data = 0;
+				continue;
+			}
+
+			if (dataLen > 1024) {
+				LOG(logINFO) << "package is big!";
+			}
+
+			auto tdh = reinterpret_cast<const TestDataHeader*>(data);
+
+			if (testRunKey == 0) {
+				testRunKey = tdh->testRunKey;
+				LOG(logDEBUG1) << "Test session key:" << testRunKey;
+			}
+			else if (testRunKey != tdh->testRunKey) {
+				LOG(logINFO) << "Received with different session key, ignoring. (key:" << tdh->testRunKey << ", len: " << dataLen <<" sent " << ((UlltraProto::getSystemTimeNanoSeconds() - tdh->tSent) / 1000) << " us ago)";
+				continue;
+			}
+
+			if (!tdh->moreData) {
+				std::cout << "Latency test ended (end flag)" << std::endl;
+				return 0;
+			}
+
+			break;
+		}
+
+		auto t = UP::getMicroSecondsCoarse();
+		auto dt((t - tLastReceive));
+		if (dt > 1000 * 1000 * 6) {
+			LOG(logDEBUG) << "Not receiving anything for 6 s, cancel!";
+			dataLen = -1;
+			return 0;
+		}
+		else {
+			LOG(logDEBUG) << "Timeout during latency test, retrying. " << dt;
+		}
+	}
+
+	if (dataLen == -1)
+		return 0;
+
+	if (!data) {
+		LOG(logERROR) << "Reached max number of " << MaxTimeouts << " timeouts/errors after receiving, canceling.";
+		return 0;
+	}
+
+	tLastReceive = UP::getMicroSecondsCoarse();
+
+	return data;
+}
+
+
+void runTimedAsSlave(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName)
+{
+	std::vector<std::string> legend({ "64", "128", "512" });
+
+
+	uint32_t nPackets = 0;
+	int key = 0, len;
+	const uint8_t *data;
+	uint64_t tLastReceiveMs = 0, tNs;
+
+	int lastBsi = -1;
+
+	std::vector<Histogram> hist(3);
+	std::vector<uint64_t> tLast(3, 0);
+	std::vector<uint64_t> tMaxTWithoutRecv(3, 0);
+
+	while (true) {
+		len = 0;
+		data = slaveReceive(link, key, tLastReceiveMs, len);
+
+		if (!data)
+			break;
+
+		TestDataHeader *tdh = (TestDataHeader *)data;
+
+		if (tdh->blockSizeIndex < 0 || tdh->blockSizeIndex >= legend.size()) {
+			break;
+		}
+
+		tNs = UP::getSystemTimeNanoSeconds();		
+
+		// on bsi change, skip
+		if (tLast[tdh->blockSizeIndex] > 0 && lastBsi == tdh->blockSizeIndex) {
+            hist[tdh->blockSizeIndex].addLog(tNs - tLast[tdh->blockSizeIndex]);			
+		}
+		tLast[tdh->blockSizeIndex] = tNs;
+		lastBsi = tdh->blockSizeIndex;
+
+		nPackets++;
+	}
+
+	LOG(logDEBUG) << "Packets received: " << nPackets;
+
+	int i = 0;
+	for (auto &h : hist) {
+		LOG(logINFO) << " BS=" << legend[i++] << "\tmax:" << h.maxLin()/1e6 << " ms";
+	}
+
+
+	auto now = UlltraProto::getMicroSeconds();
+	char hostname[32];
+	gethostname(hostname, 31);
+
+
+	Histogram::equalize(hist);
+
+	{
+		std::string fn("./out/timed_slave_hist_" + testName + "_" + nd.getName() + "_" + std::to_string(now) + ".m");
+		std::ofstream f(fn);
+		if (f.good()) {
+			f << hist << "legend(" << legend << "); title('receiver jitter (ns) " << hostname << " <-[" << *link << "]-> " << nd << "'); ";
+			LOG(logDEBUG) << "data written to " << fn;
+		}
+	}
+}
+
+
+
 void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::string &testName)
 {
-    static const int nPasses = 4000;
+    static const int nPasses = 10000;
 	//static const int nPasses = 200;
 	static const int blockSizes[] = {
 		//32, 64, 128, 256, 512, 1024, //, 2048
@@ -276,6 +676,8 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 	int bytesInFlight = 0, packetsInFlight = 0;
 	uint64_t tLastReceive = UlltraProto::getSystemTimeNanoSeconds();
 
+	std::vector<Histogram> hists(nBlockSizes);
+
 #ifdef MATLAB_REPORTS
 	std::vector<std::vector<float>> statMat(nBlockSizes, std::vector<float>(nPasses + 1, 0.0f));
 	std::vector<int> statMatIdx(nPasses, 0);
@@ -284,7 +686,8 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 
     const static int nRandBlocks = 16;
 	// generate random data blocks
-	int key = rand();
+	int key = 0;
+	while (key == 0) { key = rand(); }
     auto dataBlocks = new uint8_t[1024 * nRandBlocks];
     for (int i = 0; i < 1024 * nRandBlocks; i++) {
 		dataBlocks[i] = 1 + (rand() % 254); // dont send zeros (0 means end of test)
@@ -355,6 +758,7 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 				if (tdh->tSent > 0) {
 					//uint64_t rtt = UP::getMicroSeconds() - tdh->tSent;
 					uint64_t rtt = UP::getSystemTimeNanoSeconds() - tdh->tSent;
+                    hists[tdh->blockSizeIndex].addLog(rtt);
 #ifdef MATLAB_REPORTS
 					if (rtt > 0 && statMatIdx[tdh->blockSizeIndex] < nPasses)
 						statMat[tdh->blockSizeIndex][statMatIdx[tdh->blockSizeIndex]++] = rtt;
@@ -404,7 +808,14 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 		LOG(logERROR) << "Packet loss " << packetLoss << " too high!";
 		return;
 	}
+	
+	auto now = UlltraProto::getMicroSeconds();
+	char hostname[32];
+	gethostname(hostname, 31);
 
+
+
+	Histogram::equalize(hists, 50000);
 
 #ifdef MATLAB_REPORTS
 	LOG(logINFO) << std::endl << "# Results for " << testName << ":";
@@ -430,10 +841,9 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 	}
 	LOG(logINFO) << std::endl;
 
-	char hostname[32];
-	gethostname(hostname, 31);
 
-    auto now = UlltraProto::getMicroSeconds();
+
+   
 
     std::string fn("./out/"+ testName+"_" + nd.getName() + "_" + std::to_string(now) + ".m");
 	std::ofstream f(fn);
@@ -445,6 +855,14 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
 		LOG(logDEBUG) << "data written to " << fn;
 	}
 
+	{
+		std::string fn("./out/hist_" + testName + "_" + nd.getName() + "_" + std::to_string(now) + ".m");
+		std::ofstream f(fn);
+		if (f.good()) {
+			f << hists << "legend(" << legend << "); title('latency (ns) " << hostname << " <-[" << *link << "]-> " << nd << "'); ";
+			LOG(logDEBUG) << "data written to " << fn;
+		}
+	}
 #endif	
 
 	if (cancel) {
@@ -459,7 +877,7 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 	const int MaxTimeouts = 50;
 
 	uint32_t nPackets = 0;
-	int key;
+	int key = 0;
 
 	const uint8_t *data;
 	int len = 0;
@@ -467,65 +885,19 @@ void runTestAsSlave(const Discovery::NodeDevice &nd, LLLink *link)
 	uint64_t tLastReceive = UP::getMicroSecondsCoarse();
 
 	// just bounce packages until end flag received (or timeouts)
-	while (true) {
+	while (true)
+	{
 		len = 0;
-		for (int i = 0; i <= MaxTimeouts; i++) {
-			data = link->receive(len);
-
-			if (len == -1) {
-				LOG(logINFO) << "Link broke, cancelling!";
-				break;
-			}
-
-			if (data) break;
-			
-			auto dt((UP::getMicroSecondsCoarse() - tLastReceive));
-			if (dt > 1000 * 1000 * 6) {
-				LOG(logDEBUG) << "Not receiving anything for 6 s, cancel!";
-				len = -1;
-				break;
-			}
-			else {
-				LOG(logDEBUG) << "Timeout during latency test, retrying. " << nPackets << "|" << dt;
-			}
-		}
-
-		if (len == -1)
+		data = slaveReceive(link, key, tLastReceive, len);
+		if (!data)
 			break;
-
-		if (!data) {
-			LOG(logERROR) << "Reached max number of " << MaxTimeouts << " timeouts after receiving " << nPackets << " packets, canceling.";
-			break;
-		}
-
-		if (len < sizeof(TestDataHeader)) {
-			LOG(logINFO) << "received small package, ignoring.";
-			continue;
-		}
-
-		auto tdh = reinterpret_cast<const TestDataHeader*>(data);
-
-		if (nPackets == 0) {
-			key = tdh->testRunKey;
-		}
-		else if (key != tdh->testRunKey) {
-			LOG(logINFO) << "Received with different session key, ignoring. (sent " << ((UlltraProto::getSystemTimeNanoSeconds() - tdh->tSent) / 1000) << " us ago)";
-			continue;
-		}		
-
-		if (!tdh->moreData) {
-			std::cout << "Latency test ended (end flag)" << std::endl;
-			break;
-		}
 
 		nPackets++;
-		tLastReceive = UP::getMicroSecondsCoarse();
 
-		if (!link->send(data, len)) { // just send it back
+		if (!link->send(data, len)) {
 			LOG(logERROR) << "send failed, cancelling after " << nPackets << " packets " << *link;
 			break;
 		}
-		//LOG(logDEBUG1) << "bounced " << len;
 	}
 }
 
