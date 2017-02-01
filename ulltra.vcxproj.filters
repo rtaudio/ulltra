@@ -20,6 +20,18 @@
     <Filter Include="net\udp">
       <UniqueIdentifier>{e53f98d1-6868-4b7a-b3f3-a7600a0b65cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="audio">
+      <UniqueIdentifier>{9a1151b0-b0fa-43fd-adfe-14f7a4dc054f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="audio\jack">
+      <UniqueIdentifier>{b2d935bc-9a88-408b-b0f8-b3b6d78915d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="audio\windows">
+      <UniqueIdentifier>{7e8a6ce1-3b01-4b11-8dc7-effa666fbd54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="audio\stream">
+      <UniqueIdentifier>{dbe7ddc3-070a-442f-8758-de108bd57b35}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mongoose\mongoose.h">
@@ -59,12 +71,43 @@
     <ClInclude Include="LLCustomBlock.h">
       <Filter>net\LL</Filter>
     </ClInclude>
-    <ClInclude Include="stress\stress.h" />
     <ClInclude Include="LLUdpQWave.h">
       <Filter>net\LL</Filter>
     </ClInclude>
-    <ClInclude Include="WindowsMM.h" />
-    <ClInclude Include="AudioDriverStream.h" />
+    <ClInclude Include="audio\JackClient.h">
+      <Filter>audio\jack</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\JackStream.h">
+      <Filter>audio\jack</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\WindowsMM.h">
+      <Filter>audio\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\AudioIO.h">
+      <Filter>audio</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\AudioIOStream.h">
+      <Filter>audio</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioStreamEncoder.h">
+      <Filter>audio\stream</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioStreamer.h">
+      <Filter>audio\stream</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioStreamerRx.h">
+      <Filter>audio\stream</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioStreamerTx.h">
+      <Filter>audio\stream</Filter>
+    </ClInclude>
+    <ClInclude Include="OrderingBuffer.h" />
+    <ClInclude Include="AudioIOManager.h" />
+    <ClInclude Include="AudioStreamDecoder.h" />
+    <ClInclude Include="CircularBuffer.h" />
+    <ClInclude Include="rtt\stress.h" />
+    <ClInclude Include="pclog\pclog.h" />
+    <ClInclude Include="histogram.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mongoose\mongoose.c">
@@ -102,13 +145,45 @@
     <ClCompile Include="LLCustomBlock.cpp">
       <Filter>net\LL</Filter>
     </ClCompile>
-    <ClCompile Include="stress\stress.cpp" />
-    <ClCompile Include="stress\forknt.cpp" />
     <ClCompile Include="LLUdpQWave.cpp">
       <Filter>net\LL</Filter>
     </ClCompile>
-    <ClCompile Include="WindowsMM.cpp" />
-    <ClCompile Include="AudioDriverStream.cpp" />
+    <ClCompile Include="audio\JackClient.cpp">
+      <Filter>audio\jack</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\JackStream.cpp">
+      <Filter>audio\jack</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\WindowsMM.cpp">
+      <Filter>audio\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\WindowsMMStream.cpp">
+      <Filter>audio\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\AudioIO.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\AudioIOStream.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioStreamEncoder.cpp">
+      <Filter>audio\stream</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioStreamer.cpp">
+      <Filter>audio\stream</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioStreamerRx.cpp">
+      <Filter>audio\stream</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioStreamerTx.cpp">
+      <Filter>audio\stream</Filter>
+    </ClCompile>
+    <ClCompile Include="OrderingBuffer.cpp" />
+    <ClCompile Include="AudioIOManager.cpp" />
+    <ClCompile Include="AudioStreamDecoder.cpp" />
+    <ClCompile Include="CircularBuffer.cpp" />
+    <ClCompile Include="pclog\pclog.cpp" />
+    <ClCompile Include="rtt\stress.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore">

@@ -14,9 +14,9 @@
 #include <iostream>
 #include<signal.h>
 
-#include "WindowsMM.h"
 
-bool g_isRunning;
+volatile int g_isRunning;
+Controller *g_controller;
 
 #ifdef _WIN32
 void __CRTDECL sigintHandler(int sig)
@@ -27,31 +27,53 @@ void sigintHandler(int sig)
 	g_isRunning = false;
 }
 
-int main(int argc, const char* argv[])
+bool ulltraInit()
 {
-	RttThread::Init();
+	LOG(logDEBUG) << "ulltraInit():";
+	
+	if (!RttThread::Init()) {
+		LOG(logERROR) << "Failed to initialize rtt!";
+		return false;
+	}
+	
+	LOG(logDEBUG1) << "rtt initialized!";
 
 	if (!UlltraProto::init()) {
-		std::cerr << "Failed to initialize ulltra protocol!" << std::endl;
-		return 1;
+		LOG(logERROR) << "Failed to initialize ulltra protocol!";
+		return false;
 	}
+	
+	LOG(logDEBUG1) << "UlltraProto initialized!";
 
-	auto wmm = new WindowsMM();
-	wmm->init();
-	LOG(logINFO) << "Available streams: " << wmm->getStreams();
-		
 
 	g_isRunning = true;
 	signal(SIGINT, sigintHandler);
 
-    Controller::Params params;
-    params.nodesFileName = "nodes.txt";
-
-    Controller controller(params);
+	LOG(logDEBUG1) << "creating controller...";
+	Controller::Params params;
+	params.nodesFileName = "nodes.txt";	
+	g_controller = new Controller(params);
 
 	LOG(logINFO) << "ulltra is running ..." << std::endl;
+	return true;
+}
 
-	while (controller.isRunning() && g_isRunning) {
+#ifdef ANDROID
+int ulltraMainAndroid()
+{
+	LOG(logINFO) << "Ulltra android init";
+	return ulltraInit();
+}
+
+#endif
+
+
+int main(int argc, const char* argv[])
+{
+	if (!ulltraInit())
+		return 1;
+
+	while (g_controller->isRunning() && g_isRunning) {
 #ifdef _WIN32
 		Sleep(1000);
 #else
@@ -59,7 +81,32 @@ int main(int argc, const char* argv[])
 #endif
 	}
 
-	LOG(logINFO) << "exiting..." << std::endl;
+	LOG(logINFO) << "exiting...";
     return 0;
 }
 
+// SIG33
+#ifdef ANDROID
+#ifdef __cplusplus
+extern "C" {
+#endif
+void ulltraServiceStart()
+{
+	LOG(logINFO) << "Ulltra service started!";
+
+	if(ulltraInit())
+		LOG(logINFO) << "ulltra initialized, sleep looping...";
+
+	while (g_controller->isRunning() && g_isRunning) {
+		usleep(1000*1000);
+	}
+}
+	
+	void ulltraServiceStop()
+	{
+		g_isRunning = false;
+	}
+#ifdef __cplusplus
+}
+#endif
+#endif

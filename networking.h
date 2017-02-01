@@ -14,7 +14,10 @@
 #include<codecvt>
 #pragma comment(lib, "iphlpapi.lib")
 
-#define close closesocket
+
+//#define in_port_t u_short
+//#define inet_aton(s,b) InetPton(AF_INET,L##s,b)
+inline int close(SOCKET s) { return closesocket(s); }
 
 #else
 #include<unistd.h>
@@ -49,6 +52,9 @@ inline std::string lastError( int err=0)
 {
 #if _WIN32
 	err = err ? err : WSAGetLastError();
+#else
+	err = err ? err : errno;
+	return std::string(strerror(err));
 #endif
 
 	switch (err ? err : errno) {
@@ -141,6 +147,16 @@ inline bool socketSetBlocking(SOCKET &soc, bool block) {
 	return true;
 }
 
+inline bool socketAsyncContinue()
+{
+	return !(errno != EINTR && errno != EINPROGRESS && errno != EAGAIN && errno != EWOULDBLOCK
+#ifdef _WIN32
+	                                                          && WSAGetLastError() != WSAEINTR &&
+	                                                          WSAGetLastError() != WSAEWOULDBLOCK
+#endif
+	                                                                              );
+}
+
 inline int socketConnectTimeout(SOCKET &soc, uint64_t toUs)
 {
 	fd_set myset;
@@ -157,7 +173,7 @@ inline int socketConnectTimeout(SOCKET &soc, uint64_t toUs)
 	res = select(soc + 1/* this is ignored on windows*/, NULL, &myset, NULL, &tv);
 
 	if (res == -1) {
-		LOG(logERROR) << "error while select: " << lastError();
+		LOG(logERROR) << "error while select connect: " << lastError();
 		return -1;
 	}
 
@@ -194,7 +210,7 @@ inline int socketSelect(SOCKET &soc, uint64_t toUs)
 	FD_ZERO(&myset);
 	FD_SET(soc, &myset);
 
-	res = select(soc+1/* this is ignored on windows*/, &myset, NULL, NULL, &tv);
+	res = select(soc + 1/* this is ignored on windows*/, &myset, &myset, &myset, &tv);
 	//LOG(logDEBUG1) << "res= " << res;
 	if (res == -1) {
 		LOG(logERROR) << "error while select: " << lastError();
@@ -299,13 +315,16 @@ union SocketAddress {
 		return ntohs((sa.sa_family == AF_INET6) ? sin6.sin6_port : sin.sin_port);
 	}
 
-    inline std::string toString() const {
+    inline std::string toString(bool hostOnly=false) const {
         char host[64], serv[32];
         int r = getnameinfo((const sockaddr*)&sin6, sizeof(sin6), host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV);
         if(r != 0) {
             LOG(logERROR) << "getnameinfo() failed! " << gai_strerror(r) << lastError();
             return "";
         }
+
+		if (hostOnly)
+			return std::string(host);
 
         if(sin6.sin6_family == AF_INET6) {
             return "["+std::string(host)+"]:" + std::string(serv);

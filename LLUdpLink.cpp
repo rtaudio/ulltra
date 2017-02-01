@@ -194,11 +194,7 @@ const uint8_t *LLUdpLink::receive(int &receivedBytes)
 
 		//Windows to be better with a sleep, than yield
 		
-#ifndef _WIN32
-		std::this_thread::yield();
-#else
-		nsleep(1);
-#endif
+		RttThread::YieldCurrent();
 
 		//nsleep(1); // nanosleep on linux seems to be quiete good too (depending on the system!)
 		
@@ -229,9 +225,14 @@ bool LLUdpLink::send(const uint8_t *data, int dataLength)
 	if (ret == dataLength)
 		return true;
 
-	auto le = WSAGetLastError();
-	if (ret == -1 && errno == EAGAIN || errno == EWOULDBLOCK || le == WSAEWOULDBLOCK || le == ERROR_IO_PENDING)
+#ifdef _WIN32	
+	const auto le = WSAGetLastError();
+	if (ret == -1 && (le == WSAEWOULDBLOCK || le == ERROR_IO_PENDING))
 		return true;
+#else
+	if (ret == -1 && (errno == EAGAIN || errno == EWOULDBLOCK ))
+		return true;
+#endif
 
 	LOG(logDEBUG1) << "sendto " << m_addr << " failed: " << ret << " != " << dataLength << lastError();
 	return false;

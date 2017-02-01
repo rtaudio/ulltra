@@ -88,7 +88,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>rtt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <Link>
@@ -105,7 +105,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;MG_ENABLE_IPV6;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>rtt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,7 +123,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>rtt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,7 +143,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;MG_ENABLE_IPV6;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>rtt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -164,9 +164,21 @@
     <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AudioDriverStream.h" />
+    <ClInclude Include="AudioIOManager.h" />
+    <ClInclude Include="AudioStreamDecoder.h" />
+    <ClInclude Include="AudioStreamEncoder.h" />
+    <ClInclude Include="AudioStreamer.h" />
+    <ClInclude Include="AudioStreamerRx.h" />
+    <ClInclude Include="AudioStreamerTx.h" />
+    <ClInclude Include="audio\AudioIO.h" />
+    <ClInclude Include="audio\AudioIOStream.h" />
+    <ClInclude Include="audio\JackClient.h" />
+    <ClInclude Include="audio\WindowsMM.h" />
+    <ClInclude Include="CircularBuffer.h" />
     <ClInclude Include="Controller.h" />
     <ClInclude Include="Discovery.h" />
+    <ClInclude Include="audio\JackStream.h" />
+    <ClInclude Include="histogram.h" />
     <ClInclude Include="JsonHttpClient.h" />
     <ClInclude Include="JsonHttpServer.h" />
     <ClInclude Include="JsonNode.h" />
@@ -178,16 +190,29 @@
     <ClInclude Include="LLUdpQWave.h" />
     <ClInclude Include="mongoose\mongoose.h" />
     <ClInclude Include="networking.h" />
+    <ClInclude Include="OrderingBuffer.h" />
+    <ClInclude Include="pclog\pclog.h" />
     <ClInclude Include="rtt\rtt.h" />
+    <ClInclude Include="rtt\stress.h" />
     <ClInclude Include="SimpleUdpReceiver.h" />
-    <ClInclude Include="stress\stress.h" />
     <ClInclude Include="UlltraProto.h" />
-    <ClInclude Include="WindowsMM.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AudioDriverStream.cpp" />
+    <ClCompile Include="AudioIOManager.cpp" />
+    <ClCompile Include="AudioStreamDecoder.cpp" />
+    <ClCompile Include="AudioStreamEncoder.cpp" />
+    <ClCompile Include="AudioStreamer.cpp" />
+    <ClCompile Include="AudioStreamerRx.cpp" />
+    <ClCompile Include="AudioStreamerTx.cpp" />
+    <ClCompile Include="audio\AudioIO.cpp" />
+    <ClCompile Include="audio\AudioIOStream.cpp" />
+    <ClCompile Include="audio\JackClient.cpp" />
+    <ClCompile Include="audio\WindowsMM.cpp" />
+    <ClCompile Include="audio\WindowsMMStream.cpp" />
+    <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Controller.cpp" />
     <ClCompile Include="Discovery.cpp" />
+    <ClCompile Include="audio\JackStream.cpp" />
     <ClCompile Include="JsonHttpClient.cpp" />
     <ClCompile Include="JsonHttpServer.cpp" />
     <ClCompile Include="JsonNode.cpp" />
@@ -198,13 +223,13 @@
     <ClCompile Include="LLUdpLink.cpp" />
     <ClCompile Include="LLUdpQWave.cpp" />
     <ClCompile Include="mongoose\mongoose.c" />
+    <ClCompile Include="OrderingBuffer.cpp" />
+    <ClCompile Include="pclog\pclog.cpp" />
     <ClCompile Include="rtt\rtt.cpp" />
+    <ClCompile Include="rtt\stress.cpp" />
     <ClCompile Include="SimpleUdpReceiver.cpp" />
-    <ClCompile Include="stress\forknt.cpp" />
-    <ClCompile Include="stress\stress.cpp" />
     <ClCompile Include="ulltra.cpp" />
     <ClCompile Include="UlltraProto.cpp" />
-    <ClCompile Include="WindowsMM.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

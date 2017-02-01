@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{202D3942-B240-4C2A-B904-6EA5088A258E}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <NMakeBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /build "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /clean "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /rebuild "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\platforms\android-9\arch-mips\usr\include;C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\sources\cxx-stl\system\include;C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\toolchains\mipsel-linux-android-4.8\prebuilt\windows\lib\gcc\mipsel-linux-android\4.8\include;C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\toolchains\mipsel-linux-android-4.8\prebuilt\windows\lib\gcc\mipsel-linux-android\4.8\include-fixed;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeForcedIncludes>$(ProjectDir)\gcc_Debug.h;$(VISUALGDB_DIR)\gcc_compat.h;$(NMakeForcedIncludes)</NMakeForcedIncludes>
+    <IncludePath />
+    <ReferencePath />
+    <LibraryPath />
+    <NMakeOutput>$(ProjectDir)ulltra-android-console-Debug.vgdbsettings</NMakeOutput>
+    <NMakePreprocessorDefinitions>__VisualGDB_CFG_Debug;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <NMakeBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /build "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /clean "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /rebuild "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeReBuildCommandLine>
+    <NMakeIncludeSearchPath>C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\platforms\android-9\arch-mips\usr\include;C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\sources\cxx-stl\system\include;C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\toolchains\mipsel-linux-android-4.8\prebuilt\windows\lib\gcc\mipsel-linux-android\4.8\include;C:\ProgramData\Microsoft\AndroidNDK\android-ndk-r10e\toolchains\mipsel-linux-android-4.8\prebuilt\windows\lib\gcc\mipsel-linux-android\4.8\include-fixed;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakeForcedIncludes>$(ProjectDir)\gcc_Release.h;$(VISUALGDB_DIR)\gcc_compat.h;$(NMakeForcedIncludes)</NMakeForcedIncludes>
+    <NMakePreprocessorDefinitions>__VisualGDB_CFG_Release;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <IncludePath />
+    <ReferencePath />
+    <LibraryPath />
+    <NMakeOutput>$(ProjectDir)ulltra-android-console-Release.vgdbsettings</NMakeOutput>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="jni\Android.mk" />
+    <None Include="jni\Application.mk" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\AudioDriverStream.cpp" />
+    <ClCompile Include="..\Controller.cpp" />
+    <ClCompile Include="..\Discovery.cpp" />
+    <ClCompile Include="..\JsonHttpClient.cpp" />
+    <ClCompile Include="..\JsonHttpServer.cpp" />
+    <ClCompile Include="..\JsonNode.cpp" />
+    <ClCompile Include="..\LinkEval.cpp" />
+    <ClCompile Include="..\LLCustomBlock.cpp" />
+    <ClCompile Include="..\LLLink.cpp" />
+    <ClCompile Include="..\LLTcp.cpp" />
+    <ClCompile Include="..\LLUdpLink.cpp" />
+    <ClCompile Include="..\LLUdpQWave.cpp" />
+    <ClCompile Include="..\mongoose\mongoose.c" />
+    <ClCompile Include="..\rtt\rtt.cpp" />
+    <ClCompile Include="..\SimpleUdpReceiver.cpp" />
+    <ClCompile Include="..\stress\stress.cpp" />
+    <ClCompile Include="..\ulltra.cpp" />
+    <ClCompile Include="..\UlltraProto.cpp" />
+    <ClCompile Include="..\WindowsMM.cpp" />
+    <ClCompile Include="jni\ulltra-android-console.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\AudioDriverStream.h" />
+    <ClInclude Include="..\Controller.h" />
+    <ClInclude Include="..\Discovery.h" />
+    <ClInclude Include="..\JsonHttpClient.h" />
+    <ClInclude Include="..\JsonHttpServer.h" />
+    <ClInclude Include="..\JsonNode.h" />
+    <ClInclude Include="..\LinkEval.h" />
+    <ClInclude Include="..\LLCustomBlock.h" />
+    <ClInclude Include="..\LLLink.h" />
+    <ClInclude Include="..\LLTcp.h" />
+    <ClInclude Include="..\LLUdpLink.h" />
+    <ClInclude Include="..\LLUdpQWave.h" />
+    <ClInclude Include="..\mongoose\mongoose.h" />
+    <ClInclude Include="..\networking.h" />
+    <ClInclude Include="..\rtt\rtt.h" />
+    <ClInclude Include="..\SimpleUdpReceiver.h" />
+    <ClInclude Include="..\stress\stress.h" />
+    <ClInclude Include="..\UlltraProto.h" />
+    <ClInclude Include="..\WindowsMM.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

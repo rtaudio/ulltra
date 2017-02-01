@@ -4,11 +4,17 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 
+#ifndef  ANDROID
 #include <linux/net_tstamp.h>
+#endif
 #include <linux/errqueue.h>
 
 #include <sys/types.h>
-#include <ifaddrs.h>
+
+#ifndef ANDROID
+	#include <ifaddrs.h> // for interface listing
+#endif
+
 #else
 #include <mswsock.h>
 #include <qos2.h> //qwave
@@ -68,6 +74,9 @@ LLLink::QosHandle LLLink::enableHighQoS(SOCKET soc, int bitsPerSecond)
 	/*
 	we want 101 110 | 46 | High Priority | Expedited Forwarding (EF) N/A 101 - Critical
 	*/
+#if !defined(IPTOS_DSCP_EF)
+#define IPTOS_DSCP_EF           0xb8
+#endif
 
 	int iptos = ipv6 ? IPTOS_DSCP_EF : (IPTOS_LOWDELAY | IPTOS_PREC_CRITIC_ECP | IPTOS_THROUGHPUT);
 
@@ -186,7 +195,7 @@ LLLink::QosHandle LLLink::enableHighQoS(SOCKET soc, int bitsPerSecond)
 #endif
 }
 
-#ifndef _WIN32
+#ifdef SIOCGSTAMPNS
 static int printpacket(struct msghdr *msg, int res,
 	char *data,
     int sock, int recvmsg_flags, int *usecStackDelay)
@@ -337,7 +346,7 @@ int LLLink::socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize)
 {
 	struct sockaddr_storage remote;
 	// todo: use connect + recv
-#ifndef _WIN32
+#ifdef SIOCGSTAMPNS
     if(s_timeStampingEnabled) {
         int usecStackDelay = 0;
         int res = recvpacket(soc, (char*)buffer, bufferSize, 0, &usecStackDelay);
@@ -400,8 +409,7 @@ bool LLLink::enableTimeStamps(SOCKET soc, bool enable)
 
 }
 
-#ifndef _WIN32
-
+#if !defined(_WIN32) && !defined(ANDROID)
 
 
 

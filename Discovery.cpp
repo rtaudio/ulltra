@@ -68,17 +68,13 @@ bool Discovery::start(int broadcastPort)
     // TODO: might detect ipv6! (see if can send to multicast address!)
     // prefer ipv6, if we actually have an IPv6 address
     // localAny will be used for bind() later
-    if(NodeDevice::local6.addrStorage.ss_family == AF_INET6) {
+    if(NodeDevice::local6.addrStorage.getFamily() == AF_INET6) {
         NodeDevice::localAny = NodeDevice::local4;
     } else {
         NodeDevice::localAny = NodeDevice::local4;
     }
 
     LOG(logDEBUG) << "default bind address set to " << NodeDevice::localAny;
-
-	char hostname[32];
-	gethostname(hostname, 31);
-	m_hostname = hostname;
 
 	m_broadcastPort = broadcastPort;
 	m_updateCounter = 0;
@@ -122,6 +118,35 @@ bool Discovery::initBroadcast(int port)
 	}
 
 	m_socBroadcast4 = soc;
+	return true;
+}
+
+
+Discovery::NodeDevice::NodeDevice(int family) {
+	if (family == -1)
+		return; // none node
+	struct addrinfo hints, *res;
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = family;
+	int r;
+	if ((r = getaddrinfo(NULL, std::to_string(UlltraProto::DiscoveryPort).c_str(), &hints, &res)) == 0) {
+		memset(&addrStorage, 0, sizeof(addrStorage));
+		memcpy(&addrStorage, res->ai_addr, sizeof(res->ai_addrlen));
+		if (family == AF_INET) {
+			LOG(logDEBUG) << "local ipv4 addresses:" << *res;
+		}
+		else if (family == AF_INET6) {
+			LOG(logDEBUG) << "local ipv6 addresses:" << *res;
+		}
+		else {
+			LOG(logDEBUG) << "local addresses:" << *res;
+		}
+		freeaddrinfo(res);
+	}
+	else {
+		LOG(logERROR) << "getaddrinfo failed: " << gai_strerror(r);
+	}
 }
 
 const Discovery::NodeDevice &Discovery::getNode(const sockaddr_storage &addr) const
@@ -131,7 +156,7 @@ const Discovery::NodeDevice &Discovery::getNode(const sockaddr_storage &addr) co
 
     for (auto &np : m_discovered) {
         auto &n(np.second);
-        if(addr.ss_family != n.addrStorage.ss_family)
+        if(addr.ss_family != n.addrStorage.getFamily())
             continue;
 
         if(addr.ss_family == AF_INET) {
@@ -330,10 +355,10 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 	char data[500];
 	char *dp = &data[0];
 
-
+	auto devName = UP::getDeviceName();
 	// create 0-seperated string list
 	strcpy(dp, msg.c_str()); dp += msg.length() + 1;
-	strcpy(dp, m_hostname.c_str()); dp += m_hostname.length() + 1;
+	strcpy(dp, devName.c_str()); dp += devName.length() + 1;
 	strcpy(dp, getHwAddress().c_str());  dp += getHwAddress().length() + 1;
 
 	int dataLen = dp - &data[0];
@@ -400,12 +425,16 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 			send(msg, n);
 		}
 	}
+
+	return true;
 }
 
 
 
 /* create from a hostname or address */
-Discovery::NodeDevice::NodeDevice(const std::string &host) {
+Discovery::NodeDevice::NodeDevice(const std::string &host)
+ : hostname(host)
+{
 	sinceVitalSign = -1;
 	timeLastConnectionTry = 0;
 	m_rpcId = 0;
@@ -434,20 +463,22 @@ Discovery::NodeDevice::NodeDevice(const std::string &host) {
     freeaddrinfo(res);
 }
 
-Discovery::NodeDevice::NodeDevice(const sockaddr_storage &s)
+Discovery::NodeDevice::NodeDevice(const SocketAddress &s)
 {
 	m_rpcId = 0;
     sinceVitalSign = -1;
     addrStorage = s;
+
+	hostname = s.toString(true);
 }
 
 const SocketAddress Discovery::NodeDevice::getAddr(int port) const {
-    struct sockaddr_storage s = addrStorage;
+    auto s = addrStorage; // copy
 
-	if (s.ss_family == AF_INET6) {		
+	if (s.getFamily() == AF_INET6) {		
 		((struct sockaddr_in6 *)&s)->sin6_port = htons(port);
 	}
-	else if(s.ss_family == AF_INET) {
+	else if(s.getFamily() == AF_INET) {
 		((struct sockaddr_in *)&s)->sin_port = htons(port);
 	}
 	return s;
@@ -578,6 +609,7 @@ bool Discovery::initMulticast(int port)
 		return false;
 	}
 	
+	return true;
 }
 
 
@@ -605,9 +637,7 @@ struct sockaddr_storage *addrToSend)
 
 
 	if (n != 0) {
-		fprintf(stderr,
-			"getaddrinfo error:: [%s]\n",
-			gai_strerror(n));
+		LOG(logERROR) << "getaddrinfo error:: " <<gai_strerror(n);
 		return retval;
 	}
 

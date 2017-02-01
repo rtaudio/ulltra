@@ -13,9 +13,22 @@ struct json_token;
 
 struct JsonNode {
 	enum class Type { Undefined, Object, Array, String, Number };
-
+	
 	const static JsonNode undefined;
+	
+	Type t;
+	std::map<std::string, JsonNode> obj;
+	std::vector<JsonNode> arr;
+	std::string str;
+	double num;
 
+	inline void clear() {
+		t = Type::Undefined;
+		obj.clear();
+		arr.clear();
+		str.erase();
+		num = NAN;
+	}
 	inline JsonNode() { clear(); }
 
 	/*
@@ -45,23 +58,13 @@ struct JsonNode {
 	inline const std::string& operator=(const std::string &val) { t = Type::String; return str = val; }
 	inline const double& operator=(double val) { t = Type::Number; 	return num = val; }
 
-	Type t;
-	std::map<std::string, JsonNode> obj;
-	std::vector<JsonNode> arr;
-	std::string str;
-	double num;
+
 
 	friend std::ostream& operator<< (std::ostream& stream, const JsonNode& jd);
 	bool parse(const std::string &str);
 	int fill(json_token *tokens);
 
-	inline void clear() {
-		t = Type::Undefined;
-		obj.clear();
-		arr.clear();
-		str.erase();
-		num = NAN;
-	}
+
 
 	inline bool isUndefined() const {
 		return t == Type::Undefined;

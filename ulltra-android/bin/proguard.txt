@@ -1,0 +1,6 @@
+# view AndroidManifest.xml #generated:11
+-keep class audio.latency.low.ulltra.Flumine { <init>(...); }
+
+# view AndroidManifest.xml #generated:18
+-keep class audio.latency.low.ulltra.UlltraService { <init>(...); }
+

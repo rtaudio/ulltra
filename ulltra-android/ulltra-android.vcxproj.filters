@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{678f95ed-cb30-4579-a21c-bfa1aab6650f}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{b9ea7ec7-a670-4f5c-9805-581b67b9f37c}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{ee0974ff-ae7c-4593-b155-bab5d1238541}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Java Source Files">
+      <UniqueIdentifier>{c30c6eef-02d4-4ca4-ace8-47ecc64d8d58}</UniqueIdentifier>
+      <Extensions>*.java</Extensions>
+    </Filter>
+    <Filter Include="Java Source Files\audio">
+      <UniqueIdentifier>{eb5af791-f9dd-4f84-aedc-fc18decd1643}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Java Source Files\audio\latency">
+      <UniqueIdentifier>{da469e1b-e20b-4f1a-a6ee-62b4acb115ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Java Source Files\audio\latency\low">
+      <UniqueIdentifier>{c6be0b5d-8043-4446-9a39-c8e50f05ce96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Java Source Files\audio\latency\low\ulltra">
+      <UniqueIdentifier>{af9d7ea9-3d77-4544-aa27-8be4ae00d8d1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="AndroidManifest.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="jni\Android.mk" />
+    <None Include="jni\Application.mk" />
+    <None Include="src\audio\latency\low\ulltra\Flumine.java">
+      <Filter>Java Source Files\audio\latency\low\ulltra</Filter>
+    </None>
+    <None Include="src\audio\latency\low\ulltra\UlltraService.java" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="jni\ulltra.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\AudioDriverStream.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Controller.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Discovery.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\JsonHttpClient.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\JsonHttpServer.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\JsonNode.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\LinkEval.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\LLCustomBlock.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\LLLink.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\LLTcp.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\LLUdpLink.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\LLUdpQWave.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SimpleUdpReceiver.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ulltra.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\UlltraProto.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\WindowsMM.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stress\stress.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\rtt\rtt.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mongoose\mongoose.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="JackClient.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\AudioDriverStream.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Controller.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Discovery.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\JsonHttpClient.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\JsonHttpServer.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\JsonNode.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LinkEval.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LLCustomBlock.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LLLink.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LLTcp.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LLUdpLink.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\LLUdpQWave.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\networking.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SimpleUdpReceiver.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\UlltraProto.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\WindowsMM.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="android-compat.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stress\stress.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rtt\rtt.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mongoose\mongoose.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="JackClient.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

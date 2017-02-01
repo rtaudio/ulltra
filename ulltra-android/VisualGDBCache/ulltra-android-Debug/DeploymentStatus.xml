@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<ApkDeploymentStatus xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ApkFile>C:\dev\ulltra\ulltra-android\bin\Flumine-debug.apk</ApkFile>
+  <DeviceID>emulator-nexus5</DeviceID>
+  <ApkTimestamp>2016-03-07T00:01:34.7989992+01:00</ApkTimestamp>
+  <LastDeployment>2016-03-07T00:01:38.5967193+01:00</LastDeployment>
+</ApkDeploymentStatus>

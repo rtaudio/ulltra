@@ -1,5 +1,12 @@
 #pragma once
 
+// windows screw up
+#define NOMINMAX
+
+#ifdef ANDROID
+#include "ulltra-android/android-compat.h"
+#endif
+
 #include <stdint.h>
 
 #ifdef _WIN32
@@ -20,7 +27,9 @@
 #endif
 
 
+#ifndef ANDROID
 #include <thread>
+#endif
 
 
 // for trim function:
@@ -28,10 +37,15 @@
 #include <functional>
 #include <cctype>
 #include <locale>
+#include <string>
 
+#include "pclog/pclog.h"
 
 
 class UlltraProto {
+private:
+	static std::string deviceName;
+
 public:
 	static const int DiscoveryPort = 26025;
 	static const int BroadcastIntervalMs = 2000; //milliseconds
@@ -44,7 +58,7 @@ public:
 	static const int HttpControlPort = 26080;
 
 	static const int HttpConnectTimeout = 0;// milliseconds
-	static const int HttpResponseTimeout = 1200;// milliseconds
+	static const int HttpResponseTimeoutMs = 1200;// milliseconds
 	static const int HttpResponseTimeoutRand = 400;// milliseconds
 
 	static const int UpdateIntervalUS = 200*1000;
@@ -54,6 +68,7 @@ public:
 
 
 	static bool init();
+	static const std::string& getDeviceName();
 
 	inline static uint64_t getMicroSeconds()
 	{
@@ -251,72 +266,23 @@ private:
 
 typedef UlltraProto UP;
 
-
-
+#ifdef ANDROID
+#include <rtt.h>
+#endif
 
 inline void spinWait(uint64_t usec)
 {
 	auto tu = UP::getMicroSeconds() + usec;
-	while (tu > UP::getMicroSeconds()) { std::this_thread::yield(); }
+	while (tu > UP::getMicroSeconds()) { 
+#ifndef ANDROID
+		std::this_thread::yield();
+#else
+		nsleep(1);
+#endif
+	}
 }
 
-// Log, version 0.1: a simple logging class
-enum TLogLevel {
-	logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1,
-	logDEBUG2, logDEBUG3, logDEBUG4, logDebugHttp
-};
 
-
-class Log
-{
-public:
-	const TLogLevel lv;
-#ifdef _WIN32
-	CONSOLE_SCREEN_BUFFER_INFO scbi;
-#endif
-
-	inline Log(TLogLevel level = logINFO) : lv(level) {
-	}	
-
-
-	inline ~Log() {
-
-#ifndef _WIN32
-		if (lv == logERROR)
-			std::cout << "\e[0m ";
-#endif
-
-		std::cout << std::endl << std::flush;
-#ifdef _WIN32
-		if (lv == logERROR)
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), scbi.wAttributes);
-#endif
-	}
-
-	inline std::ostream& get() {
-		std::string cl;
-
-#ifdef _WIN32
-		if (lv == logERROR) {
-			GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &scbi);
-			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_INTENSITY);
-		}
-#else
-		if (lv == logERROR)
-			cl = "\e[91m";
-#endif
-
-
-		std::cout << (cl + std::string(lv > logDEBUG ? (lv - logDEBUG)*2 : 0, ' '));
-		return std::cout;
-	}
-
-	inline static TLogLevel ReportingLevel() {
-		return logDEBUG3; // logDebugHttp;
-	}
-};
-
-#define LOG(level) if (level > Log::ReportingLevel()) ; else Log(level).get()
 
 
 

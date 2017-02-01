@@ -1,4 +1,5 @@
 #pragma once
+#ifdef _WIN32
 #include "LLLink.h"
 
 #include <winsock2.h>
@@ -44,3 +45,4 @@ private:
 
 };
 
+#endif

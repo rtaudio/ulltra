@@ -4,6 +4,13 @@
 #include "UlltraProto.h"
 #include "Discovery.h"
 
+#include <functional>
+
+class LLLink;
+
+typedef std::function<LLLink*()> LLLinkGenerator;
+
+
 class LLLink
 {
 public:
@@ -26,7 +33,8 @@ public:
 	bool setBlockingTimeout(uint64_t timeoutUs);
 	virtual bool onBlockingTimeoutChanged(uint64_t timeoutUs) = 0;
 	virtual bool flushReceiveBuffer();
-	virtual const uint8_t *receive(int &receivedBytes) = 0;
+	virtual const uint8_t *receive(int &receivedBytes) = 0;//receive using an interal buffer
+	//virtual const uint8_t *receive(uint8_t *buffer, int &receivedBytes) = 0;
 
 	/* tx */
 	virtual bool send(const uint8_t *data, int dataLength) = 0;

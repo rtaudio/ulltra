@@ -49,3 +49,13 @@ enc_temp_folder
 *.vcxproj.user
 ulltra.cbp
 /out/*.m
+/CodeDB
+*.exp
+
+
+*.o.d
+obj/local
+*.apk
+*.apk.d
+/ulltra-android-console/libs
+/ulltra-android-console2/libs

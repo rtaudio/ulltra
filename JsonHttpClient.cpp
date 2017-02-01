@@ -8,7 +8,8 @@
 
 // need to override LOG() macro:
 #undef LOG
-#define LOG(level) if (level > Log::ReportingLevel()) ; else Log(level).get()
+#define LOG(level) if (level > pclog::Log::ReportingLevel()) ; else pclog::Log(level).get()
+#define logDebugHttp logDEBUG
 
 
 JsonHttpClient::JsonHttpClient()
@@ -93,25 +94,40 @@ const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::st
 		char chunk[1024*16+1];
 		int rlen;
 
+		
+		int toms = 0;
 		// set socket back to blocking if necessary
-		if (m_connectTimeout > 0)
+		if (UP::HttpResponseTimeoutMs > 0)
+		{
+			toms = UP::HttpResponseTimeoutMs + rand() % (UP::HttpResponseTimeoutMs);
 			socketSetBlocking(soc, true);
 
-		int to = UP::HttpResponseTimeout + rand() % (UP::HttpResponseTimeoutRand);
+			// set timeout
+#ifndef _WIN32
+			// 0 means no timeout
+			struct timeval tv;
+			tv.tv_sec = toms/1000UL;
+			tv.tv_usec = (toms*1000UL) % 1000000UL;
+#else
+			int tv = toms;
+#endif
+			if (setsockopt(soc, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) < 0) {
+				LOG(logERROR) << "set SO_RCVTIMEO fro " << soc << " failed: " << lastError();
+				throw Exception("Cannot set recvtimeo to " + std::to_string(toms) + "us! " + lastError()) ;
+			}
+		}
+		
 
 		while (true) {
-			res = socketSelect(soc, to * 1000);
-			if (res == 0) {
-				throw Exception("Server " + host.toString() + " did not send a response within " + std::to_string(to) + " ms!");
-			}
-
-			if (res < 0) {
-				throw Exception("socketSelectTimeout() failed!");
-			}
-
 			rlen = recv(soc, chunk, sizeof(chunk) - 1, 0);
-			if (rlen <= 0) // eos
+			if (rlen == 0)
 				break;
+			
+			if (rlen <= 0 && !socketAsyncContinue()) {
+				LOG(logERROR) << "error during receive!";
+				break;
+			}
+			
 			chunk[rlen] = '\0';
 			buf << chunk;
 		}
@@ -119,10 +135,15 @@ const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::st
 
 		auto tEnd = UP::getMicroSeconds();
 
-		LOG(logDEBUG3) << "response after " << ((tEnd - tStart) / 1000) << " ms, timeout was " << to << " ms";
-
 		str = buf.str();
 		buf.str(""); buf.clear();
+		
+		if (str.empty())
+		{
+			throw Exception("Empty response!");
+		}
+		
+		LOG(logDEBUG3) << "response after " << ((tEnd - tStart) / 1000) << " ms, timeout was " << toms << " ms";
 
 		auto skipHttpVer = str.find(' '), skipCode = str.find(' ', skipHttpVer + 1), skipStatus = str.find('\n', skipCode + 1);
 		if (skipHttpVer == std::string::npos || skipCode == std::string::npos || skipStatus == std::string::npos) {

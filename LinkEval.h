@@ -6,10 +6,11 @@
 
 #include <vector>
 #include <algorithm>
+#include <functional>
 
 #include "LLLink.h"
 
-typedef std::function<LLLink*()> LLLinkGenerator;
+
 
 typedef std::map<std::string, LLLinkGenerator> LLLinkGeneratorSet;
 
@@ -98,15 +99,22 @@ public:
 
 	LinkEval();
 	~LinkEval();
-    bool init();
 
-	void update(time_t now);
+	void update(time_t now);	
 
-	void chooseLinkCandidate(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd, bool master);
+	inline void sessionSlave(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd) {
+		session(candidates, nd, false);
+	}
+
+	inline void sessionMaster(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd) {
+		session(candidates, nd, true);
+	}
 
 	void systemLatencyEval();
 
 private:
+
+	void session(LLLinkGeneratorSet const& candidates, const Discovery::NodeDevice &nd, bool master);
 
     void outputExtendedLinkStats(LLLink *link, std::string const& testName);
 };

@@ -2,7 +2,7 @@
 #include "UlltraProto.h"
 
 #include<iostream>
-
+#include "networking.h"
 
 #ifdef _WIN32
 LARGE_INTEGER UlltraProto::timerFreq;
@@ -54,6 +54,51 @@ bool UlltraProto::init() {
 }
 
 
+#if ANDROID
+#include <stdio.h>
+#include <string.h>
+#include <sys/system_properties.h>
+
+/* Get device name
+--
+1/ Compile with the Android NDK Toolchain:
+arm-linux-androideabi-gcc -static pname.c -o pname
+
+2/ Transfer on device:
+adb push pname /data/local/tmp
+
+3/ Run:
+adb shell
+$ /data/local/tmp/pname
+[device]: [HTC/HTC Sensation Z710e]
+
+NOTE: these properties can be queried via adb:
+adb shell getprop ro.product.manufacturer */
+
+std::string androidGetProperty(std::string prop)
+{
+	std::string command = "getprop " + prop;
+	FILE* file = popen(command.c_str(), "r");
+	if (!file) {
+		return "";
+	}
+
+	char * line = NULL;
+	size_t len = 0;
+	std::string val;
+	while ((getline(&line, &len, file)) != -1) {
+		val += (std::string(line));
+	}
+	val = trim(val);
+
+	// read the property value from file
+	pclose(file);
+
+	return val;
+}
+
+#endif
+
 
 
 /*
@@ -64,3 +109,22 @@ Log::~Log()
 	fflush(stderr);
 }
 */
+std::string UlltraProto::deviceName = "";
+
+const std::string&  UlltraProto::getDeviceName()
+{
+	if (!deviceName.empty())
+		return deviceName;
+
+#if ANDROID
+	deviceName = androidGetProperty("ro.product.manufacturer") + "/" + androidGetProperty("ro.product.model");
+	LOG(logDEBUG) << "Device name: " << deviceName;
+#else
+	char hostname[32];
+	gethostname(hostname, 31);
+	deviceName = std::string(hostname);
+#endif
+
+	return deviceName;
+}
+

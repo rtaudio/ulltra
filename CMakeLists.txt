@@ -1,44 +1,73 @@
-cmake_minimum_required(VERSION 3.2.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.6)
+project(ulltra)
 
-project (ulltra)
+set(CMAKE_CXX_STANDARD 11)
 
-set (ulltra_VERSION_MAJOR 1)
-set (ulltra_VERSION_MINOR 0)
+set(SOURCE_FILES
+    audio/AudioIO.cpp
+    audio/AudioIO.h
+    audio/AudioIOStream.cpp
+    audio/AudioIOStream.h
+    audio/JackClient.cpp
+    audio/JackClient.h
+    audio/JackStream.cpp
+    audio/JackStream.h
+    audio/WindowsMM.cpp
+    audio/WindowsMM.h
+    audio/WindowsMMStream.cpp
+    mongoose/mongoose.c
+    mongoose/mongoose.h
+    pclog/pclog.cpp
+    pclog/pclog.h
+    rtt/rtt.cpp
+    rtt/rtt.h
+    rtt/stress.cpp
+    rtt/stress.h
+    AudioIOManager.cpp
+    AudioIOManager.h
+    AudioStreamDecoder.cpp
+    AudioStreamDecoder.h
+    AudioStreamEncoder.cpp
+    AudioStreamEncoder.h
+    AudioStreamer.cpp
+    AudioStreamer.h
+    AudioStreamerRx.cpp
+    AudioStreamerRx.h
+    AudioStreamerTx.cpp
+    AudioStreamerTx.h
+    CircularBuffer.cpp
+    CircularBuffer.h
+    Controller.cpp
+    Controller.h
+    Discovery.cpp
+    Discovery.h
+    histogram.h
+    JsonHttpClient.cpp
+    JsonHttpClient.h
+    JsonHttpServer.cpp
+    JsonHttpServer.h
+    JsonNode.cpp
+    JsonNode.h
+    LinkEval.cpp
+    LinkEval.h
+    LLCustomBlock.cpp
+    LLCustomBlock.h
+    LLLink.cpp
+    LLLink.h
+    LLTcp.cpp
+    LLTcp.h
+    LLUdpLink.cpp
+    LLUdpLink.h
+    LLUdpQWave.cpp
+    LLUdpQWave.h
+    networking.h
+    OrderingBuffer.cpp
+    OrderingBuffer.h
+    SimpleUdpReceiver.cpp
+    SimpleUdpReceiver.h
+    ulltra.cpp
+    UlltraProto.cpp
+    UlltraProto.h
+    WindowsMMStream.cpp)
 
-
-include_directories(./ ./rtt "${PROJECT_BINARY_DIR}")
-
-add_executable(ulltra ulltra.cpp)
-add_library(rtt rtt/rtt.cpp)
-add_library(mongoose mongoose/mongoose.c)
-add_library(ulltra-cntrl Controller.cpp JsonHttpClient.cpp JsonHttpServer.cpp JsonNode.cpp)
-add_library(ulltra-net Discovery.cpp SimpleUdpReceiver.cpp LinkEval.cpp stress/stress.cpp)
-add_library(ulltra-ll LLLink.cpp LLCustomBlock.cpp LLUdpLink.cpp LLTcp.cpp)
-add_library(ulltra-proto UlltraProto.cpp)
-
-
-
-# enable cxx11
-target_compile_features(ulltra PRIVATE cxx_range_for)
-target_compile_features(rtt PRIVATE cxx_range_for)
-target_compile_features(ulltra-net PRIVATE cxx_range_for)
-target_compile_features(ulltra-ll PRIVATE cxx_range_for)
-target_compile_features(ulltra-proto PRIVATE cxx_range_for)
-target_compile_features(ulltra-cntrl PRIVATE cxx_range_for)
-
-target_compile_definitions(mongoose PRIVATE -DMG_ENABLE_IPV6)
-
-
-find_path (JACK_INC jack/jack.h)
-find_library(JACK_LIB NAMES jack )
-
-find_library(PTHREAD_LIB NAMES pthread )
-
-target_link_libraries (ulltra ulltra-cntrl ulltra-net ulltra-ll ulltra-proto rtt mongoose ${JACK_LIB} ${PTHREAD_LIB})
-
-#execute_process(COMMAND ./gcc-tune-flags
-#    OUTPUT_VARIABLE GCC_TUNE_FLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
-#add_definitions(${GCC_TUNE_FLAGS})
-
-#debug
-add_definitions("-g -ggdb -D_DEBUG")
+add_executable(ulltra ${SOURCE_FILES})

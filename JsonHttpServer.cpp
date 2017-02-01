@@ -3,13 +3,15 @@
 
 #include <sstream>
 #include "JsonHttpServer.h"
+#include "pclog/pclog.h"
 
 
 #define MG_ENABLE_IPV6
 #undef LOG
 #include "mongoose/mongoose.h"
 #undef LOG // need to override LOG() macro:
-#define LOG(level) if (level > Log::ReportingLevel()) ; else Log(level).get()
+#define LOG(level) if (level > pclog::Log::ReportingLevel()) ; else pclog::Log(level).get()
+#define logDebugHttp logDEBUG
 
 JsonHttpServer::JsonHttpServer()
 {

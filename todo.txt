@@ -1,0 +1,18 @@
+- test wifi hotspot latency
+- qwave stuff!
+- https://blog.cloudflare.com/how-to-achieve-low-latency/
+- ARticle about linux kernel lower latency network
+- Hardware timestamping to see how long the kernel takes
+- Something RAW?
+- TCP_EXPEDITED_1122
+
+http://serverfault.com/questions/623780/low-latency-tcp-settings-on-ubuntu
+
+net.ipv4.tcp_low_latency=
+http://serverfault.com/questions/623780/low-latency-tcp-settings-on-ubuntu
+- dont send out eval request
+
+
+# publisH. dont use yield(): on windows
+# use busy loop on linux!
+# best on windows: RT-thread with usleep(1) (0% CPU, <1.5ms wakeup)

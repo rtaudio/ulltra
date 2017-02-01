@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #include "LLUdpQWave.h"
 
 #pragma comment(lib, "Qwave.lib")
@@ -211,8 +213,8 @@ bool LLUdpQWave::onBlockingTimeoutChanged(uint64_t timeoutUs)
 	// set timeout
 #ifndef _WIN32
 	struct timeval tv;
-	tv.tv_sec = 0;
-	tv.tv_usec = timeoutUs; // 0 means no timeout (block forever)
+	tv.tv_sec = timeoutUs / 1000000UL;
+	tv.tv_usec = timeoutUs % 1000000UL; // 0 means no timeout (block forever)
 #else
 	int tv = (timeoutUs < 1000 ? 1UL : (timeoutUs / 1000UL));
 #endif
@@ -232,3 +234,4 @@ bool LLUdpQWave::onBlockingTimeoutChanged(uint64_t timeoutUs)
 
 	return true;
 }
+#endif

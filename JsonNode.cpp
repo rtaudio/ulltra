@@ -2,7 +2,9 @@
 #include <iostream>
 #include <sstream>
 #include "mongoose/mongoose.h"
-
+#ifdef ANDROID
+#include "ulltra-android/android-compat.h"
+#endif
 
 const JsonNode JsonNode::undefined;
 

@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" buildAllGenerated="false">
+    <generated />
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="bb4902c1-1f33-4b7a-bb96-c344c336d7ef" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/pclog" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/vcs.xml" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/AudioDriverStream.cpp" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/AudioDriverStream.h" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/WindowsMM.h" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/latency_analysis/firs/latencies_rpi2dev.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/latency_analysis/no_qos/latencies_rpi2dev_43392826723.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/latency_analysis/only_linux_dsmc/1ms_to/latencies_rpi2dev_48196976013.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/latency_analysis/only_linux_dsmc/1ms_to/latencies_rpi2dev_48550932454.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/latency_analysis/only_linux_dsmc/4ms_to/latencies_rpi2dev_48084076423.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/latency_analysis/only_linux_dsmc/latencies_rpi2dev_47804482648.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/matlab/predict_signal.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/misc/linux/timestamping.c" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/below_1000/latencies_flarch_6944973275.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/latencies_flarch_1823529821.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/linux_kernel_blocking_4000.fig" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/linux_user_block_4000_2k.fig" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/linux_user_blocking_4000.fig" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/win_kblock_2000us_eth" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/win_kblock_2000us_eth.fig" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/win_kblock_2000us_eth.m" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/windows_kernel_blocking_4000.fig" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/windows_kernel_blocking_4000_eth.fig" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/reports/windows_kernel_blocking_4000_eth2.fig" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/stress/stress.cpp" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/stress/stress.h" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mongoose" afterPath="$PROJECT_DIR$/mongoose" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/rtt" afterPath="$PROJECT_DIR$/rtt" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitmodules" afterPath="$PROJECT_DIR$/.gitmodules" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/CMakeLists.txt" afterPath="$PROJECT_DIR$/CMakeLists.txt" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Controller.cpp" afterPath="$PROJECT_DIR$/Controller.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Controller.h" afterPath="$PROJECT_DIR$/Controller.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Discovery.cpp" afterPath="$PROJECT_DIR$/Discovery.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Discovery.h" afterPath="$PROJECT_DIR$/Discovery.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/JsonHttpClient.cpp" afterPath="$PROJECT_DIR$/JsonHttpClient.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/JsonHttpClient.h" afterPath="$PROJECT_DIR$/JsonHttpClient.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/JsonHttpServer.cpp" afterPath="$PROJECT_DIR$/JsonHttpServer.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/JsonHttpServer.h" afterPath="$PROJECT_DIR$/JsonHttpServer.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/JsonNode.cpp" afterPath="$PROJECT_DIR$/JsonNode.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/JsonNode.h" afterPath="$PROJECT_DIR$/JsonNode.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LICENSE" afterPath="$PROJECT_DIR$/LICENSE" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLCustomBlock.cpp" afterPath="$PROJECT_DIR$/LLCustomBlock.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLCustomBlock.h" afterPath="$PROJECT_DIR$/LLCustomBlock.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLLink.cpp" afterPath="$PROJECT_DIR$/LLLink.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLLink.h" afterPath="$PROJECT_DIR$/LLLink.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLTcp.cpp" afterPath="$PROJECT_DIR$/LLTcp.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLTcp.h" afterPath="$PROJECT_DIR$/LLTcp.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLUdpLink.cpp" afterPath="$PROJECT_DIR$/LLUdpLink.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLUdpLink.h" afterPath="$PROJECT_DIR$/LLUdpLink.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLUdpQWave.cpp" afterPath="$PROJECT_DIR$/LLUdpQWave.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LLUdpQWave.h" afterPath="$PROJECT_DIR$/LLUdpQWave.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LinkEval.cpp" afterPath="$PROJECT_DIR$/LinkEval.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/LinkEval.h" afterPath="$PROJECT_DIR$/LinkEval.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/SimpleUdpReceiver.cpp" afterPath="$PROJECT_DIR$/SimpleUdpReceiver.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/SimpleUdpReceiver.h" afterPath="$PROJECT_DIR$/SimpleUdpReceiver.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/UlltraProto.cpp" afterPath="$PROJECT_DIR$/UlltraProto.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/UlltraProto.h" afterPath="$PROJECT_DIR$/UlltraProto.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bak/Discovery.cpp" afterPath="$PROJECT_DIR$/bak/Discovery.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bak/LLReceiver.cpp" afterPath="$PROJECT_DIR$/bak/LLReceiver.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/bak/LinkEval.cpp" afterPath="$PROJECT_DIR$/bak/LinkEval.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/deployment/dirsync.txt" afterPath="$PROJECT_DIR$/deployment/dirsync.txt" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/networking.h" afterPath="$PROJECT_DIR$/networking.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ulltra.cpp" afterPath="$PROJECT_DIR$/ulltra.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ulltra.sln" afterPath="$PROJECT_DIR$/ulltra.sln" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ulltra.vcxproj" afterPath="$PROJECT_DIR$/ulltra.vcxproj" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ulltra.vcxproj.filters" afterPath="$PROJECT_DIR$/ulltra.vcxproj.filters" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ulltra.vcxproj.user" afterPath="$PROJECT_DIR$/ulltra.vcxproj.user" />
+    </list>
+    <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
+    <ignored path="$PROJECT_DIR$/CMakeFiles/" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CreatePatchCommitExecutor">
+    <option name="PATCH_PATH" value="" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
+  <component name="FavoritesManager">
+    <favorites_list name="ulltra" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="600">
+      <file leaf-file-name="Discovery.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Discovery.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="110" column="0" lean-forward="false" selection-start-line="110" selection-start-column="0" selection-end-line="110" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="stress.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/rtt/stress.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="5" column="46" lean-forward="false" selection-start-line="5" selection-start-column="46" selection-end-line="5" selection-end-column="46" />
+              <folding>
+                <marker date="1485524319054" expanded="true" signature="14:469" ph="{...}" />
+                <marker date="1485524319054" expanded="true" signature="35:466" ph="{...}" />
+                <marker date="1485524319054" expanded="true" signature="350:387" ph="{...}" />
+                <marker date="1485524319054" expanded="true" signature="423:460" ph="{...}" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="stress.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/rtt/stress.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="207" column="0" lean-forward="false" selection-start-line="207" selection-start-column="0" selection-end-line="207" selection-end-column="0" />
+              <folding>
+                <element signature="e#259#441#0" expanded="true" />
+                <element signature="e#508#524#0" expanded="true" />
+                <element signature="e#1298#1764#0" expanded="true" />
+                <element signature="e#1991#2003#0" expanded="true" />
+                <element signature="e#5443#8535#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="LinkEval.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/LinkEval.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="17" column="0" lean-forward="false" selection-start-line="17" selection-start-column="0" selection-end-line="17" selection-end-column="0" />
+              <folding>
+                <element signature="e#5104#5564#0" expanded="true" />
+                <element signature="e#25413#30601#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="AudioIO.h" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/audio/AudioIO.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="396">
+              <caret line="11" column="0" lean-forward="true" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>sleep</find>
+      <find>mkstemp</find>
+    </findStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/Discovery.h" />
+        <option value="$PROJECT_DIR$/rtt/stress.h" />
+        <option value="$PROJECT_DIR$/rtt/stress.cpp" />
+        <option value="$PROJECT_DIR$/LinkEval.cpp" />
+        <option value="$PROJECT_DIR$/audio/AudioIO.h" />
+      </list>
+    </option>
+  </component>
+  <component name="JsBuildToolGruntFileManager" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsBuildToolPackageJson" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsGulpfileManager">
+    <detection-done>true</detection-done>
+    <sorting>DEFINITION_ORDER</sorting>
+  </component>
+  <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="-13" />
+    <option name="y" value="-13" />
+    <option name="width" value="5146" />
+    <option name="height" value="2826" />
+  </component>
+  <component name="ProjectView">
+    <navigator currentView="ProjectPane" proportions="" version="1">
+      <flattenPackages />
+      <showMembers />
+      <showModules />
+      <showLibraryContents />
+      <hideEmptyPackages />
+      <abbreviatePackageNames />
+      <autoscrollToSource />
+      <autoscrollFromSource />
+      <sortByType />
+      <manualOrder />
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ulltra" />
+              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ulltra" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ulltra" />
+              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ulltra" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="rtt" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ulltra" />
+              <option name="myItemType" value="com.jetbrains.cidr.projectView.CidrFilesViewHelper$MyProjectTreeStructure$1" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ulltra" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="audio" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+        </subPane>
+      </pane>
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="settings.editor.selected.configurable" value="preferences.customizations" />
+    <property name="nodejs_interpreter_path" value="C:/Program Files/nodejs/node" />
+    <property name="js.eslint.eslintPackage" value="" />
+    <property name="js-jscs-nodeInterpreter" value="C:\Program Files\nodejs\node.exe" />
+  </component>
+  <component name="RunManager">
+    <configuration default="true" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" TEST_MODE="SUITE_TEST">
+      <envs />
+      <method />
+    </configuration>
+    <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <module name="" />
+      <working_directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <kind value="FILE" />
+      <method />
+    </configuration>
+    <configuration default="true" type="GoRunFileConfiguration" factoryName="Go Single File">
+      <module name="" />
+      <working_directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <method />
+    </configuration>
+    <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="" />
+      <working_directory value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <kind value="DIRECTORY" />
+      <method />
+    </configuration>
+    <configuration default="true" type="JavaScriptTestRunnerProtractor" factoryName="Protractor">
+      <config-file value="" />
+      <node-interpreter value="project" />
+      <envs />
+      <method />
+    </configuration>
+    <configuration default="true" type="JavascriptDebugType" factoryName="JavaScript Debug">
+      <method />
+    </configuration>
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="ulltra" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="Tox" factoryName="Tox">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="ulltra" />
+      <method />
+    </configuration>
+    <configuration default="true" type="js.build_tools.gulp" factoryName="Gulp.js">
+      <method />
+    </configuration>
+    <configuration default="true" type="js.build_tools.npm" factoryName="npm">
+      <command value="run" />
+      <scripts />
+      <node-interpreter value="project" />
+      <envs />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Attests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="ulltra" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Doctests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="ulltra" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Nosetests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="ulltra" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Unittests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="ulltra" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PUREUNITTEST" value="true" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="py.test">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="ulltra" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="testToRun" value="" />
+      <option name="keywords" value="" />
+      <option name="params" value="" />
+      <option name="USE_PARAM" value="false" />
+      <option name="USE_KEYWORD" value="false" />
+      <method />
+    </configuration>
+  </component>
+  <component name="ShelveChangesManager" show_recycled="false">
+    <option name="remove_strategy" value="false" />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="bb4902c1-1f33-4b7a-bb96-c344c336d7ef" name="Default" comment="" />
+      <created>1485514781237</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1485514781237</updated>
+      <workItem from="1485514783706" duration="933000" />
+      <workItem from="1485523264472" duration="2552000" />
+      <workItem from="1485962508138" duration="557000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="4042000" />
+  </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-13" y="-13" width="5146" height="2826" extended-state="6" />
+    <editor active="false" />
+    <layout>
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.13515624" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="CMake" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.22447419" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+    </layout>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="processedProjectFiles" value="true" />
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager />
+    <watches-manager />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/Discovery.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2860">
+          <caret line="110" column="0" lean-forward="false" selection-start-line="110" selection-start-column="0" selection-end-line="110" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rtt/stress.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="130">
+          <caret line="5" column="46" lean-forward="false" selection-start-line="5" selection-start-column="46" selection-end-line="5" selection-end-column="46" />
+          <folding>
+            <marker date="1485524319054" expanded="true" signature="14:469" ph="{...}" />
+            <marker date="1485524319054" expanded="true" signature="35:466" ph="{...}" />
+            <marker date="1485524319054" expanded="true" signature="350:387" ph="{...}" />
+            <marker date="1485524319054" expanded="true" signature="423:460" ph="{...}" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rtt/stress.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="5382">
+          <caret line="207" column="0" lean-forward="false" selection-start-line="207" selection-start-column="0" selection-end-line="207" selection-end-column="0" />
+          <folding>
+            <element signature="e#259#441#0" expanded="true" />
+            <element signature="e#508#524#0" expanded="true" />
+            <element signature="e#1298#1764#0" expanded="true" />
+            <element signature="e#1991#2003#0" expanded="true" />
+            <element signature="e#5443#8535#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/LinkEval.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="e#5104#5564#0" expanded="true" />
+            <element signature="e#25413#30601#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Discovery.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Discovery.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="110" column="0" lean-forward="false" selection-start-line="110" selection-start-column="0" selection-end-line="110" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rtt/rtt.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="282">
+          <caret line="15" column="11" lean-forward="false" selection-start-line="15" selection-start-column="5" selection-end-line="15" selection-end-column="11" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rtt/stress.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="5" column="46" lean-forward="false" selection-start-line="5" selection-start-column="46" selection-end-line="5" selection-end-column="46" />
+          <folding>
+            <marker date="1485524319054" expanded="true" signature="14:469" ph="{...}" />
+            <marker date="1485524319054" expanded="true" signature="35:466" ph="{...}" />
+            <marker date="1485524319054" expanded="true" signature="350:387" ph="{...}" />
+            <marker date="1485524319054" expanded="true" signature="423:460" ph="{...}" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rtt/stress.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="207" column="0" lean-forward="false" selection-start-line="207" selection-start-column="0" selection-end-line="207" selection-end-column="0" />
+          <folding>
+            <element signature="e#259#441#0" expanded="true" />
+            <element signature="e#508#524#0" expanded="true" />
+            <element signature="e#1298#1764#0" expanded="true" />
+            <element signature="e#1991#2003#0" expanded="true" />
+            <element signature="e#5443#8535#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/LinkEval.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="17" column="0" lean-forward="false" selection-start-line="17" selection-start-column="0" selection-end-line="17" selection-end-column="0" />
+          <folding>
+            <element signature="e#5104#5564#0" expanded="true" />
+            <element signature="e#25413#30601#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/audio/AudioIO.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="11" column="0" lean-forward="true" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>

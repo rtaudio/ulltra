@@ -1,0 +1,30 @@
+<html>
+<body>
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<input name="stock" placeholder="Stock" value="TL0" id="stock" />
+
+<input type="submit" value="Go" id="btn" />
+
+<script>
+
+jQuery('#btn').click(function() {
+	//alert($('#stock').val());
+	
+	$.ajax({
+	  url: "http://localhost:8008",
+	  method:"POST",
+	  contentType : 'text/plain',
+	  data: JSON.stringify({"id":1,method:"get_sinks",params:[22,33]})
+	})
+	.done(function( data ) {
+		if ( console && console.log ) {
+		  console.log( "Sample of data:", data );
+		}
+	  });
+	});
+
+</script>
+
+</body>
+</html>

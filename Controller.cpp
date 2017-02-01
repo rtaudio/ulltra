@@ -1,17 +1,36 @@
+#include"UlltraProto.h"
+
 #include "Controller.h"
 
-#include <rtt.h>
 #include<time.h>
 #include<iostream>
 #include<fstream>
 
+#include <rtt.h>
 
-#include"UlltraProto.h"
-#include "AudioDriverStream.h"
+
+#include "audio/AudioIOStream.h"
+#include "AudioStreamerTx.h"
+#include "AudioStreamerRx.h"
+
+
+JsonNode streamInfo2Json(AudioStreamInfo const& asi)
+{
+	JsonNode jsi;
+	jsi["name"] = asi.name;
+	jsi["sample_rate"] = asi.sampleRate;
+	jsi["block_size"] = asi.blockSize;
+	jsi["channel_count"] = asi.channelCount;
+	jsi["latency"] = asi.latency;
+	return jsi;
+}
 
 
 Controller::Controller(const Params &params)
 {
+	int seed = time(NULL);
+	srand(seed);
+
 	m_linkEval.systemLatencyEval();
 
 #if _WIN32
@@ -24,7 +43,7 @@ Controller::Controller(const Params &params)
     }
 #endif
 
-    LOG(logDEBUG) << "Node file: " << params.nodesFileName;
+    LOG(logINFO) << "Nodes file: " << params.nodesFileName;
     std::ifstream nfs(params.nodesFileName);
     while(nfs.good() && !nfs.eof()) {
         std::string nh;
@@ -34,32 +53,32 @@ Controller::Controller(const Params &params)
         Discovery::NodeDevice nd(nh);
         LOG(logINFO) << "Explicit node: " << nd;
         m_explicitNodes.push_back((nd));
-        //m_discovery.addExplicitHosts(nh);
+        m_discovery.addExplicitHosts(nh); // TODO comment out?
     }
 
 	defaultLinkCandidates();
 
     m_isRunning = true;
-    RttThread::Routine updateThread(std::bind(&Controller::updateThreadMain, this, std::placeholders::_1));
-    m_updateThread = new RttThread(updateThread);
-	
+	m_updateThread = new RttThread([this]() {
+		updateThreadMain();
+	});
 
+	// after discovery each node should say hello
+	m_rpcServer.on("hello", [this](const SocketAddress &addr, const std::string &id, JsonNode &request, JsonNode &response) {
 	
-	m_server.on("hello", [this](const SocketAddress &addr, const std::string &id, JsonNode &request, JsonNode &response) {
-
 		if (request["name"].str.empty() || request["id"].str.empty()) {
 			response["error"] = "Say your name!";
 			return;
 		}
 
+		// make sure the sender has been discovered
+		// if not yet done, do a firstEncounter
 		if (!validateOrigin(addr, id).known()) {
 			auto skipClientNodeId = id.find('-');
 			auto clienId = id.substr(0, skipClientNodeId);
 			if (skipClientNodeId != std::string::npos && clienId == request["id"].str
 				&& m_presentNodes.find(clienId) == m_presentNodes.end()) {
-				Discovery::NodeDevice nd(*(sockaddr_storage*)&addr);
-				nd.id = clienId;
-				nd.name = request["name"].str;
+				Discovery::NodeDevice nd(*(sockaddr_storage*)&addr, clienId, request["name"].str);
 				m_asyncActions.push_back([this, nd]() {
 					firstEncounter(nd);
 				});
@@ -71,7 +90,7 @@ Controller::Controller(const Params &params)
 		return;
 	});
 
-	m_server.on("bye", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
+	m_rpcServer.on("bye", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
 		auto n = validateOrigin(addr, id);
 		if (!n.known()) {
 			response["error"] = "Who are you?";
@@ -84,8 +103,9 @@ Controller::Controller(const Params &params)
 	});
 
 
-	
-	m_server.on("link_choose", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
+	// link evaluation session by request from master, this is executed on the slave
+	// reponse: a list of available link candidates
+	m_rpcServer.on("link-eval-session", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
 		auto n = validateOrigin(addr, id);
 		if (!n.exists()) {
 			response["error"] = "Who are you?";
@@ -93,7 +113,7 @@ Controller::Controller(const Params &params)
 		}
 
 		m_asyncActions.push_back([this, n]() {
-			m_linkEval.chooseLinkCandidate(m_linkCandidates, n, false);
+			m_linkEval.sessionSlave(m_linkCandidates, n);
 		});
 
 		int i = 0;
@@ -102,33 +122,95 @@ Controller::Controller(const Params &params)
 		}
 	});
 
+	m_rpcServer.on("streams-available", [this](const SocketAddress &addr, const std::string &rid, const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, rid);
 
-	m_server.on("link_eval", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
-		auto n = validateOrigin(addr, id);
+		auto sis = m_audioManager.getAvailableStreams();
+
+		int i = 0;
+		for (auto &s : sis) {
+			response[i] = streamInfo2Json(s.second);
+			i++;
+		}
+	});
+
+	
+
+	// 
+	/*
+		sink -> source stream request
+		The sink sends {source_id,links,codecs} in the request
+		source_id: This is a the id of the stream source
+	*/
+	m_rpcServer.on("stream-start", [this](const SocketAddress &addr, const std::string &rid, const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, rid);
 		if (!n.exists()) {
 			response["error"] = "Who are you?";
 			return;
 		}
 
-		auto cand = request["candidate"].str;
+		auto source_id = request["source_id"].str;
+		auto links = request["links"].arr; // available links on the requesting sink
+		auto codecs = request["codecs"].arr; // available codecs on the requesting sink
 
-		if (cand.empty()) {
-			LOG(logERROR) << addr << " requested link eval without specifying a candidate! " << request;
-			response["error"] = "Specifiy candidate";
+		if (source_id.empty()) {
+			LOG(logERROR) << addr << " requested stream-start without specifiying a source_id! " << request;
+			response["error"] = "Specify stream id";
 			return;
 		}
 
-		if (m_linkCandidates.find(cand) == m_linkCandidates.end()) {
-			LOG(logERROR) << addr << " requested link eval of unknown " << cand;
-			response["error"] = "Unknown candidate " + cand;
+		auto stream = m_audioManager.stream(source_id);
+
+		if (!stream) {
+			response["error"] = "Unknown stream " + source_id;
 			return;
 		}
 
-		m_asyncActions.push_back([this, n]() {
-			m_linkEval.chooseLinkCandidate(m_linkCandidates, n, false);
-		});
+		// just choose first requested link generator!
+		auto selectedLinkGen = links.front().str;
 
-		response["candidates"] = "ok";
+		// check if selected link is available
+		auto slgi = m_linkCandidates.find(selectedLinkGen);
+		if (slgi == m_linkCandidates.end()) {
+			LOG(logERROR) << "selected stream link " << selectedLinkGen << " not available!";
+			response["error"] = "No supported link available!";
+			return;
+		}
+
+		LLLinkGenerator linkGen = slgi->second;
+
+		// generate a random stream token for validation
+		// this is included in the header of each stream frame
+		auto streamToken = rand();
+
+		response["link"] = selectedLinkGen;
+		response["token"] = streamToken;
+		response["info"] = streamInfo2Json(stream->getInfo());
+		
+		auto streamer = new AudioStreamerTx(linkGen, n, 6000);
+		streamer->start(stream, streamToken);
+		m_streamers.push_back(streamer);
+	});
+
+	// JS!
+	m_rpcServer.on("get_graph", [this](const SocketAddress &addr, const std::string &id, JsonNode &request, JsonNode &response) {
+		response["self_name"] = UP::getDeviceName();
+		response["nodes"][0]["name"] = UP::getDeviceName();
+		response["nodes"][0]["id"] = m_discovery.getHwAddress();
+
+		int i = 1;
+		for (auto &ni : m_presentNodes) {
+			Discovery::NodeDevice &n(ni.second);
+			response["nodes"][i]["name"] = n.getName();
+			response["nodes"][i]["id"] = n.getId();
+			response["nodes"][i]["hostname"] = n.getHost();
+			i++;
+		}
+
+		response["nodes"][i]["name"] = "dummy";
+		response["nodes"][i]["id"] = "dummy" + std::to_string(i);
+		response["nodes"][i]["hostname"] = "s";
+		i++;
 	});
 }
 
@@ -136,7 +218,7 @@ Controller::Controller(const Params &params)
 Controller::~Controller()
 {
 	m_isRunning = false;
-	if (!m_updateThread->Join(4000)) {
+	if (!m_updateThread->Join(2000)) {
 		LOG(logINFO) << "joining update thread failed, killing.";
 		m_updateThread->Kill();
 		LOG(logDEBUG1) << "thread killed!";
@@ -185,7 +267,7 @@ void Controller::listNodes()
 	LOG(logINFO) << std::endl;
 }
 
-void Controller::updateThreadMain(void *arg)
+void Controller::updateThreadMain()
 {
 	// we use 2-stage discovery: after actual discovery must say hello over tcp
 	// any inital actions are done in on("hello") handler
@@ -200,12 +282,10 @@ void Controller::updateThreadMain(void *arg)
 			}
 		}
 		catch (...) {
-
+			LOG(logDEBUG) << "an exception occured during hello handshake!";
 		}
 	};
-		
-		//std::bind(&Controller::firstEncounter, this, std::placeholders::_1);
-	
+			
     m_discovery.onNodeLost = [this](const Discovery::NodeDevice &node) {
 		LOG(logDEBUG) << "Discovery said " << node << " is lost, ignoring";
 		listNodes();
@@ -219,20 +299,13 @@ void Controller::updateThreadMain(void *arg)
         return;
     }
 
-    SocketAddress httpBindAddr(Discovery::NodeDevice::localAny.addrStorage);
-    httpBindAddr.setPort(UP::HttpControlPort);
-
-    if (!m_server.start(httpBindAddr.toString())) {
-        LOG(logERROR) << "Control server init failed!";
+    SocketAddress httpBindAddr(Discovery::NodeDevice::localAny.getAddr(UP::HttpControlPort));
+    if (!m_rpcServer.start(httpBindAddr.toString())) {
+		m_isRunning = false;
+        LOG(logERROR) << "RPC server init failed on address " << httpBindAddr.toString() << "!";
         return;
     }
 
-
-    if (!m_linkEval.init()) {
-        m_isRunning = false;
-        LOG(logERROR) << "Link evaluation init failed!";
-        return;
-    }
 
     time_t now;
 
@@ -240,14 +313,7 @@ void Controller::updateThreadMain(void *arg)
         now = time(NULL);
 		uint64_t nowUs = UP::getMicroSeconds();
 
-		if (m_helloNodes.size()) {
-			for (auto &n : m_helloNodes) {
-				firstEncounter(n);
-			}
-			m_helloNodes.clear();
-		}
-
-
+		// process async actions
 		if (m_asyncActions.size()) {
 			auto aa = m_asyncActions; // work on a copy!
 			m_asyncActions.clear();
@@ -258,31 +324,26 @@ void Controller::updateThreadMain(void *arg)
 
 
         m_discovery.update(nowUs);
-        //m_linkEval.update(now);
-        m_server.update();
+        m_rpcServer.update();
 
 
-
+		// always try to reach explicit nodes
         for(Discovery::NodeDevice &n : m_explicitNodes)
         {
 			try {
-				if (!n.alive() && difftime(now, n.timeLastConnectionTry) > 10)
+				if (!n.alive() && n.shouldRetryConnection(now))
 				{
-					n.timeLastConnectionTry = now + rand() % 5;
-
 					auto resp = rpc(n, "hello", JsonNode({
 						"name", m_discovery.getSelfName(),
 						"id", m_discovery.getHwAddress()
 					}));
 					
-					LOG(logDEBUG1) << "got hello response from " << resp;
-
 					if (resp["id"].isUndefined() || resp["name"].isUndefined()) {
 						LOG(logERROR) << "invalid hello response " << resp;
 					}
 					else {
-						n.id = resp["id"].str;
-						n.name = resp["name"].str;
+						n.update(resp["id"].str, resp["name"].str);		
+						LOG(logDEBUG1) << "got hello response from " << n << ": " << resp;
 						firstEncounter(n);
 					}					
 				}
@@ -291,9 +352,23 @@ void Controller::updateThreadMain(void *arg)
 				LOG(logDEBUG1) << " http client exception: " << ex.statusString;
 			}
         }
+
+		auto streamers(m_streamers);
+		for (auto si = m_streamers.begin(); si != m_streamers.end(); )
+		{
+			auto s(*si);
+			if (s->isAlive()) {
+				s->update();
+				si++;
+			}
+			else {
+				delete s;
+				si = m_streamers.erase(si);
+			}
+		}
 		
         usleep(UP::UpdateIntervalUS);
-    }
+    } // while(runnning)
 
 
 	for (auto n : m_presentNodes)
@@ -314,22 +389,23 @@ void Controller::updateThreadMain(void *arg)
 
 }
 
+// node handshaking
 bool Controller::firstEncounter(const Discovery::NodeDevice &node)
 {
-	if (node.id.empty() || m_presentNodes.find(node.id) != m_presentNodes.end()) {
+	if (!node.exists() || m_presentNodes.find(node.getId()) != m_presentNodes.end()) {
 		return false;
 	}
-	m_presentNodes.insert(std::pair<std::string, Discovery::NodeDevice>(node.id, node));;
+	m_presentNodes.insert(std::pair<std::string, Discovery::NodeDevice>(node.getId(), node));;
 
 	LOG(logINFO) << "first encounter with " << node;
 
 	if (isSlave(node)) {
-		LOG(logINFO) << "initiating link evaluation to node " << node;
+		LOG(logINFO) << "initiating link evaluation to slave node " << node;
 
 		try {
-			auto res = rpc(node, "link_choose", JsonNode({}));
+			auto res = rpc(node, "link-eval-session", JsonNode({}));
 			m_asyncActions.push_back([this, node]() {
-				m_linkEval.chooseLinkCandidate(m_linkCandidates, node, true);
+				m_linkEval.sessionMaster(m_linkCandidates, node);
 			});	
 			LOG(logINFO) << "queued deferred start of link evaluation with" << node;
 		}

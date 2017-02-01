@@ -5,9 +5,13 @@
 #include "LinkEval.h"
 #include "JsonHttpServer.h"
 #include "JsonHttpClient.h"
+#include "AudioIOManager.h"
 #include <rtt.h>
 
 class LLLink;
+class AudioIO;
+class AudioIOStream;
+class AudioStreamer;
 
 class Controller
 {
@@ -30,21 +34,20 @@ public:
 	}
 
 private:
-	void updateThreadMain(void *arg);
+	void updateThreadMain();
 
 	void listNodes();
 
 	Discovery m_discovery;
 	LinkEval m_linkEval;
 	JsonHttpClient m_client;
-	JsonHttpServer m_server;
+	JsonHttpServer m_rpcServer;
+	AudioIOManager m_audioManager;
 
 	bool m_isRunning;
 	RttThread *m_updateThread;
 
 	std::vector<Discovery::NodeDevice> m_explicitNodes;
-
-	std::vector<Discovery::NodeDevice> m_helloNodes;
 
 	std::vector<std::function<void(void)>> m_asyncActions;
 
@@ -59,6 +62,10 @@ private:
 	Discovery::NodeDevice const& validateOrigin(const SocketAddress &addr, const std::string &id);
 
 	LLLinkGeneratorSet m_linkCandidates;
+
+
+	std::vector<AudioStreamer*> m_streamers;
+
 
 	void defaultLinkCandidates();
 };
