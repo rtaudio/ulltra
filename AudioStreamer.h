@@ -1,5 +1,5 @@
 #pragma once
-#include "LLLink.h"
+#include "net/LLLink.h"
 
 #include "audio/AudioIOStream.h"
 
@@ -22,6 +22,8 @@ struct StreamFrameHeader {
 
 class AudioStreamer
 {
+	friend class AudioIOManager;
+
 public:
 	AudioStreamer(LLLinkGenerator &linkGen, const Discovery::NodeDevice &nd, int port);
 	~AudioStreamer();
@@ -45,5 +47,10 @@ protected:
 
 private:
 	RttThread *m_thread;
+
+	virtual bool inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time=0.0) = 0;
+	virtual bool outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time=0.0) = 0;
+
+	void notifyXRun();
 };
 

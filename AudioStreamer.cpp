@@ -1,7 +1,7 @@
 #include "AudioStreamer.h"
 #include "audio/AudioIOStream.h"
-#include "AudioStreamEncoder.h"
-#include <rtt.h>
+#include "audio/AudioCoder.h"
+#include <rtt/rtt.h>
 
 #define MIN_SAMPLES_PER_FRAME 60
 
@@ -55,3 +55,6 @@ void AudioStreamer::reportLinkError() {}
 void AudioStreamer::reportStreamError() {}
 
 
+void AudioStreamer::notifyXRun() {
+
+}

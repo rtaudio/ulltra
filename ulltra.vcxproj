@@ -87,8 +87,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;__WINDOWS_WASAPI__;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;.</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <Link>
@@ -164,9 +164,8 @@
     <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AudioIOManager.h" />
-    <ClInclude Include="AudioStreamDecoder.h" />
-    <ClInclude Include="AudioStreamEncoder.h" />
+    <ClInclude Include="audio\AudioIOManager.h" />
+    <ClInclude Include="audio\AudioCoder.h" />
     <ClInclude Include="AudioStreamer.h" />
     <ClInclude Include="AudioStreamerRx.h" />
     <ClInclude Include="AudioStreamerTx.h" />
@@ -176,31 +175,31 @@
     <ClInclude Include="audio\WindowsMM.h" />
     <ClInclude Include="CircularBuffer.h" />
     <ClInclude Include="Controller.h" />
-    <ClInclude Include="Discovery.h" />
+    <ClInclude Include="net\Discovery.h" />
     <ClInclude Include="audio\JackStream.h" />
     <ClInclude Include="histogram.h" />
-    <ClInclude Include="JsonHttpClient.h" />
-    <ClInclude Include="JsonHttpServer.h" />
-    <ClInclude Include="JsonNode.h" />
-    <ClInclude Include="LinkEval.h" />
-    <ClInclude Include="LLCustomBlock.h" />
-    <ClInclude Include="LLLink.h" />
-    <ClInclude Include="LLTcp.h" />
-    <ClInclude Include="LLUdpLink.h" />
-    <ClInclude Include="LLUdpQWave.h" />
+    <ClInclude Include="net\JsonHttpClient.h" />
+    <ClInclude Include="net\JsonHttpServer.h" />
+    <ClInclude Include="net\JsonNode.h" />
+    <ClInclude Include="net\LinkEval.h" />
+    <ClInclude Include="net\LLCustomBlock.h" />
+    <ClInclude Include="net\LLLink.h" />
+    <ClInclude Include="net\LLTcp.h" />
+    <ClInclude Include="net\LLUdpLink.h" />
+    <ClInclude Include="net\LLUdpQWave.h" />
     <ClInclude Include="mongoose\mongoose.h" />
-    <ClInclude Include="networking.h" />
+    <ClInclude Include="net\networking.h" />
     <ClInclude Include="OrderingBuffer.h" />
     <ClInclude Include="pclog\pclog.h" />
+    <ClInclude Include="rtaudio\RtAudio.h" />
     <ClInclude Include="rtt\rtt.h" />
     <ClInclude Include="rtt\stress.h" />
-    <ClInclude Include="SimpleUdpReceiver.h" />
+    <ClInclude Include="net\SimpleUdpReceiver.h" />
     <ClInclude Include="UlltraProto.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AudioIOManager.cpp" />
-    <ClCompile Include="AudioStreamDecoder.cpp" />
-    <ClCompile Include="AudioStreamEncoder.cpp" />
+    <ClCompile Include="audio\AudioIOManager.cpp" />
+    <ClCompile Include="audio\AudioCoder.cpp" />
     <ClCompile Include="AudioStreamer.cpp" />
     <ClCompile Include="AudioStreamerRx.cpp" />
     <ClCompile Include="AudioStreamerTx.cpp" />
@@ -211,23 +210,24 @@
     <ClCompile Include="audio\WindowsMMStream.cpp" />
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="Controller.cpp" />
-    <ClCompile Include="Discovery.cpp" />
+    <ClCompile Include="net\Discovery.cpp" />
     <ClCompile Include="audio\JackStream.cpp" />
-    <ClCompile Include="JsonHttpClient.cpp" />
-    <ClCompile Include="JsonHttpServer.cpp" />
-    <ClCompile Include="JsonNode.cpp" />
-    <ClCompile Include="LinkEval.cpp" />
-    <ClCompile Include="LLCustomBlock.cpp" />
-    <ClCompile Include="LLLink.cpp" />
-    <ClCompile Include="LLTcp.cpp" />
-    <ClCompile Include="LLUdpLink.cpp" />
-    <ClCompile Include="LLUdpQWave.cpp" />
+    <ClCompile Include="net\JsonHttpClient.cpp" />
+    <ClCompile Include="net\JsonHttpServer.cpp" />
+    <ClCompile Include="net\JsonNode.cpp" />
+    <ClCompile Include="net\LinkEval.cpp" />
+    <ClCompile Include="net\LLCustomBlock.cpp" />
+    <ClCompile Include="net\LLLink.cpp" />
+    <ClCompile Include="net\LLTcp.cpp" />
+    <ClCompile Include="net\LLUdpLink.cpp" />
+    <ClCompile Include="net\LLUdpQWave.cpp" />
     <ClCompile Include="mongoose\mongoose.c" />
     <ClCompile Include="OrderingBuffer.cpp" />
     <ClCompile Include="pclog\pclog.cpp" />
+    <ClCompile Include="rtaudio\RtAudio.cpp" />
     <ClCompile Include="rtt\rtt.cpp" />
     <ClCompile Include="rtt\stress.cpp" />
-    <ClCompile Include="SimpleUdpReceiver.cpp" />
+    <ClCompile Include="net\SimpleUdpReceiver.cpp" />
     <ClCompile Include="ulltra.cpp" />
     <ClCompile Include="UlltraProto.cpp" />
   </ItemGroup>

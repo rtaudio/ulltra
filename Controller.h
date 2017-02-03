@@ -1,12 +1,16 @@
 #pragma once
+#include "UlltraProto.h"
+
+#include <rtt/rtt.h>
+
+#include "net/Discovery.h"
+#include "net/LinkEval.h"
+#include "net/JsonHttpServer.h"
+#include "net/JsonHttpClient.h"
+#include "audio/AudioIOManager.h"
+#include "audio/AudioCoder.h"
 
 
-#include "Discovery.h"
-#include "LinkEval.h"
-#include "JsonHttpServer.h"
-#include "JsonHttpClient.h"
-#include "AudioIOManager.h"
-#include <rtt.h>
 
 class LLLink;
 class AudioIO;
@@ -59,9 +63,10 @@ private:
 	JsonNode const& rpc(const Discovery::NodeDevice &node, std::string const& method, JsonNode const& params);
 
 
-	Discovery::NodeDevice const& validateOrigin(const SocketAddress &addr, const std::string &id);
+	Discovery::NodeDevice const& validateOrigin(const SocketAddress &addr, const JsonNode &reqestData);
 
 	LLLinkGeneratorSet m_linkCandidates;
+	AudioCoderGeneratorSet m_encoderCandidates;
 
 
 	std::vector<AudioStreamer*> m_streamers;

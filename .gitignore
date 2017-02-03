@@ -59,3 +59,5 @@ obj/local
 *.apk.d
 /ulltra-android-console/libs
 /ulltra-android-console2/libs
+*.opendb
+/ulltra.VC.db

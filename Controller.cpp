@@ -6,12 +6,16 @@
 #include<iostream>
 #include<fstream>
 
-#include <rtt.h>
+#include <rtt/rtt.h>
 
 
 #include "audio/AudioIOStream.h"
 #include "AudioStreamerTx.h"
 #include "AudioStreamerRx.h"
+
+#include "net/LLUdpLink.h"
+#include "net/LLTcp.h"
+#include "net/LLUdpQWave.h"
 
 
 JsonNode streamInfo2Json(AudioStreamInfo const& asi)
@@ -22,6 +26,22 @@ JsonNode streamInfo2Json(AudioStreamInfo const& asi)
 	jsi["block_size"] = asi.blockSize;
 	jsi["channel_count"] = asi.channelCount;
 	jsi["latency"] = asi.latency;
+	return jsi;
+}
+
+JsonNode deviceState2Json(AudioIOManager::DeviceState const& state)
+{
+	JsonNode jsi;
+	jsi["name"] = state.info.name;
+	jsi["id"] = state.id;
+	jsi["sampleRates"] = state.getSampleRateCurrentlyAvailable();
+	jsi["blockSize"] = 512; // TODO
+	jsi["numChannels"] = state.numChannels();
+	jsi["isCapture"] = state.isCapture;
+	jsi["isPlayback"] = !state.isCapture;
+	jsi["latency"] = 0; // TODO
+	jsi["isDefault"] = state.isCapture ? state.info.isDefaultInput : state.info.isDefaultOutput;
+	jsi["isOpen"] = state.isOpen();
 	return jsi;
 }
 
@@ -64,7 +84,7 @@ Controller::Controller(const Params &params)
 	});
 
 	// after discovery each node should say hello
-	m_rpcServer.on("hello", [this](const SocketAddress &addr, const std::string &id, JsonNode &request, JsonNode &response) {
+	m_rpcServer.on("hello", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
 	
 		if (request["name"].str.empty() || request["id"].str.empty()) {
 			response["error"] = "Say your name!";
@@ -73,7 +93,8 @@ Controller::Controller(const Params &params)
 
 		// make sure the sender has been discovered
 		// if not yet done, do a firstEncounter
-		if (!validateOrigin(addr, id).known()) {
+		if (!validateOrigin(addr, request).known()) {
+			auto id = request["deviceId"].str;
 			auto skipClientNodeId = id.find('-');
 			auto clienId = id.substr(0, skipClientNodeId);
 			if (skipClientNodeId != std::string::npos && clienId == request["id"].str
@@ -90,8 +111,8 @@ Controller::Controller(const Params &params)
 		return;
 	});
 
-	m_rpcServer.on("bye", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
-		auto n = validateOrigin(addr, id);
+	m_rpcServer.on("bye", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, request);
 		if (!n.known()) {
 			response["error"] = "Who are you?";
 			return;
@@ -105,8 +126,8 @@ Controller::Controller(const Params &params)
 
 	// link evaluation session by request from master, this is executed on the slave
 	// reponse: a list of available link candidates
-	m_rpcServer.on("link-eval-session", [this](const SocketAddress &addr, const std::string &id, const JsonNode &request, JsonNode &response) {
-		auto n = validateOrigin(addr, id);
+	m_rpcServer.on("link-eval-session", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, request);
 		if (!n.exists()) {
 			response["error"] = "Who are you?";
 			return;
@@ -122,15 +143,14 @@ Controller::Controller(const Params &params)
 		}
 	});
 
-	m_rpcServer.on("streams-available", [this](const SocketAddress &addr, const std::string &rid, const JsonNode &request, JsonNode &response) {
-		auto n = validateOrigin(addr, rid);
+	m_rpcServer.on("list-devices", [this](const SocketAddress &addr,  const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, request);
 
-		auto sis = m_audioManager.getAvailableStreams();
+		auto devList = m_audioManager.getDevices();
 
 		int i = 0;
-		for (auto &s : sis) {
-			response[i] = streamInfo2Json(s.second);
-			i++;
+		for (auto &d : devList) {
+			response[i++] = deviceState2Json(d);
 		}
 	});
 
@@ -142,8 +162,9 @@ Controller::Controller(const Params &params)
 		The sink sends {source_id,links,codecs} in the request
 		source_id: This is a the id of the stream source
 	*/
-	m_rpcServer.on("stream-start", [this](const SocketAddress &addr, const std::string &rid, const JsonNode &request, JsonNode &response) {
-		auto n = validateOrigin(addr, rid);
+	/*
+	m_rpcServer.on("stream-start", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, request);
 		if (!n.exists()) {
 			response["error"] = "Who are you?";
 			return;
@@ -187,13 +208,13 @@ Controller::Controller(const Params &params)
 		response["token"] = streamToken;
 		response["info"] = streamInfo2Json(stream->getInfo());
 		
-		auto streamer = new AudioStreamerTx(linkGen, n, 6000);
-		streamer->start(stream, streamToken);
-		m_streamers.push_back(streamer);
-	});
+		//auto streamer = new AudioStreamerTx(linkGen, n, 6000);
+		//streamer->start(stream, streamToken);
+		//m_streamers.push_back(streamer);
+	});*/
 
 	// JS!
-	m_rpcServer.on("get_graph", [this](const SocketAddress &addr, const std::string &id, JsonNode &request, JsonNode &response) {
+	m_rpcServer.on("get_graph", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
 		response["self_name"] = UP::getDeviceName();
 		response["nodes"][0]["name"] = UP::getDeviceName();
 		response["nodes"][0]["id"] = m_discovery.getHwAddress();
@@ -207,10 +228,176 @@ Controller::Controller(const Params &params)
 			i++;
 		}
 
+		/*
 		response["nodes"][i]["name"] = "dummy";
 		response["nodes"][i]["id"] = "dummy" + std::to_string(i);
 		response["nodes"][i]["hostname"] = "s";
 		i++;
+		*/
+	});
+
+	
+	
+
+	// from gui
+	// request for starting a stream, handled on playback node
+	m_rpcServer.on("start-stream", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
+		// TODO: need to authenticate browser
+
+		auto captureNodeId = request["captureNodeId"].str;
+		auto captureDeviceId = request["captureDeviceId"].str;	
+
+		if (captureNodeId.empty() || captureDeviceId.empty()) {
+			LOG(logERROR) << "start-stream request does not specify capture node and/or device!";
+			response["error"] = "Specify captureNodeId and captureDeviceId!";
+			return;
+		}
+
+		auto playbackDeviceId = request["playbackDeviceId"].str;
+		if (playbackDeviceId.empty()) {
+			LOG(logERROR) << "start-stream request does not specify playback device!";
+			response["error"] = "Specify playbackDeviceId!";
+			return;
+		}
+
+		auto playbackDevice = m_audioManager.getDevice(playbackDeviceId);
+		if (!playbackDevice.exists() || playbackDevice.isCapture) {
+			LOG(logERROR) << "start-stream request with non-existing playback device!";
+			response["error"] = "Playback devices does not exist!";
+			return;
+		}
+
+		auto channelOffset = std::max((int)request["channelOffset"].num, 0);
+		auto numChannels = std::max((int)request["numChannels"].num, 0);
+
+		if (playbackDevice.numChannels() < (channelOffset+numChannels)) {
+			LOG(logERROR) << "start-stream request with more channels than playback device has!";
+			response["error"] = "Invalid channel count for playback!";
+			return;
+		}
+		
+		auto cnit = m_presentNodes.find(captureNodeId);
+		if (cnit == m_presentNodes.end()) {
+			LOG(logERROR) << "start-stream request with unknown node!";
+			response["error"] = "Capture node unknown!";
+			return;
+		}
+
+		auto captureNode = cnit->second;
+
+		JsonNode captureRequest;
+		captureRequest["captureDeviceId"] = captureDeviceId;
+		captureRequest["channelOffset"] = channelOffset;
+		captureRequest["numChannels"] = numChannels;
+		captureRequest["sampleRates"] = playbackDevice.getSampleRateCurrentlyAvailable();
+		captureRequest["coders"] = std::vector<std::string>(); // TODO	
+		
+		// include available link names
+		std::vector<std::string> linkIds;
+		for (auto &l : m_linkCandidates) {
+			linkIds.push_back(l.first);
+		}
+		captureRequest["linkIds"] = linkIds;
+		
+
+		auto captureResponse = rpc(captureNode, "start-stream-capture", captureRequest);
+		LOG(logDEBUG) << "captureResponse: " << captureResponse;
+	});
+
+
+	// from playback node
+	m_rpcServer.on("start-stream-capture", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
+		auto n = validateOrigin(addr, request);
+		if (!n.exists()) {
+			response["error"] = "Who are you?";
+			return;
+		}
+
+		auto captureDeviceId = request["captureDeviceId"].str;
+		auto channelOffset = request["channelOffset"].num;
+		auto numChannels = request["numChannels"].num;
+		auto playbackSampleRates = request["sampleRates"].arr;
+		auto coders = request["coders"].arr;
+		auto linkIds = request["linkIds"].arr;
+
+		auto &captureDevice = m_audioManager.getDevice(captureDeviceId);
+		if (!captureDevice.exists() || !captureDevice.isCapture) {
+			LOG(logERROR) << "start-stream-capture request with non-existing capture device!";
+			response["error"] = "Capture devices does not exist!";
+			return;
+		}
+
+
+		if (captureDevice.numChannels() < (channelOffset + numChannels)) {
+			LOG(logERROR) << "start-stream-capture request with more channels than capture device has!";
+			response["error"] = "Invalid channel count for capture!";
+			return;
+		}
+
+		
+		// find sample rate(s)
+		auto captureSampleRates = captureDevice.getSampleRateCurrentlyAvailable();
+
+		std::vector<int> sampleRateMatches;
+		for (auto &sr : playbackSampleRates) {
+			for (auto csr : captureSampleRates) {
+				if (csr == (int)sr.num) {
+					sampleRateMatches.push_back(csr);
+				}
+			}
+		}
+
+		if (sampleRateMatches.size() == 0) {
+			LOG(logINFO) << "start-stream-capture request with non-matching sample rates!";
+		}
+		else {
+			LOG(logINFO) << "start-stream-capture  request found matching sample rate (maybe more) " << sampleRateMatches[0];
+		}
+
+		// skip first entry because this is preferred sample rate
+		std::sort(sampleRateMatches.begin()+1, sampleRateMatches.end(), AudioIOManager::compareSampleRatesTo48KHz);
+
+		response["commonSampleRates"] = sampleRateMatches;
+
+		// choose the sample rate
+		// if we dont have a mitch pick lower sample rate
+		int selectedSampleRate = (sampleRateMatches.size() > 0)
+			? sampleRateMatches[0]
+			: std::min((int)playbackSampleRates[0].num, captureSampleRates[0]);
+
+		response["selectedSampleRate"] = selectedSampleRate;
+		
+
+		// find link
+		if (linkIds.size() == 0) {
+			LOG(logERROR) << "start-stream-capture request without link candidates!";
+			response["error"] = "Give linkIds!";
+			return;
+		}
+
+		std::vector<std::string> linkMatches;
+		for (auto &lid : linkIds) {
+			for (auto &l : m_linkCandidates) {
+				if (l.first == lid.str) {
+					linkMatches.push_back(lid.str);
+				}
+			}
+		}
+		response["commonLinkIds"] = linkMatches;
+
+		// now we start link evaluation
+		// TODO
+
+		AudioIOManager::StreamEndpointInfo ei(captureDevice);
+		ei.channelOffset = channelOffset;
+		ei.numChannels = numChannels;
+		ei.sampleRate = selectedSampleRate;
+
+		// start our stream
+		//m_audioManager.stream(ei);
+
+
+		response["ok"] = 1;
 	});
 }
 
@@ -226,8 +413,13 @@ Controller::~Controller()
 	delete m_updateThread;
 }
 
-Discovery::NodeDevice const& Controller::validateOrigin(const SocketAddress &addr, const std::string &id)
+Discovery::NodeDevice const& Controller::validateOrigin(const SocketAddress &addr, const JsonNode &reqestData)
 {
+	auto id = reqestData["deviceId"].str;
+	if(id.empty()) {
+		return Discovery::NodeDevice::none;
+	}
+
 	auto skipClientNodeId = id.find('-');
 	auto skipBothNodeId = id.find('@');
 	if (skipClientNodeId == std::string::npos || skipBothNodeId == std::string::npos) {
@@ -399,6 +591,7 @@ bool Controller::firstEncounter(const Discovery::NodeDevice &node)
 
 	LOG(logINFO) << "first encounter with " << node;
 
+	/* moved link evaluation to stream init"
 	if (isSlave(node)) {
 		LOG(logINFO) << "initiating link evaluation to slave node " << node;
 
@@ -413,6 +606,7 @@ bool Controller::firstEncounter(const Discovery::NodeDevice &node)
 			LOG(logDEBUG1) << "request failed: " << ex.statusString;
 		}
 	}
+	*/
 
 	listNodes();
 
@@ -423,12 +617,14 @@ JsonNode const& Controller::rpc(Discovery::NodeDevice const& node, std::string c
 {
 	// auto-retry!
 	auto id = m_discovery.getHwAddress() + '-' + node.getId() + '@' + std::to_string(node.nextRpcId());
-	return m_client.rpc(node.getAddr(UP::HttpControlPort), id, method, params);
+
+	auto paramsCopy = params;
+	paramsCopy["deviceId"] = id;
+
+	return m_client.rpc(node.getAddr(UP::HttpControlPort), method, paramsCopy);
 }
 
-#include "LLUdpLink.h"
-#include "LLTcp.h"
-#include "LLUdpQWave.h"
+
 
 //#define DeleteSafe(p) p ?
 void Controller::defaultLinkCandidates()

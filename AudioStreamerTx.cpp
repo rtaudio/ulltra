@@ -1,7 +1,7 @@
 #include "AudioStreamerTx.h"
 
-#include <rtt.h>
-#include "AudioStreamEncoder.h"
+#include <rtt/rtt.h>
+#include "audio/AudioCoder.h"
 
 
 AudioStreamerTx::AudioStreamerTx(LLLinkGenerator &linkGen, const Discovery::NodeDevice &nd, int port)

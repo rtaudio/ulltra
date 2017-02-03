@@ -1,7 +1,7 @@
 #pragma once
 #include "AudioStreamer.h"
 
-class AudioStreamDecoder;
+class AudioCoder;
 class OrderingBuffer;
 
 class AudioStreamerRx :
@@ -12,7 +12,7 @@ public:
 	~AudioStreamerRx();
 
 private:
-	AudioStreamDecoder *m_decoder;
+	AudioCoder *m_decoder;
 	OrderingBuffer *m_ordering;
 
 	void streamingThread();

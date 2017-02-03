@@ -7,3 +7,6 @@
 [submodule "pclog"]
 	path = pclog
 	url = https://github.com/rtaudio/pclog
+[submodule "rtaudio"]
+	path = rtaudio
+	url = https://github.com/rtaudio/rtaudio

@@ -1,7 +1,7 @@
 #pragma once
 #include "AudioStreamer.h"
 
-class AudioStreamEncoder;
+class AudioCoder;
 
 class AudioStreamerTx :
 	public AudioStreamer
@@ -15,7 +15,7 @@ protected:
 
 private:
 	uint16_t m_frameIndex;
-	AudioStreamEncoder *m_encoder;
+	AudioCoder *m_encoder;
 	uint8_t m_linkBuffer[2048];
 };
 

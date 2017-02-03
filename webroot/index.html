@@ -2,225 +2,358 @@
 <head><title>Flumine Audio</title></head>
 <body>
 <script src="jquery-2.1.4.min.js"></script>
+<script src="colors.js"></script>
 <link rel="stylesheet" type="text/css" media="screen" href="stylesheet.css">
 
 <div id="header-title"></div>
 
 <div id="net-graph">
 
-	<div id="audio-source" class="audio-node">
-		<span>network</span>
-		
-		<!--<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" class="style-scope iron-icon" style="pointer-events: none; display: block; width: 25%; height: 25%;margin-top: -40%;margin-left: 15%;background-color: white;border-radius: 50%;"><g class="style-scope iron-icon"><path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" class="style-scope iron-icon"></path></g></svg> -->
-		
-		<svg class="icon-error" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" class="style-scope iron-icon" style="pointer-events: none; width: 100%; height: 100%;"><g class="style-scope iron-icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" class="style-scope iron-icon"></path></g></svg>
-	</div>
-	
-	
-	<!-- <div id="audio-line-00" class="audio-line"></div> -->
-	
-	<div id="nodes">
-	</div>
-	
-	<div id="node-template">
-		<div class="audio-node"><span class="name">sink</span>
-			<div class="latency-control"><span>Latency</span><br />
-				<button type="button" class="low-lat">Low</button>
-				<button type="button" class="norm-lat">Norm</button>
-			</div>
-		</div>
-	</div>
-	
-	
-	<div class="msg" id="error-msg"><p>The streaming service is not responding.</p></div>
-	<div class="msg" id="no-sinks"><p>No sinks in the network.</p></div>
+    <div id="audio-source" class="audio-node">
+        <span>network</span>
+
+        <!--<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" class="style-scope iron-icon" style="pointer-events: none; display: block; width: 25%; height: 25%;margin-top: -40%;margin-left: 15%;background-color: white;border-radius: 50%;"><g class="style-scope iron-icon"><path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" class="style-scope iron-icon"></path></g></svg> -->
+
+        <svg class="icon-error style-scope iron-icon" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet"
+             style="pointer-events: none; width: 100%; height: 100%;">
+            <g class="style-scope iron-icon">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
+                      class="style-scope iron-icon"></path>
+            </g>
+        </svg>
+    </div>
+
+
+    <!-- <div id="audio-line-00" class="audio-line"></div> -->
+
+    <div id="nodes">
+    </div>
+
+    <div id="node-template">
+        <div class="audio-node">
+            <div class="node-border"></div>
+            <div class="title">
+                <div class="name">sink</div>
+                <div class="latency-control"><span>Latency</span><br/>
+                    <!-- <button type="button" class="low-lat">Low</button>
+                    <button type="button" class="norm-lat">Norm</button> -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="device-template">
+        <div class="audio-device">
+            <div class="name"><span></span></div>
+            <div class="connector"></div>
+        </div>
+    </div>
+
+
+    <div class="msg" id="error-msg"><p>The streaming service is not responding.</p></div>
+    <div class="msg" id="no-sinks"><p>No sinks in the network.</p></div>
 
 </div>
 
 <script>
+    var audioSourceNode = $('#audio-source');
 
-var audioSourceNode = $('#audio-source');
-var bodyNode = $('body');
+    var rpcHost = (!window.location.hostname) ? "localhost" : window.location.hostname;
 
-var rpcHost = (window.location.hostname == "") ? "localhost:26080" : window.location.hostname;
-rpcHost = "localhost:26080";
-var nodes = {};
+    if (window.location.hash)
+        rpcHost = window.location.hash.substr(1);
 
-var rpc_id = 0;
-var rpc = function(method, params, callback) {
-	$.ajax({
-	  url: "http://"+rpcHost,
-	  method:"POST",
-	  contentType : 'text/plain',
-	  data: JSON.stringify({"id":"browser-?@"+(rpc_id++),method:method,params:params})
-	})
-	.done(function(data) {
-		if(callback) callback(data.result);
-		//console.log(data.result);
-	})
-	.fail(function(qXHR, textStatus, errorThrown){
-		callback(false);
-	});
-};
+    var nodes = {};
+    var nodeList = [];
 
-var sinksData = [];
+    var selfName;
 
-var updateNodeElements = function()
-{
-	var n = $('#nodes').children().length;
-	var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0)
-	var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0)
 
-	var r = Math.min(w,h) * 0.45 - 150;
-	console.log(r);
-	$('#nodes').children().each(function(i) {
-		//console.log(i);
-		var phi = i/n*Math.PI*2;
-		$(this)
-			.css('margin-top',(Math.sin(phi)*r)+'px')
-			.css('margin-left',(Math.cos(phi)*r)+'px');
-	});	
-	
-}
+    var rpc_id = 0;
+    var rpc = function (method, params, callback) {
+        if(params && 'object' != typeof params) {
+            console.error('RPC params must be passed as object with named keys!');
+            callback(false);
+            return;
+        }
 
-window.onresize = function(event) {
-    updateNodeElements();
-};
+        rpc_id++;
 
-function HSVtoRGB(h, s, v) {
-    var r, g, b, i, f, p, q, t;
-    if (arguments.length === 1) {
-        s = h.s, v = h.v, h = h.h;
-    }
-    i = Math.floor(h * 6);
-    f = h * 6 - i;
-    p = v * (1 - s);
-    q = v * (1 - f * s);
-    t = v * (1 - (1 - f) * s);
-    switch (i % 6) {
-        case 0: r = v, g = t, b = p; break;
-        case 1: r = q, g = v, b = p; break;
-        case 2: r = p, g = v, b = t; break;
-        case 3: r = p, g = q, b = v; break;
-        case 4: r = t, g = p, b = v; break;
-        case 5: r = v, g = p, b = q; break;
-    }
-    return {
-        r: Math.round(r * 255),
-        g: Math.round(g * 255),
-        b: Math.round(b * 255)
+        var rpcId = rpc_id;
+        params.clientId = "browser-?@";
+        $.ajax({
+            url: "http://" + ((params && params['hostname']) || rpcHost) + ':26080',
+            method: "POST",
+            contentType: 'text/plain',
+            data: JSON.stringify({"id": (rpcId), method: method, params: params})
+        })
+                .done(function (data) {
+                    if(data.id != rpcId) {
+                        console.error('RPC id mistmatch', rpcId, data.id);
+                        callback(false);
+                        return;
+                    }
+
+                    if(data.error) {
+                        console.error('RPC error for', method, ':', data.error.message);
+                        callback(false);
+                        return;
+                    }
+                   callback(data.result);
+                })
+                .fail(function (qXHR, textStatus, errorThrown) {
+                    console.error('RPC failed', {method:method, params: params}, textStatus, errorThrown, qXHR.responseText)
+                    callback(false);
+                });
     };
-}
 
-String.prototype.hashCode = function() {
-  var hash = 0, i, chr, len;
-  if (this.length === 0) return hash;
-  for (i = 0, len = this.length; i < len; i++) {
-    chr   = this.charCodeAt(i);
-    hash  = ((hash << 5) - hash) + chr;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return hash;
-};
+    var sinksData = [];
 
+    var updateNodeElements = function () {
+        var nodes = $('#nodes');
+        var n = nodes.children().length;
+        var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0)
+        var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0)
 
-function makeid()
-{
-    var text = "";
-    var possible = "abcdefghijklmnopqrstuvwxyz0123456789:::::";
+        var r = Math.min(w, h) * 0.45 - 150;
+        nodes.children().each(function (i) {
+            //console.log(i);
+            var phi = i / n * Math.PI * 2;
+            var nodeR = this.offsetWidth;
+            var dns = $(this).children('.audio-device');
+            var nd = dns.length;
+            $(this)
+                    .css('margin-top', (Math.sin(phi) * r) + 'px')
+                    .css('margin-left', (Math.cos(phi) * r) + 'px');
 
-    for( var i=0; i < 12; i++ )
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
+            dns.each(function (di) {
+                var phi = di / nd * Math.PI * 2;
+                var nameEl = $(this).find('.name');
+                var s = Math.sin(phi);
+                nameEl
+                        .css('margin-top', (Math.sign(s) * Math.pow(Math.abs(s), 1.5) * (nodeR + nameEl[0].offsetHeight / 2) ) + 'px')
+                        .css('margin-left', (Math.cos(phi) * nodeR - nameEl[0].offsetWidth / 2 + this.offsetWidth / 2) + 'px');
 
-    return text;
-}
+                $(this).find('.connector')
+                        .css('top', (Math.sin(phi) * nodeR * 1.5 ) + 'px')
+                        .css('left', (Math.cos(phi) * nodeR * 1.5 ) + 'px');
 
-// from http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
-//rgb(46, 204, 113) rgb(52, 152, 219) rgb(241, 196, 15) rgb(231, 76, 60)
-var id2Rgb = function(s){
-	var golden_ratio_conjugate = 0.618033988749895;
-	var h = ((s.hashCode()) % 47) / 47;
-	h = 0.5+h/2;
-	h += golden_ratio_conjugate
-	h %= 1
-	console.log(h);
-	var c = HSVtoRGB(h, 0.4, 0.9);
+            });
+        });
 
-	return 'rgb(' + c.r + ',' +c.g+',' + c.b +')';
-	//console.log('rgb(' + c.r + ',' +c.g+',' + c.b +')');	
-	 //return '#'+(Math.abs(s.hashCode()) % 0xffffff).toString(16);
-  //return pastelColors(Math.abs(s.hashCode()));
-}
+    };
 
-
-var addNode = function(n)
-{
-	var el = $('#node-template .audio-node').clone();
-	el.find('.name').text(n.name);
-	el.css('background-color', id2Rgb(n.id));
-	$('#nodes').append(el);
-	updateNodeElements();
-}
-
-var updateNetGraph = function() {
-	rpc("get_graph",[],function(data) {
-		if(!data) {
-			$('body,#audio-source').addClass('error');
-			$('#header-title').text('error');
-			return;
-		}
-		
-		$('body,#audio-source').removeClass('error');
-		
-		$('#header-title').text(data.self_name);
-		
-		for (var i in data.nodes) {
-			var n = data.nodes[i];
-			if(!nodes[n.id]) {
-				nodes[n.id] = n;
-				window.setTimeout((function() {
-					addNode(this);
-				}).bind(n), i*150);				
-			}
-		}
-		/*
-		if(data[0]) {
-			sinksData = data;
-			$('#no-sinks').hide();
-			$('#audio-sink-00').removeClass('new').prev('.audio-line').addClass('connected');
-			if($('#audio-sink-00 span.name').text() != data[0].name)
-				$('#audio-sink-00 span.name').text(data[0].name);
-		} else {
-			$('#audio-sink-00').addClass('new').prev('.audio-line').removeClass('connected');
-			$('#no-sinks').show();
-			sinksData = [];
-		}
-		*/
-	});
-};
-
-jQuery('#audio-sink-00 button.norm-lat').click(function() {
-	rpc("set_sink_bufsiz",[sinksData[0].id, 48*250*5]);
-});
-
-jQuery('#audio-sink-00 button.low-lat').click(function() {
-	rpc("set_sink_bufsiz",[sinksData[0].id, 48*14]);
-});	
+    window.onresize = function (event) {
+        updateNodeElements();
+    };
 
 
-var pollBeat = function() {
-	rpc("poll_beat", [], function(data) {
-		if(data) {
-			audioSourceNode.addClass('beat');
-			window.setTimeout(function(){ audioSourceNode.removeClass('beat'); }, 1000*0.07);
-			pollBeat();
-		}
-	});
-};	
+    String.prototype.hashCode = function () {
+        var hash = 0, i, chr, len;
+        if (this.length === 0) return hash;
+        for (i = 0, len = this.length; i < len; i++) {
+            chr = this.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
+    };
 
-window.setInterval(updateNetGraph, 1000);
-updateNetGraph();
-pollBeat();
+    function makeid() {
+        var text = "";
+        var possible = "abcdefghijklmnopqrstuvwxyz0123456789:::::";
+
+        for (var i = 0; i < 12; i++)
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+        return text;
+    }
+
+
+
+
+    var addNode = function (n) {
+        //console.log(n);
+
+        var tplDevice = $('#device-template').children('.audio-device');
+        var el = $('#node-template').children('.audio-node').clone();
+        el.find('.name').text(n.name);
+        el.find('.title').css('background-color', id2Rgb(n.id));
+        el.attr('tabindex', $('#nodes').children('.audio-node').length);
+        $('#nodes').append(el);
+        n.el = el;
+
+        // skip dummy
+        if (n.hostname && n.hostname.length < 2)
+            return;
+
+        rpc("list-devices", {hostname: n.hostname}, (function (data) {
+            var el = this;
+            data.forEach(function (device) {
+               // console.log(device);
+                var deviceEl = tplDevice.clone();
+                var cl = id2Rgb(device.id.split('#')[0]);
+
+                device.name = device.name.replace(/\s+/g, ' ').replace(' )', ')');
+
+                deviceEl.find('.name span')
+                        .text(device.name)
+                        .css('color', cl);
+                deviceEl.addClass(device.isCapture ? 'capture' : 'playback');
+                deviceEl.addClass(device.isDefault ? 'default' : 'nondefault');
+
+                deviceEl.find('.connector')
+                        .text(device.numChannels)
+                        .click({node: n, device: device}, onConnectorClicked)
+                        .data('device-id', device.id)
+                        .prop('title', device.id)
+                        .css('border-color',  cl);
+                el.append(deviceEl);
+            });
+
+            updateNodeElements();
+        }).bind(el));
+
+        updateNodeElements();
+    };
+
+    function GraphException(message) {
+        this.message = message;
+    }
+
+    var connectDevices = function(capture, playback) {
+        if(playback.device.isCapture == capture.device.isCapture) {
+            throw new GraphException("Trying to connect two devices that are both playback or capture!");
+        }
+        if(playback.device.isCapture) {
+            return connectDevices(playback, capture);
+        }
+        console.log('Connect', capture, '---->', playback);
+
+        rpc('start-stream', {
+            hostname: playback.node.hostname,
+            playbackDeviceId: playback.device.id,
+            captureNodeId: capture.node.id,
+            captureDeviceId: capture.device.id,
+            numChannels: 0, // TODO
+            channelOffset: 0 // TODO
+        }, function(result) {
+            console.log(result);
+        });
+    };
+
+    var onConnectorClicked = function (e,d) {
+        var node = e.data.node;
+        var device = e.data.device;
+        var audioNodeEl = $(this).parents('.audio-node');
+
+        audioNodeEl.blur();
+        audioNodeEl.css('pointer-events', 'none');
+
+        if(window.connectingNodeDevice) {
+            connectDevices(window.connectingNodeDevice, e.data);
+            $(document.body)
+                    .removeClass('connecting')
+                    .removeClass('connecting-capture')
+                    .removeClass('connecting-playback');
+            window.connectingNodeDevice.audioNodeEl.css('pointer-events', '');
+            window.connectingNodeDevice = false;
+
+            $('#header-title').text(selfName);
+
+            setTimeout(function() {
+                audioNodeEl.css('pointer-events', '');
+            }, 100);
+
+            return;
+        }
+
+        $(document.body)
+                .addClass('connecting')
+                .addClass(device.isCapture ? 'connecting-capture' : 'connecting-playback');
+
+
+
+        window.connectingNodeDevice = e.data;
+        window.connectingNodeDevice.audioNodeEl = audioNodeEl;
+
+        $('#header-title').text( device.isCapture ? ('Streaming from ' +  device.name + ' to ...') :  ('Streaming to ' +  device.name + ' from ...'));
+
+        //console.log(nodeList);
+        if(nodeList.length == 2) {
+            var other = nodeList[+(nodeList[0].id == node.id)];
+            $(other.el).focus();
+        }
+    };
+
+    var updateNetGraph = function () {
+        rpc("get_graph", {}, function (data) {
+            if (!data) {
+                $('body,#audio-source').addClass('error');
+                $('#header-title').text('error');
+                return;
+            }
+
+            $('body,#audio-source').removeClass('error');
+
+            if(!window.connectingNodeDevice && selfName != data.self_name) {
+                selfName = data.self_name;
+                $('#header-title').text(selfName);
+            }
+
+
+            for (var i in data.nodes) {
+                var n = data.nodes[i];
+                if (!nodes[n.id]) {
+                    nodes[n.id] = n;
+                    nodeList.push(n);
+                    window.setTimeout((function () {
+                        addNode(this);
+                    }).bind(n), i * 150);
+                }
+            }
+            /*
+             if(data[0]) {
+             sinksData = data;
+             $('#no-sinks').hide();
+             $('#audio-sink-00').removeClass('new').prev('.audio-line').addClass('connected');
+             if($('#audio-sink-00 span.name').text() != data[0].name)
+             $('#audio-sink-00 span.name').text(data[0].name);
+             } else {
+             $('#audio-sink-00').addClass('new').prev('.audio-line').removeClass('connected');
+             $('#no-sinks').show();
+             sinksData = [];
+             }
+             */
+        });
+    };
+
+    /*
+    jQuery('#audio-sink-00 button.norm-lat').click(function () {
+        rpc("set_sink_bufsiz", [sinksData[0].id, 48 * 250 * 5]);
+    });
+
+    jQuery('#audio-sink-00 button.low-lat').click(function () {
+        rpc("set_sink_bufsiz", [sinksData[0].id, 48 * 14]);
+    });
+    */
+
+
+    var pollBeat = function () {
+        rpc("poll_beat", [], function (data) {
+            if (data) {
+                audioSourceNode.addClass('beat');
+                window.setTimeout(function () {
+                    audioSourceNode.removeClass('beat');
+                }, 1000 * 0.07);
+                pollBeat();
+            }
+        });
+    };
+
+    window.setInterval(updateNetGraph, 10000);
+    updateNetGraph();
+    pollBeat();
 
 </script>
 

@@ -1,7 +1,7 @@
 #include "AudioStreamerRx.h"
 
 #include "OrderingBuffer.h"
-#include "AudioStreamDecoder.h"
+#include "audio/AudioCoder.h"
 
 AudioStreamerRx::AudioStreamerRx(LLLinkGenerator &linkGen, const Discovery::NodeDevice &nd, int port)
 	: AudioStreamer(linkGen, nd, port)

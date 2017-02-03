@@ -2,8 +2,8 @@
 //
 
 #define _WINSOCKAPI_  // prevent winsock.h
-#include <rtt.h>
-#include"UlltraProto.h"
+#include <rtt/rtt.h>
+#include "UlltraProto.h"
 #include "Controller.h"
 
 

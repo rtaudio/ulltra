@@ -2,7 +2,7 @@
 #include "UlltraProto.h"
 
 #include<iostream>
-#include "networking.h"
+#include "net/networking.h"
 
 #ifdef _WIN32
 LARGE_INTEGER UlltraProto::timerFreq;

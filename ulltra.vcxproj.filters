@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Ressourcendateien">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="net">
       <UniqueIdentifier>{99a47e92-350c-457e-8887-7c707b0fa2ab}</UniqueIdentifier>
     </Filter>
@@ -13,9 +9,6 @@
     </Filter>
     <Filter Include="net\LL">
       <UniqueIdentifier>{4907bbdf-e484-4f6c-b7b7-af57d70d2b68}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="meta">
-      <UniqueIdentifier>{31a7baf0-ceee-4c34-b513-6aee7339ed90}</UniqueIdentifier>
     </Filter>
     <Filter Include="net\udp">
       <UniqueIdentifier>{e53f98d1-6868-4b7a-b3f3-a7600a0b65cc}</UniqueIdentifier>
@@ -32,48 +25,22 @@
     <Filter Include="audio\stream">
       <UniqueIdentifier>{dbe7ddc3-070a-442f-8758-de108bd57b35}</UniqueIdentifier>
     </Filter>
+    <Filter Include="misc">
+      <UniqueIdentifier>{51b06d31-aef2-4bdd-9eff-0d30a19cef43}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ds">
+      <UniqueIdentifier>{1fb88da6-853d-4f27-aa0a-b0ae2f409b8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="meta">
+      <UniqueIdentifier>{31a7baf0-ceee-4c34-b513-6aee7339ed90}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mongoose\mongoose.h">
       <Filter>net\http</Filter>
     </ClInclude>
-    <ClInclude Include="JsonHttpServer.h">
-      <Filter>net\http</Filter>
-    </ClInclude>
-    <ClInclude Include="LLUdpLink.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="LLLink.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="Discovery.h">
-      <Filter>net</Filter>
-    </ClInclude>
-    <ClInclude Include="LinkEval.h">
-      <Filter>net</Filter>
-    </ClInclude>
-    <ClInclude Include="networking.h">
-      <Filter>net</Filter>
-    </ClInclude>
     <ClInclude Include="Controller.h" />
-    <ClInclude Include="rtt\rtt.h" />
     <ClInclude Include="UlltraProto.h" />
-    <ClInclude Include="SimpleUdpReceiver.h">
-      <Filter>net\udp</Filter>
-    </ClInclude>
-    <ClInclude Include="LLTcp.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="JsonHttpClient.h">
-      <Filter>net\http</Filter>
-    </ClInclude>
-    <ClInclude Include="JsonNode.h" />
-    <ClInclude Include="LLCustomBlock.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="LLUdpQWave.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
     <ClInclude Include="audio\JackClient.h">
       <Filter>audio\jack</Filter>
     </ClInclude>
@@ -89,9 +56,6 @@
     <ClInclude Include="audio\AudioIOStream.h">
       <Filter>audio</Filter>
     </ClInclude>
-    <ClInclude Include="AudioStreamEncoder.h">
-      <Filter>audio\stream</Filter>
-    </ClInclude>
     <ClInclude Include="AudioStreamer.h">
       <Filter>audio\stream</Filter>
     </ClInclude>
@@ -101,53 +65,77 @@
     <ClInclude Include="AudioStreamerTx.h">
       <Filter>audio\stream</Filter>
     </ClInclude>
-    <ClInclude Include="OrderingBuffer.h" />
-    <ClInclude Include="AudioIOManager.h" />
-    <ClInclude Include="AudioStreamDecoder.h" />
-    <ClInclude Include="CircularBuffer.h" />
-    <ClInclude Include="rtt\stress.h" />
-    <ClInclude Include="pclog\pclog.h" />
-    <ClInclude Include="histogram.h" />
+    <ClInclude Include="audio\AudioCoder.h">
+      <Filter>audio\stream</Filter>
+    </ClInclude>
+    <ClInclude Include="net\Discovery.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="net\JsonHttpClient.h">
+      <Filter>net\http</Filter>
+    </ClInclude>
+    <ClInclude Include="net\JsonHttpServer.h">
+      <Filter>net\http</Filter>
+    </ClInclude>
+    <ClInclude Include="net\LinkEval.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="net\LLCustomBlock.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="net\LLLink.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="net\LLTcp.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="net\LLUdpLink.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="net\LLUdpQWave.h">
+      <Filter>net\LL</Filter>
+    </ClInclude>
+    <ClInclude Include="net\SimpleUdpReceiver.h">
+      <Filter>net\udp</Filter>
+    </ClInclude>
+    <ClInclude Include="audio\AudioIOManager.h">
+      <Filter>audio</Filter>
+    </ClInclude>
+    <ClInclude Include="net\JsonNode.h">
+      <Filter>net\http</Filter>
+    </ClInclude>
+    <ClInclude Include="pclog\pclog.h">
+      <Filter>misc</Filter>
+    </ClInclude>
+    <ClInclude Include="rtaudio\RtAudio.h">
+      <Filter>audio</Filter>
+    </ClInclude>
+    <ClInclude Include="rtt\rtt.h">
+      <Filter>misc</Filter>
+    </ClInclude>
+    <ClInclude Include="rtt\stress.h">
+      <Filter>misc</Filter>
+    </ClInclude>
+    <ClInclude Include="histogram.h">
+      <Filter>misc</Filter>
+    </ClInclude>
+    <ClInclude Include="OrderingBuffer.h">
+      <Filter>ds</Filter>
+    </ClInclude>
+    <ClInclude Include="CircularBuffer.h">
+      <Filter>ds</Filter>
+    </ClInclude>
+    <ClInclude Include="net\networking.h">
+      <Filter>net</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mongoose\mongoose.c">
       <Filter>net\http</Filter>
     </ClCompile>
-    <ClCompile Include="JsonHttpServer.cpp">
-      <Filter>net\http</Filter>
-    </ClCompile>
-    <ClCompile Include="LLUdpLink.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="LLLink.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="LinkEval.cpp">
-      <Filter>net</Filter>
-    </ClCompile>
-    <ClCompile Include="Discovery.cpp">
-      <Filter>net</Filter>
-    </ClCompile>
     <ClCompile Include="Controller.cpp" />
-    <ClCompile Include="rtt\rtt.cpp" />
     <ClCompile Include="ulltra.cpp" />
     <ClCompile Include="UlltraProto.cpp" />
-    <ClCompile Include="SimpleUdpReceiver.cpp">
-      <Filter>net\udp</Filter>
-    </ClCompile>
-    <ClCompile Include="LLTcp.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="JsonHttpClient.cpp">
-      <Filter>net\http</Filter>
-    </ClCompile>
-    <ClCompile Include="JsonNode.cpp" />
-    <ClCompile Include="LLCustomBlock.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="LLUdpQWave.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
     <ClCompile Include="audio\JackClient.cpp">
       <Filter>audio\jack</Filter>
     </ClCompile>
@@ -166,9 +154,6 @@
     <ClCompile Include="audio\AudioIOStream.cpp">
       <Filter>audio</Filter>
     </ClCompile>
-    <ClCompile Include="AudioStreamEncoder.cpp">
-      <Filter>audio\stream</Filter>
-    </ClCompile>
     <ClCompile Include="AudioStreamer.cpp">
       <Filter>audio\stream</Filter>
     </ClCompile>
@@ -178,12 +163,63 @@
     <ClCompile Include="AudioStreamerTx.cpp">
       <Filter>audio\stream</Filter>
     </ClCompile>
-    <ClCompile Include="OrderingBuffer.cpp" />
-    <ClCompile Include="AudioIOManager.cpp" />
-    <ClCompile Include="AudioStreamDecoder.cpp" />
-    <ClCompile Include="CircularBuffer.cpp" />
-    <ClCompile Include="pclog\pclog.cpp" />
-    <ClCompile Include="rtt\stress.cpp" />
+    <ClCompile Include="audio\AudioCoder.cpp">
+      <Filter>audio\stream</Filter>
+    </ClCompile>
+    <ClCompile Include="net\Discovery.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="net\JsonHttpClient.cpp">
+      <Filter>net\http</Filter>
+    </ClCompile>
+    <ClCompile Include="net\JsonHttpServer.cpp">
+      <Filter>net\http</Filter>
+    </ClCompile>
+    <ClCompile Include="net\LinkEval.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="net\LLCustomBlock.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="net\LLLink.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="net\LLTcp.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="net\LLUdpLink.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="net\LLUdpQWave.cpp">
+      <Filter>net\LL</Filter>
+    </ClCompile>
+    <ClCompile Include="net\SimpleUdpReceiver.cpp">
+      <Filter>net\udp</Filter>
+    </ClCompile>
+    <ClCompile Include="audio\AudioIOManager.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="net\JsonNode.cpp">
+      <Filter>net\http</Filter>
+    </ClCompile>
+    <ClCompile Include="pclog\pclog.cpp">
+      <Filter>misc</Filter>
+    </ClCompile>
+    <ClCompile Include="rtaudio\RtAudio.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="rtt\rtt.cpp">
+      <Filter>misc</Filter>
+    </ClCompile>
+    <ClCompile Include="rtt\stress.cpp">
+      <Filter>misc</Filter>
+    </ClCompile>
+    <ClCompile Include="OrderingBuffer.cpp">
+      <Filter>ds</Filter>
+    </ClCompile>
+    <ClCompile Include="CircularBuffer.cpp">
+      <Filter>ds</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore">

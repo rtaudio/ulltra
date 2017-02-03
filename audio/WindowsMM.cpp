@@ -1,7 +1,7 @@
 #ifdef _WIN32
 #include "WindowsMM.h"
 #include "../UlltraProto.h"
-#include "../networking.h"
+#include "../net/networking.h"
 
 #include <windows.h>
 #include <stdio.h>
@@ -15,7 +15,7 @@
 
 #include "AudioIOStream.h"
 
-#include <rtt.h>
+#include <rtt/rtt.h>
 
 std::string getLongDeviceName(IMMDevice *dev, std::string &id);
 IMMDevice *getDefaultDevice(bool capture);
