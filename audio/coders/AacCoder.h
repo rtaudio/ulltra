@@ -1,0 +1,34 @@
+#pragma once
+#include "../AudioCoder.h"
+
+#include "fdk-aac/libAACenc/include/aacenc_lib.h"
+
+class AacCoder : public AudioCoder
+{
+public:
+	struct Params {
+		int bitrate;
+		Params() : bitrate(64000) {}
+	};
+
+	AacCoder(int numChannels, int sample_rate, Params &params);
+	virtual ~AacCoder();
+
+	int encodeInterleaved(const float* samples, int numFrames, uint8_t *buffer, int bufferLen);
+	void decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames);
+
+	int getFrameLength() {
+		return info.frameLength;
+	}
+private:
+	HANDLE_AACENCODER handle;
+	CHANNEL_MODE mode;
+	AACENC_InfoStruct info = { 0 };
+	int16_t *convert_buf;
+
+
+
+
+	
+};
+
