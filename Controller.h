@@ -9,6 +9,7 @@
 #include "net/JsonHttpClient.h"
 #include "audio/AudioIOManager.h"
 #include "audio/AudioCoder.h"
+#include "audio/WebAudio.h"
 
 
 
@@ -70,6 +71,8 @@ private:
 
 
 	std::vector<AudioStreamer*> m_streamers;
+
+	WebAudio m_webAudio;
 
 
 	void defaultLinkCandidates();

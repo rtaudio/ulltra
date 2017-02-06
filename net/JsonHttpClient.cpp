@@ -2,7 +2,7 @@
 
 #include "JsonHttpClient.h"
 
-#define MG_ENABLE_IPV6
+#define MG_ENABLE_IPV6 1
 #undef LOG
 #include "mongoose/mongoose.h"
 
@@ -50,6 +50,8 @@ const JsonNode &JsonHttpClient::rpc(const SocketAddress &host, const std::string
 
 	return rpcResp["result"];
 }
+
+
 
 const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::string &method, const std::string &body)
 {
@@ -163,7 +165,7 @@ const JsonNode &JsonHttpClient::request(const SocketAddress &host, const std::st
 		auto skipHeader = str.find(winLb ? "\r\n\r\n" : "\n\n", skipStatus);
 		auto body = str.substr(skipHeader + (winLb ? 4 : 2));
 
-		if (!m_lastData.parse(body)) {
+		if (!m_lastData.tryParse(body)) {
 			LOG(logERROR) << "Failed to parse json " << body;
 			throw Exception("JSON parse error!");
 		}

@@ -49,6 +49,7 @@ private:
 public:
 	static const int DiscoveryPort = 26025;
 	static const int BroadcastIntervalMs = 2000; //milliseconds
+
 	static const int LinkEvalPort = 26100;
 	static const int LinkEvalTimeoutMS = 200; // milliseconds
 
@@ -56,12 +57,13 @@ public:
     static const int DiscoveryTcpTimeout = 800; // milliseconds
 
 	static const int HttpControlPort = 26080;
+	static const int HttpServerThreadPoolSize = 4;
 
 	static const int HttpConnectTimeout = 0;// milliseconds
 	static const int HttpResponseTimeoutMs = 1200;// milliseconds
 	static const int HttpResponseTimeoutRand = 400;// milliseconds
 
-	static const int UpdateIntervalUS = 200*1000;
+	static const int UpdateIntervalUS = 20*1000;
 
 
 	static const int TcpConnectTimeout = 4000; // milliseconds

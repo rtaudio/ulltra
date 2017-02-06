@@ -1,73 +1,43 @@
 cmake_minimum_required(VERSION 3.6)
 project(ulltra)
 
-set(CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 11)
+set (BUILD_TESTING OFF)
 
-set(SOURCE_FILES
-    audio/AudioIO.cpp
-    audio/AudioIO.h
-    audio/AudioIOStream.cpp
-    audio/AudioIOStream.h
-    audio/JackClient.cpp
-    audio/JackClient.h
-    audio/JackStream.cpp
-    audio/JackStream.h
-    audio/WindowsMM.cpp
-    audio/WindowsMM.h
-    audio/WindowsMMStream.cpp
-    mongoose/mongoose.c
-    mongoose/mongoose.h
-    pclog/pclog.cpp
-    pclog/pclog.h
-    rtt/rtt.cpp
-    rtt/rtt.h
-    rtt/stress.cpp
-    rtt/stress.h
-    AudioIOManager.cpp
-    AudioIOManager.h
-    AudioStreamDecoder.cpp
-    AudioStreamDecoder.h
-    AudioStreamEncoder.cpp
-    AudioStreamEncoder.h
-    AudioStreamer.cpp
-    AudioStreamer.h
-    AudioStreamerRx.cpp
-    AudioStreamerRx.h
-    AudioStreamerTx.cpp
-    AudioStreamerTx.h
-    CircularBuffer.cpp
-    CircularBuffer.h
-    Controller.cpp
-    Controller.h
-    Discovery.cpp
-    Discovery.h
-    histogram.h
-    JsonHttpClient.cpp
-    JsonHttpClient.h
-    JsonHttpServer.cpp
-    JsonHttpServer.h
-    JsonNode.cpp
-    JsonNode.h
-    LinkEval.cpp
-    LinkEval.h
-    LLCustomBlock.cpp
-    LLCustomBlock.h
-    LLLink.cpp
-    LLLink.h
-    LLTcp.cpp
-    LLTcp.h
-    LLUdpLink.cpp
-    LLUdpLink.h
-    LLUdpQWave.cpp
-    LLUdpQWave.h
-    networking.h
-    OrderingBuffer.cpp
-    OrderingBuffer.h
-    SimpleUdpReceiver.cpp
-    SimpleUdpReceiver.h
-    ulltra.cpp
-    UlltraProto.cpp
-    UlltraProto.h
-    WindowsMMStream.cpp)
+set(ULLTRA_LINKLIBS)
 
-add_executable(ulltra ${SOURCE_FILES})
+if(WIN32)
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+	add_compile_options(/EHsc)
+	list(APPEND ULLTRA_LINKLIBS winmm ws2_32)
+	# ole32 
+endif(WIN32)
+
+add_subdirectory (rtt)
+add_subdirectory (pclog)
+add_subdirectory (rtaudio)
+add_subdirectory (fdk-aac)
+
+
+
+set(src_main ulltra.cpp Controller.cpp UlltraProto.cpp)
+set(src_audio audio/AudioIOManager.cpp audio/AudioCoder.cpp audio/coders/AacCoder.cpp audio/WebAudio.cpp autil/test.cpp)
+set(src_net net/Discovery.cpp net/JsonHttpClient.cpp net/JsonHttpServer.cpp net/JsonNode.cpp net/LinkEval.cpp net/LLLink.cpp net/LLTcp.cpp net/LLUdpLink.cpp net/LLUdpQWave.cpp net/SimpleUdpReceiver.cpp net/LLCustomBlock.cpp)
+set(src_streaming AudioStreamer.cpp AudioStreamerRx.cpp AudioStreamerTx.cpp OrderingBuffer.cpp)
+
+add_library(mongoose mongoose/mongoose.c frozen/frozen.c)
+
+
+add_executable(ulltra ${src_main} ${src_audio} ${src_mongoose} ${src_net} ${src_streaming})
+
+target_include_directories (ulltra PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${FDK_AAC_INCLUDES} fdk-aac/libSYS/include)
+
+target_link_libraries(ulltra pclog rtt rtaudio_static mongoose fdk-aac ${ULLTRA_LINKLIBS})
+
+source_group("main"            FILES ${src_main})
+source_group("audio"           FILES ${src_audio})
+source_group("mongoose"        FILES ${src_mongoose})
+source_group("net"             FILES ${src_net})
+source_group("streaming"       FILES ${src_streaming})
+
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ulltra)

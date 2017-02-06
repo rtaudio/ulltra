@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -9,236 +9,354 @@
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
+    <ProjectConfiguration Include="MinSizeRel|Win32">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
+    <ProjectConfiguration Include="RelWithDebInfo|Win32">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{7036FF0D-3E5D-4D1B-BBA4-77888913411F}</ProjectGuid>
+    <ProjectGUID>{28E62C49-B17A-3855-9859-ACCC79C0DCA9}</ProjectGUID>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ulltra</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <Platform>Win32</Platform>
+    <ProjectName>ulltra</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
+    <PropertyGroup>
+      <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\dev\rtaudio\ulltra\Debug\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ulltra.dir\Debug\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ulltra</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.exe</TargetExt>
+      <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+      <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</GenerateManifest>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\dev\rtaudio\ulltra\Release\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ulltra.dir\Release\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ulltra</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.exe</TargetExt>
+      <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+      <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</GenerateManifest>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">C:\dev\rtaudio\ulltra\MinSizeRel\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">ulltra.dir\MinSizeRel\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">ulltra</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">.exe</TargetExt>
+      <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">false</LinkIncremental>
+      <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">true</GenerateManifest>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">C:\dev\rtaudio\ulltra\RelWithDebInfo\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">ulltra.dir\RelWithDebInfo\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">ulltra</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">.exe</TargetExt>
+      <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">true</LinkIncremental>
+      <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">true</GenerateManifest>
+    </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;__WINDOWS_WASAPI__;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;.</AdditionalIncludeDirectories>
-      <CallingConvention>Cdecl</CallingConvention>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Ws2_32.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;MG_ENABLE_IPV6;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
     <Link>
+      <AdditionalOptions> /machine:X86 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;pclog\Debug\pclog.lib;rtt\Debug\rtt.lib;rtaudio\Debug\rtaudio_static.lib;Debug\mongoose.lib;fdk-aac\Debug\fdk-aac.lib;winmm.lib;ws2_32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>Debug</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>C:/dev/rtaudio/ulltra/Debug/ulltra.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/dev/rtaudio/ulltra/Debug/ulltra.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Ws2_32.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <Version></Version>
     </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat></DebugInformationFormat>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
     <Link>
+      <AdditionalOptions> /machine:X86 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;pclog\Release\pclog.lib;rtt\Release\rtt.lib;rtaudio\Release\rtaudio_static.lib;Release\mongoose.lib;fdk-aac\Release\fdk-aac.lib;winmm.lib;ws2_32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>C:/dev/rtaudio/ulltra/Release/ulltra.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/dev/rtaudio/ulltra/Release/ulltra.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Ws2_32.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <Version></Version>
     </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">
     <ClCompile>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>MinSizeRel/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;MG_ENABLE_IPV6;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProgramFiles)\Jack\includes;rtt</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="MinSizeRel";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat></DebugInformationFormat>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
     <Link>
+      <AdditionalOptions> /machine:X86 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;pclog\MinSizeRel\pclog.lib;rtt\MinSizeRel\rtt.lib;rtaudio\MinSizeRel\rtaudio_static.lib;MinSizeRel\mongoose.lib;fdk-aac\MinSizeRel\fdk-aac.lib;winmm.lib;ws2_32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>C:/dev/rtaudio/ulltra/MinSizeRel/ulltra.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/dev/rtaudio/ulltra/MinSizeRel/ulltra.pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Ws2_32.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-      <UACUIAccess>false</UACUIAccess>
+      <Version></Version>
     </Link>
-    <Manifest>
-      <OutputManifestFile>
-      </OutputManifestFile>
-      <AdditionalManifestFiles>%(AdditionalManifestFiles)</AdditionalManifestFiles>
-    </Manifest>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>RelWithDebInfo/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="RelWithDebInfo";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\dev\rtaudio\ulltra;C:\dev\rtaudio\ulltra\fdk-aac\libSYS\include;C:\dev\rtaudio\ulltra\pclog;C:\dev\rtaudio\ulltra\rtt;C:\dev\rtaudio\ulltra\fdk-aac\libAACdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libAACenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRdec\include;C:\dev\rtaudio\ulltra\fdk-aac\libSBRenc\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPDec\include;C:\dev\rtaudio\ulltra\fdk-aac\libMpegTPEnc\include;C:\dev\rtaudio\ulltra\fdk-aac\libFDK\include;C:\dev\rtaudio\ulltra\fdk-aac\libPCMutils\include;C:\dev\rtaudio\ulltra\fdk-aac\win32;C:\dev\rtaudio\ulltra\fdk-aac;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalOptions> /machine:X86 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;pclog\RelWithDebInfo\pclog.lib;rtt\RelWithDebInfo\rtt.lib;rtaudio\RelWithDebInfo\rtaudio_static.lib;RelWithDebInfo\mongoose.lib;fdk-aac\RelWithDebInfo\fdk-aac.lib;winmm.lib;ws2_32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>Debug</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>C:/dev/rtaudio/ulltra/RelWithDebInfo/ulltra.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/dev/rtaudio/ulltra/RelWithDebInfo/ulltra.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+      <Version></Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="CMakeLists.txt" />
+    <CustomBuild Include="C:\dev\rtaudio\ulltra\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building Custom Rule C:/dev/rtaudio/ulltra/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -HC:/dev/rtaudio/ulltra -BC:/dev/rtaudio/ulltra --check-stamp-file C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:/dev/rtaudio/ulltra/CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInitialize.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCCompiler.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\dev\rtaudio\ulltra\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building Custom Rule C:/dev/rtaudio/ulltra/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -HC:/dev/rtaudio/ulltra -BC:/dev/rtaudio/ulltra --check-stamp-file C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:/dev/rtaudio/ulltra/CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInitialize.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCCompiler.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\dev\rtaudio\ulltra\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">Building Custom Rule C:/dev/rtaudio/ulltra/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -HC:/dev/rtaudio/ulltra -BC:/dev/rtaudio/ulltra --check-stamp-file C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">C:/dev/rtaudio/ulltra/CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInitialize.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCCompiler.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\dev\rtaudio\ulltra\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">Building Custom Rule C:/dev/rtaudio/ulltra/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -HC:/dev/rtaudio/ulltra -BC:/dev/rtaudio/ulltra --check-stamp-file C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">C:/dev/rtaudio/ulltra/CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeLists.txt;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInitialize.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCCompiler.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeCXXCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\WindowsPaths.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\dev\rtaudio\ulltra\CMakeFiles\3.7.0\CMakeRCCompiler.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-3.7\Modules\CMakeCommonLanguageInclude.cmake;C:\dev\rtaudio\ulltra\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">C:\dev\rtaudio\ulltra\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">false</LinkObjects>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="audio\AudioIOManager.h" />
-    <ClInclude Include="audio\AudioCoder.h" />
-    <ClInclude Include="AudioStreamer.h" />
-    <ClInclude Include="AudioStreamerRx.h" />
-    <ClInclude Include="AudioStreamerTx.h" />
-    <ClInclude Include="audio\AudioIO.h" />
-    <ClInclude Include="audio\AudioIOStream.h" />
-    <ClInclude Include="audio\JackClient.h" />
-    <ClInclude Include="audio\WindowsMM.h" />
-    <ClInclude Include="CircularBuffer.h" />
-    <ClInclude Include="Controller.h" />
-    <ClInclude Include="net\Discovery.h" />
-    <ClInclude Include="audio\JackStream.h" />
-    <ClInclude Include="histogram.h" />
-    <ClInclude Include="net\JsonHttpClient.h" />
-    <ClInclude Include="net\JsonHttpServer.h" />
-    <ClInclude Include="net\JsonNode.h" />
-    <ClInclude Include="net\LinkEval.h" />
-    <ClInclude Include="net\LLCustomBlock.h" />
-    <ClInclude Include="net\LLLink.h" />
-    <ClInclude Include="net\LLTcp.h" />
-    <ClInclude Include="net\LLUdpLink.h" />
-    <ClInclude Include="net\LLUdpQWave.h" />
-    <ClInclude Include="mongoose\mongoose.h" />
-    <ClInclude Include="net\networking.h" />
-    <ClInclude Include="OrderingBuffer.h" />
-    <ClInclude Include="pclog\pclog.h" />
-    <ClInclude Include="rtaudio\RtAudio.h" />
-    <ClInclude Include="rtt\rtt.h" />
-    <ClInclude Include="rtt\stress.h" />
-    <ClInclude Include="net\SimpleUdpReceiver.h" />
-    <ClInclude Include="UlltraProto.h" />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\ulltra.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\Controller.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\UlltraProto.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\AudioIOManager.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\AudioCoder.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\coders\AacCoder.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\WebAudio.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\autil\test.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\Discovery.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\JsonHttpClient.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\JsonHttpServer.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\JsonNode.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LinkEval.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLLink.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLTcp.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLUdpLink.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLUdpQWave.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\SimpleUdpReceiver.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLCustomBlock.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\AudioStreamer.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\AudioStreamerRx.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\AudioStreamerTx.cpp"  />
+    <ClCompile Include="C:\dev\rtaudio\ulltra\OrderingBuffer.cpp"  />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="audio\AudioIOManager.cpp" />
-    <ClCompile Include="audio\AudioCoder.cpp" />
-    <ClCompile Include="AudioStreamer.cpp" />
-    <ClCompile Include="AudioStreamerRx.cpp" />
-    <ClCompile Include="AudioStreamerTx.cpp" />
-    <ClCompile Include="audio\AudioIO.cpp" />
-    <ClCompile Include="audio\AudioIOStream.cpp" />
-    <ClCompile Include="audio\JackClient.cpp" />
-    <ClCompile Include="audio\WindowsMM.cpp" />
-    <ClCompile Include="audio\WindowsMMStream.cpp" />
-    <ClCompile Include="CircularBuffer.cpp" />
-    <ClCompile Include="Controller.cpp" />
-    <ClCompile Include="net\Discovery.cpp" />
-    <ClCompile Include="audio\JackStream.cpp" />
-    <ClCompile Include="net\JsonHttpClient.cpp" />
-    <ClCompile Include="net\JsonHttpServer.cpp" />
-    <ClCompile Include="net\JsonNode.cpp" />
-    <ClCompile Include="net\LinkEval.cpp" />
-    <ClCompile Include="net\LLCustomBlock.cpp" />
-    <ClCompile Include="net\LLLink.cpp" />
-    <ClCompile Include="net\LLTcp.cpp" />
-    <ClCompile Include="net\LLUdpLink.cpp" />
-    <ClCompile Include="net\LLUdpQWave.cpp" />
-    <ClCompile Include="mongoose\mongoose.c" />
-    <ClCompile Include="OrderingBuffer.cpp" />
-    <ClCompile Include="pclog\pclog.cpp" />
-    <ClCompile Include="rtaudio\RtAudio.cpp" />
-    <ClCompile Include="rtt\rtt.cpp" />
-    <ClCompile Include="rtt\stress.cpp" />
-    <ClCompile Include="net\SimpleUdpReceiver.cpp" />
-    <ClCompile Include="ulltra.cpp" />
-    <ClCompile Include="UlltraProto.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include=".gitignore" />
-    <None Include=".gitmodules" />
-    <None Include="LICENSE" />
-    <None Include="README.md" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="admin.xml" />
+    <ProjectReference Include="C:/dev/rtaudio/ulltra/ZERO_CHECK.vcxproj">
+      <Project>B8A128E4-8279-3868-920B-4547284E520E</Project>
+    </ProjectReference>
+    <ProjectReference Include="C:/dev/rtaudio/ulltra/fdk-aac/fdk-aac.vcxproj">
+      <Project>5F5E16ED-8D56-3450-8455-CB8FF9639FF5</Project>
+    </ProjectReference>
+    <ProjectReference Include="C:/dev/rtaudio/ulltra/mongoose.vcxproj">
+      <Project>17148655-C9AB-333F-B85B-7257E599C726</Project>
+    </ProjectReference>
+    <ProjectReference Include="C:/dev/rtaudio/ulltra/pclog/pclog.vcxproj">
+      <Project>589CC59C-7B3A-32BA-A8DF-F4B4819E8592</Project>
+    </ProjectReference>
+    <ProjectReference Include="C:/dev/rtaudio/ulltra/rtaudio/rtaudio_static.vcxproj">
+      <Project>9B0809B0-4302-3349-A6F1-81DCD6C4D6F2</Project>
+    </ProjectReference>
+    <ProjectReference Include="C:/dev/rtaudio/ulltra/rtt/rtt.vcxproj">
+      <Project>2642B407-27FE-3B2B-98EE-904A41AD7AB5</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

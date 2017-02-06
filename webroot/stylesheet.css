@@ -299,3 +299,19 @@ body.error #no-sinks {
 	
 	width: 200px;
 }
+
+
+#monitor-button {
+	width: 10rem;
+	height: 10rem;
+	background-color: #9f00a7;
+	border-radius: 50%;
+	transition: .4s ease-in-out;
+	position: absolute;
+	top: 2rem;
+	left: -12rem;
+}
+
+body.connecting-capture #monitor-button {
+	left: 2rem;
+}

@@ -6,6 +6,8 @@
 #include "ulltra-android/android-compat.h"
 #endif
 
+#include "frozen/frozen.h"
+
 const JsonNode JsonNode::undefined;
 
 JsonNode& JsonNode::operator[](const std::string &key) {
@@ -24,6 +26,12 @@ JsonNode& JsonNode::operator[](const std::string &key) {
 			return obj[key];
 		}
 	}
+	else if (t == Type::Array) {
+		// auto parse key if this is already an array
+		return (*this)[std::stoul(key)];
+	}
+	
+	throw std::runtime_error("operator[] only on objects and arrays");
 }
 
 
@@ -39,16 +47,24 @@ JsonNode& JsonNode::operator[](const uint64_t &index) {
 		}
 		return arr[index];
 	}
+
+	throw std::runtime_error("operator[int] only on arrays");
 }
 
 JsonNode const& JsonNode::operator[](const std::string &key) const {
+	if (t == Type::Array) {
+		return (*this)[std::stoul(key)];
+	}
+
 	if (t != Type::Object) {
 		return undefined;
 	}
+
 	auto v = obj.find(key);
 	if (v == obj.end()) {
 		return undefined;
 	}
+
 	return v->second;
 }
 
@@ -61,58 +77,87 @@ JsonNode const& JsonNode::operator[](const uint64_t &index) const {
 }
 
 
-int fillJson(JsonNode &jn, json_token *cur)
+bool JsonNode::tryParse(const std::string &str)
 {
-	switch (cur->type) {
-	case JSON_TYPE_OBJECT:
-		jn.t = JsonNode::Type::Object;
-		for (int i = 1; i < cur->num_desc;) {
-			if (cur[i].type == JSON_TYPE_STRING) {
-				std::string key(cur[i].ptr, cur[i].len);
-				i++;
-				i += fillJson(jn[key], &cur[i]) + 1;
-			}
-		}
-		return cur->num_desc;
-
-	case JSON_TYPE_ARRAY:
-		jn.t = JsonNode::Type::Array;
-		jn.arr.reserve(cur->num_desc);
-		for (int i = 1; i <= cur->num_desc;) {
-			i += fillJson(jn[i - 1], &cur[i]) + 1;
-		}
-		return cur->num_desc;
-
-	case JSON_TYPE_NUMBER:
-		jn.t = JsonNode::Type::Number;
-		jn.num = std::stod(std::string(cur->ptr, cur->len));
-		return 0;
-
-	case JSON_TYPE_STRING:
-		jn.t = JsonNode::Type::String;
-		jn.str = std::string(cur->ptr, cur->len);
-		return 0;
-
+	try {
+		JsonWalker walker(*this);
+		return walker.parse(str) > 0;
 	}
-
-	return 0;
-}
-
-int JsonNode::fill(json_token *tokens)
-{
-	clear();
-	return fillJson(*this, tokens);
-}
-
-bool JsonNode::parse(const std::string &str)
-{
-	json_token tokens[400];
-	int n = parse_json(str.c_str(), str.length(), tokens, sizeof(tokens) / sizeof(tokens[0]));
-	if (n <= 0) {
+	catch (...) {
 		return false;
 	}
-	fill(tokens);
-	return true;
+}
+
+
+bool JsonNode::tryParse(const char *str, int len)
+{
+	try {
+		JsonWalker walker(*this);
+		return walker.parse(str, len) > 0;
+	}
+	catch (...) {
+		return false;
+	}
+}
+
+#include <cctype>
+#include <iomanip>
+#include <sstream>
+#include <string>
+
+using namespace std;
+
+string url_encode(const string &value) {
+	ostringstream escaped;
+	escaped.fill('0');
+	escaped << hex;
+
+	for (string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+		string::value_type c = (*i);
+
+		// Keep alphanumeric and other accepted characters intact
+		if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+			escaped << c;
+			continue;
+		}
+
+		// Any other characters are percent-encoded
+		escaped << uppercase;
+		escaped << '%' << setw(2) << int((unsigned char)c);
+		escaped << nouppercase;
+	}
+
+	return escaped.str();
+}
+
+// this only works on objects with strings
+std::string JsonNode::toQueryString() {
+	std::stringstream ss;
+	
+	if(t != Type::Object)
+		throw std::runtime_error("JsonNode::toQueryString() does only work on string maps!");
+
+	for (auto &a : obj) {
+		ss << url_encode(a.first) << "=";
+		switch (a.second.t)
+		{
+		case Type::String: ss << url_encode(a.second.str); break;
+		case Type::Number: {
+			auto d = a.second.num;
+			auto r = std::round(d);
+			if (std::abs(d - r) < 0.001) ss << (int)r;
+			else ss << d;
+		}
+			break;
+		default:
+			throw std::runtime_error("JsonNode::toQueryString() does only work on string maps!");
+			break;
+		}
+		ss << "&";	
+	}
+	auto str = ss.str();
+	str.pop_back(); // remove &
+	return str;
 }
 
 std::ostream& operator<< (std::ostream& stream, const JsonNode& jd) {
@@ -144,4 +189,63 @@ std::ostream& operator<< (std::ostream& stream, const JsonNode& jd) {
 		break;
 	}
 	return stream;
+}
+
+int JsonWalker::parse(const std::string &jsonString) {
+	return parse(jsonString.c_str(), jsonString.size());
+}
+
+
+int JsonWalker::parse(const char *jsonString, int len) {
+	return json_walk(jsonString, len, &walking, this);
+}
+
+void JsonWalker::walking(void *callback_data, const char *name, size_t name_len, const char *path, const struct json_token *token)
+{
+	auto jwd = (JsonWalker*)callback_data;
+
+	JsonNode &current(*jwd->stack.top());
+	JsonNode &jn(name ? current[std::string(name, name + name_len)] : current);
+
+	switch (token->type) {
+	case JSON_TYPE_NUMBER:
+		jn.t = JsonNode::Type::Number;
+		jn.num = std::stod(std::string(token->ptr, token->len));
+		break;
+
+	case JSON_TYPE_STRING:
+		jn.t = JsonNode::Type::String;
+		jn.str = std::string(token->ptr, token->len);
+		break;
+
+	case JSON_TYPE_TRUE:
+		jn.t = JsonNode::Type::Number;
+		jn.num = 1;
+		break;
+
+	case JSON_TYPE_FALSE:
+	case JSON_TYPE_NULL:
+		jn.t = JsonNode::Type::Number;
+		jn.num = 0;
+		break;
+
+	case JSON_TYPE_OBJECT_START:
+		jn.t = JsonNode::Type::Object;
+		jwd->stack.push(&jn);
+		break;
+
+	case JSON_TYPE_ARRAY_START:
+		jn.t = JsonNode::Type::Object;
+		jwd->stack.push(&jn);
+		break;
+
+	case JSON_TYPE_ARRAY_END:
+	case JSON_TYPE_OBJECT_END:
+		jwd->stack.pop();
+		break;
+
+	default:
+		throw std::runtime_error("invalid JSON token type");
+		break;
+	}
 }

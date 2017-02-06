@@ -23,6 +23,7 @@ AudioStreamer::~AudioStreamer()
 
 bool AudioStreamer::start(AudioIOStream *streamSource, int token)
 {
+	/*
 	if (!m_link) {
 		LOG(logERROR) << "Failed to start stream, link creation failed!";
 		return false;
@@ -37,6 +38,9 @@ bool AudioStreamer::start(AudioIOStream *streamSource, int token)
 	m_thread = new RttThread([this]() {
 		streamingThread();
 	}, true);
+	*/
+
+	return true;
 }
 
 void AudioStreamer::update() {
@@ -55,6 +59,30 @@ void AudioStreamer::reportLinkError() {}
 void AudioStreamer::reportStreamError() {}
 
 
-void AudioStreamer::notifyXRun() {
+
+
+
+AudioCodingStream::AudioCodingStream()
+{
+
+}
+
+
+bool AudioCodingStream::inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time)
+{
+	return false;
+}
+
+bool AudioCodingStream::outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time)
+{
+	return false;
+}
+
+void AudioCodingStream::notifyXRun() {
+
+}
+
+void AudioCodingStream::addSink(BinaryAudioStreamPump &sink)
+{
 
 }

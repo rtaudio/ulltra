@@ -9,7 +9,6 @@
 #include <rtt/rtt.h>
 
 
-#include "audio/AudioIOStream.h"
 #include "AudioStreamerTx.h"
 #include "AudioStreamerRx.h"
 
@@ -46,7 +45,7 @@ JsonNode deviceState2Json(AudioIOManager::DeviceState const& state)
 }
 
 
-Controller::Controller(const Params &params)
+Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 {
 	int seed = time(NULL);
 	srand(seed);
@@ -81,7 +80,7 @@ Controller::Controller(const Params &params)
     m_isRunning = true;
 	m_updateThread = new RttThread([this]() {
 		updateThreadMain();
-	});
+	}, false, "cntrlupdate");
 
 	// after discovery each node should say hello
 	m_rpcServer.on("hello", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
@@ -146,7 +145,7 @@ Controller::Controller(const Params &params)
 	m_rpcServer.on("list-devices", [this](const SocketAddress &addr,  const JsonNode &request, JsonNode &response) {
 		auto n = validateOrigin(addr, request);
 
-		auto devList = m_audioManager.getDevices();
+		auto &devList = m_audioManager.getDevices();
 
 		int i = 0;
 		for (auto &d : devList) {
@@ -260,7 +259,7 @@ Controller::Controller(const Params &params)
 			return;
 		}
 
-		auto playbackDevice = m_audioManager.getDevice(playbackDeviceId);
+		auto &playbackDevice = m_audioManager.getDevice(playbackDeviceId);
 		if (!playbackDevice.exists() || playbackDevice.isCapture) {
 			LOG(logERROR) << "start-stream request with non-existing playback device!";
 			response["error"] = "Playback devices does not exist!";
@@ -334,7 +333,7 @@ Controller::Controller(const Params &params)
 			return;
 		}
 
-		
+
 		// find sample rate(s)
 		auto captureSampleRates = captureDevice.getSampleRateCurrentlyAvailable();
 
@@ -355,7 +354,7 @@ Controller::Controller(const Params &params)
 		}
 
 		// skip first entry because this is preferred sample rate
-		std::sort(sampleRateMatches.begin()+1, sampleRateMatches.end(), AudioIOManager::compareSampleRatesTo48KHz);
+		std::sort(sampleRateMatches.begin() + 1, sampleRateMatches.end(), AudioIOManager::compareSampleRatesTo48KHz);
 
 		response["commonSampleRates"] = sampleRateMatches;
 
@@ -366,7 +365,7 @@ Controller::Controller(const Params &params)
 			: std::min((int)playbackSampleRates[0].num, captureSampleRates[0]);
 
 		response["selectedSampleRate"] = selectedSampleRate;
-		
+
 
 		// find link
 		if (linkIds.size() == 0) {
@@ -399,6 +398,13 @@ Controller::Controller(const Params &params)
 
 		response["ok"] = 1;
 	});
+
+
+
+	
+	
+
+	m_webAudio.registerWithServer(m_rpcServer);	
 }
 
 
@@ -559,7 +565,10 @@ void Controller::updateThreadMain()
 			}
 		}
 		
-        usleep(UP::UpdateIntervalUS);
+		//if (!m_rpcServer.hasActiveConnection())
+//			usleep(UP::UpdateIntervalUS);
+		//else
+//			LOG(logDEBUG) << "rpc has active conns, spinning";
     } // while(runnning)
 
 

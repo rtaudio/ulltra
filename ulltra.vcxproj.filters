@@ -1,246 +1,91 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="net">
-      <UniqueIdentifier>{99a47e92-350c-457e-8887-7c707b0fa2ab}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="net\http">
-      <UniqueIdentifier>{9deedb63-bbb9-40dd-bb33-50ce5986eb51}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="net\LL">
-      <UniqueIdentifier>{4907bbdf-e484-4f6c-b7b7-af57d70d2b68}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="net\udp">
-      <UniqueIdentifier>{e53f98d1-6868-4b7a-b3f3-a7600a0b65cc}</UniqueIdentifier>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\ulltra.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\Controller.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\UlltraProto.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\AudioIOManager.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\AudioCoder.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\coders\AacCoder.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\audio\WebAudio.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\autil\test.cpp">
+      <Filter>audio</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\Discovery.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\JsonHttpClient.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\JsonHttpServer.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\JsonNode.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LinkEval.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLLink.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLTcp.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLUdpLink.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLUdpQWave.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\SimpleUdpReceiver.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\net\LLCustomBlock.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\AudioStreamer.cpp">
+      <Filter>streaming</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\AudioStreamerRx.cpp">
+      <Filter>streaming</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\AudioStreamerTx.cpp">
+      <Filter>streaming</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\dev\rtaudio\ulltra\OrderingBuffer.cpp">
+      <Filter>streaming</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\dev\rtaudio\ulltra\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="main">
+      <UniqueIdentifier>{52E804D9-FAD6-3597-B836-FBE5A19D2E84}</UniqueIdentifier>
     </Filter>
     <Filter Include="audio">
-      <UniqueIdentifier>{9a1151b0-b0fa-43fd-adfe-14f7a4dc054f}</UniqueIdentifier>
+      <UniqueIdentifier>{FA611789-7B3A-368C-A4C4-490D0747FE42}</UniqueIdentifier>
     </Filter>
-    <Filter Include="audio\jack">
-      <UniqueIdentifier>{b2d935bc-9a88-408b-b0f8-b3b6d78915d8}</UniqueIdentifier>
+    <Filter Include="net">
+      <UniqueIdentifier>{A9BA09D1-AD8A-3532-A8E3-848869A98ABF}</UniqueIdentifier>
     </Filter>
-    <Filter Include="audio\windows">
-      <UniqueIdentifier>{7e8a6ce1-3b01-4b11-8dc7-effa666fbd54}</UniqueIdentifier>
+    <Filter Include="streaming">
+      <UniqueIdentifier>{0918B076-EE01-3DC7-A40A-BE6E3261B142}</UniqueIdentifier>
     </Filter>
-    <Filter Include="audio\stream">
-      <UniqueIdentifier>{dbe7ddc3-070a-442f-8758-de108bd57b35}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="misc">
-      <UniqueIdentifier>{51b06d31-aef2-4bdd-9eff-0d30a19cef43}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ds">
-      <UniqueIdentifier>{1fb88da6-853d-4f27-aa0a-b0ae2f409b8d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="meta">
-      <UniqueIdentifier>{31a7baf0-ceee-4c34-b513-6aee7339ed90}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="mongoose\mongoose.h">
-      <Filter>net\http</Filter>
-    </ClInclude>
-    <ClInclude Include="Controller.h" />
-    <ClInclude Include="UlltraProto.h" />
-    <ClInclude Include="audio\JackClient.h">
-      <Filter>audio\jack</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\JackStream.h">
-      <Filter>audio\jack</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\WindowsMM.h">
-      <Filter>audio\windows</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\AudioIO.h">
-      <Filter>audio</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\AudioIOStream.h">
-      <Filter>audio</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioStreamer.h">
-      <Filter>audio\stream</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioStreamerRx.h">
-      <Filter>audio\stream</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioStreamerTx.h">
-      <Filter>audio\stream</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\AudioCoder.h">
-      <Filter>audio\stream</Filter>
-    </ClInclude>
-    <ClInclude Include="net\Discovery.h">
-      <Filter>net</Filter>
-    </ClInclude>
-    <ClInclude Include="net\JsonHttpClient.h">
-      <Filter>net\http</Filter>
-    </ClInclude>
-    <ClInclude Include="net\JsonHttpServer.h">
-      <Filter>net\http</Filter>
-    </ClInclude>
-    <ClInclude Include="net\LinkEval.h">
-      <Filter>net</Filter>
-    </ClInclude>
-    <ClInclude Include="net\LLCustomBlock.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="net\LLLink.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="net\LLTcp.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="net\LLUdpLink.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="net\LLUdpQWave.h">
-      <Filter>net\LL</Filter>
-    </ClInclude>
-    <ClInclude Include="net\SimpleUdpReceiver.h">
-      <Filter>net\udp</Filter>
-    </ClInclude>
-    <ClInclude Include="audio\AudioIOManager.h">
-      <Filter>audio</Filter>
-    </ClInclude>
-    <ClInclude Include="net\JsonNode.h">
-      <Filter>net\http</Filter>
-    </ClInclude>
-    <ClInclude Include="pclog\pclog.h">
-      <Filter>misc</Filter>
-    </ClInclude>
-    <ClInclude Include="rtaudio\RtAudio.h">
-      <Filter>audio</Filter>
-    </ClInclude>
-    <ClInclude Include="rtt\rtt.h">
-      <Filter>misc</Filter>
-    </ClInclude>
-    <ClInclude Include="rtt\stress.h">
-      <Filter>misc</Filter>
-    </ClInclude>
-    <ClInclude Include="histogram.h">
-      <Filter>misc</Filter>
-    </ClInclude>
-    <ClInclude Include="OrderingBuffer.h">
-      <Filter>ds</Filter>
-    </ClInclude>
-    <ClInclude Include="CircularBuffer.h">
-      <Filter>ds</Filter>
-    </ClInclude>
-    <ClInclude Include="net\networking.h">
-      <Filter>net</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="mongoose\mongoose.c">
-      <Filter>net\http</Filter>
-    </ClCompile>
-    <ClCompile Include="Controller.cpp" />
-    <ClCompile Include="ulltra.cpp" />
-    <ClCompile Include="UlltraProto.cpp" />
-    <ClCompile Include="audio\JackClient.cpp">
-      <Filter>audio\jack</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\JackStream.cpp">
-      <Filter>audio\jack</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\WindowsMM.cpp">
-      <Filter>audio\windows</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\WindowsMMStream.cpp">
-      <Filter>audio\windows</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\AudioIO.cpp">
-      <Filter>audio</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\AudioIOStream.cpp">
-      <Filter>audio</Filter>
-    </ClCompile>
-    <ClCompile Include="AudioStreamer.cpp">
-      <Filter>audio\stream</Filter>
-    </ClCompile>
-    <ClCompile Include="AudioStreamerRx.cpp">
-      <Filter>audio\stream</Filter>
-    </ClCompile>
-    <ClCompile Include="AudioStreamerTx.cpp">
-      <Filter>audio\stream</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\AudioCoder.cpp">
-      <Filter>audio\stream</Filter>
-    </ClCompile>
-    <ClCompile Include="net\Discovery.cpp">
-      <Filter>net</Filter>
-    </ClCompile>
-    <ClCompile Include="net\JsonHttpClient.cpp">
-      <Filter>net\http</Filter>
-    </ClCompile>
-    <ClCompile Include="net\JsonHttpServer.cpp">
-      <Filter>net\http</Filter>
-    </ClCompile>
-    <ClCompile Include="net\LinkEval.cpp">
-      <Filter>net</Filter>
-    </ClCompile>
-    <ClCompile Include="net\LLCustomBlock.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="net\LLLink.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="net\LLTcp.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="net\LLUdpLink.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="net\LLUdpQWave.cpp">
-      <Filter>net\LL</Filter>
-    </ClCompile>
-    <ClCompile Include="net\SimpleUdpReceiver.cpp">
-      <Filter>net\udp</Filter>
-    </ClCompile>
-    <ClCompile Include="audio\AudioIOManager.cpp">
-      <Filter>audio</Filter>
-    </ClCompile>
-    <ClCompile Include="net\JsonNode.cpp">
-      <Filter>net\http</Filter>
-    </ClCompile>
-    <ClCompile Include="pclog\pclog.cpp">
-      <Filter>misc</Filter>
-    </ClCompile>
-    <ClCompile Include="rtaudio\RtAudio.cpp">
-      <Filter>audio</Filter>
-    </ClCompile>
-    <ClCompile Include="rtt\rtt.cpp">
-      <Filter>misc</Filter>
-    </ClCompile>
-    <ClCompile Include="rtt\stress.cpp">
-      <Filter>misc</Filter>
-    </ClCompile>
-    <ClCompile Include="OrderingBuffer.cpp">
-      <Filter>ds</Filter>
-    </ClCompile>
-    <ClCompile Include="CircularBuffer.cpp">
-      <Filter>ds</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include=".gitignore">
-      <Filter>meta</Filter>
-    </None>
-    <None Include=".gitmodules">
-      <Filter>meta</Filter>
-    </None>
-    <None Include="LICENSE">
-      <Filter>meta</Filter>
-    </None>
-    <None Include="README.md">
-      <Filter>meta</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="CMakeLists.txt">
-      <Filter>meta</Filter>
-    </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="admin.xml" />
   </ItemGroup>
 </Project>

@@ -10,3 +10,18 @@
 [submodule "rtaudio"]
 	path = rtaudio
 	url = https://github.com/rtaudio/rtaudio
+[submodule "fdk-aac"]
+	path = fdk-aac
+	url = https://github.com/rtaudio/fdk-aac
+[submodule "autil"]
+	path = autil
+	url = https://github.com/rtaudio/autil
+[submodule "concurrentqueue"]
+	path = concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue
+[submodule "frozen"]
+	path = frozen
+	url = https://github.com/cesanta/frozen
+[submodule "ThreadPool"]
+	path = ThreadPool
+	url = https://github.com/progschj/ThreadPool

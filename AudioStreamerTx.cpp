@@ -45,6 +45,7 @@ void AudioStreamerTx::streamingThread()
 		// try to read full frame until success
 		int waiting = 0;
 		std::vector<float *> samples;
+		/*
 		while (!m_aio->blockRead(samples, m_samplesPerFrame)) {
 			usleep(1);
 			waiting++;
@@ -55,6 +56,7 @@ void AudioStreamerTx::streamingThread()
 				break;
 			}
 		}
+		*/
 
 		int dataLen = m_encoder->encode(samples, m_linkBuffer, sizeof(m_linkBuffer));
 		if (dataLen == 0) {

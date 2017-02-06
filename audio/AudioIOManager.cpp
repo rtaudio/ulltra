@@ -4,6 +4,8 @@
 
 #include "AudioStreamer.h"
 
+#include <chrono>
+#include <thread>
 
 AudioIOManager::DeviceState AudioIOManager::DeviceState::NoDevice;
 
@@ -62,6 +64,7 @@ AudioIOManager::AudioIOManager()
 		DeviceState state;
 		state.index = i;
 		state.info = rta.getDeviceInfo(i);
+		state.id = state.info.id;
 
 		// windows devices sometimes have some weird spaces
 		myReplace(state.info.name, "  ", " ");
@@ -70,26 +73,23 @@ AudioIOManager::AudioIOManager()
 
 		if (state.info.inputChannels > 0) {
 			state.isCapture = true;
-			state.id = state.info.id + "#in";
-			deviceStates.push_back(state);
+			deviceStates.emplace_back(state.copy("#in"));
 		}
 
 		if (state.info.outputChannels > 0) {
 			state.isCapture = false;
-			state.id = state.info.id + "#out";
-			deviceStates.push_back(state);
+			deviceStates.emplace_back(state.copy("#out"));
 
 			if (state.info.canLoopback) {
 				// create a virtual device state for loopback
 				state.isLoopback = true;
 				state.info.name += " loopback";
-				state.id = state.info.id + "#loop";
 				state.info.inputChannels = state.info.outputChannels;
 				state.info.outputChannels = 0;
 				state.info.duplexChannels = 0;
 				state.isCapture = true;
 
-				deviceStates.push_back(state);
+				deviceStates.emplace_back(state.copy("#loop"));
 			}
 		}		
 	}
@@ -98,7 +98,7 @@ AudioIOManager::AudioIOManager()
 
 AudioIOManager::~AudioIOManager()
 {
-	for (auto io : deviceStates) {
+	for (auto &io : deviceStates) {
 		if (io.rta) {
 			delete io.rta;
 			io.rta = nullptr;
@@ -115,11 +115,29 @@ void AudioIOManager::update()
 int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
 	double streamTime, RtAudioStreamStatus status, void *data) {
 	DeviceState &ds(*(DeviceState*)data);
+	auto &streams(ds.cd.streams);
 
-	auto streamers = ds.cd.streamers;
+
+	if (ds.cd.hasStreamsToAdd) {
+		for (auto as : ds.cd.addStreams)
+			streams.push_back(as);
+		ds.cd.addStreams.clear();
+
+		for (auto ss : ds.cd.addSinks)
+			ss.first->addSink(ss.second);
+		ds.cd.addSinks.clear();
+
+		ds.cd.hasStreamsToAdd = false;
+	}
+
+
+	
 	bool res;
 	int si = 0;
-	for (auto s : streamers) {
+	for (auto s : streams) {
+		if (status) {
+			s->notifyXRun();
+		}
 
 		if (ds.isCapture) {
 			res = s->inputInterleaved((float*)inputBuffer, nBufferFrames, ds.numChannels(), streamTime);
@@ -127,26 +145,23 @@ int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned
 			res = s->outputInterleaved((float*)outputBuffer, nBufferFrames, ds.numChannels(), streamTime);
 		}
 
-		if (status && res) {
-			s->notifyXRun();
-		}
 
 		if (!res) {
 			// remove streamer
-			ds.cd.streamers.erase(ds.cd.streamers.begin() + si);
+			ds.cd.streams.erase(ds.cd.streams.begin() + si);
 			si--;
 		}
 
 		si++;
 	}
 
-	return streamers.size() > 0 ? 0 : 1;
+
+	return streams.size() > 0 ? 0 : 1;
 }
 
-void AudioIOManager::openDevice(DeviceState &device)
+void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSize)
 {
-	int sampleRate = 48000;
-	unsigned int bufferFrames = 512;
+	unsigned int bufferFrames = (unsigned int)blockSize;
 
 	if (!device.rta) {
 		device.rta = new RtAudio(rta.getCurrentApi());
@@ -170,9 +185,47 @@ void AudioIOManager::openDevice(DeviceState &device)
 			sampleRate,
 			&bufferFrames,
 			&AudioIOManager::rtAudioInout, (void *)&device);
+		device.rta->startStream();
 	}
 	catch (RtAudioError& e) {
 		LOG(logERROR) << "Cannot open device: " << e.getMessage() << std::endl;
 		throw e;
 	}
+}
+
+
+void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encParams, BinaryAudioStreamPump &&pump)
+{
+	// here we manage 2 classes of resources:
+	// 1. the audio devices
+	// 2. the encoders
+
+	auto &device = _getDevice(sei.deviceId);
+	if (!device.exists() || !device.isCapture)
+		return;
+
+	// open device if needed // TODO: need to close!
+	if (!device.isOpen()) {
+		openDevice(device, sei.sampleRate, 512);
+	}
+
+	AudioCodingStream::Info acsi;
+	acsi.setDeviceId(device.id);
+	acsi.encoderParams = encParams;
+
+	// find an existing streamer with same info
+	// the hash includes: device and encoder params (coderName, sampleRate, channels, bitrate)
+	auto streamerIt = streamers.find(acsi);
+	auto isNewStreamer = (streamerIt == streamers.end());
+	if (isNewStreamer) {
+		streamers[acsi] = new AudioCodingStream(); // TODO acsi.encoderParams
+	}
+
+	auto &streamer(streamers[acsi]);
+
+	while (device.cd.hasStreamsToAdd) { std::this_thread::yield(); }
+	if(isNewStreamer)
+		device.cd.addStreams.push_back(streamer);
+	device.cd.addSinks.push_back({ streamer, pump});
+	device.cd.hasStreamsToAdd = true;
 }

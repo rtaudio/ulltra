@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <stack>
 
 #include <math.h>
 
@@ -10,6 +11,8 @@
 #endif
 
 struct json_token;
+
+
 
 struct JsonNode {
 	enum class Type { Undefined, Object, Array, String, Number };
@@ -44,9 +47,17 @@ struct JsonNode {
 	JsonNode(std::initializer_list<std::string> keyValues) {
 		t = Type::Undefined;
 
-		for (auto it = keyValues.begin(); it != keyValues.end(); it++){			
+		for (auto it = keyValues.begin(); it != keyValues.end(); it++) {
 			std::string k(*it);
 			(*this)[k] = *(++it);
+		}
+	}
+
+	JsonNode(const std::map<std::string, std::string> &map) {
+		t = Type::Undefined;
+
+		for (auto m : map) {
+			(*this)[m.first] = m.second;
 		}
 	}
 
@@ -76,12 +87,36 @@ struct JsonNode {
 
 
 	friend std::ostream& operator<< (std::ostream& stream, const JsonNode& jd);
-	bool parse(const std::string &str);
-	int fill(json_token *tokens);
+	bool tryParse(const std::string &str);
+	bool tryParse(const char *str, int len);
 
+	std::string toQueryString();
 
 
 	inline bool isUndefined() const {
 		return t == Type::Undefined;
 	}
+
+	inline bool isEmpty() const {
+		switch (t) {
+		case Type::Array:return arr.size() > 0;
+		case Type::Number: return false;
+		case Type::Object: return obj.size() > 0;
+		case Type::String: return str.length() > 0;
+		case Type::Undefined: return true;
+		}
+		throw std::runtime_error("Invalid JsonNode type in isEmpty()");
+	}
+};
+
+struct JsonWalker {
+	JsonNode &root;
+	JsonWalker(JsonNode &root) : root(root) {
+		stack.push(&root);
+	}
+	int parse(const std::string &jsonString);
+	int parse(const char *jsonString, int len);
+private:
+	static void walking(void *callback_data, const char *name, size_t name_len, const char *path, const struct json_token *token);
+	std::stack<JsonNode*> stack;
 };

@@ -6,6 +6,9 @@
 <link rel="stylesheet" type="text/css" media="screen" href="stylesheet.css">
 
 <div id="header-title"></div>
+<div id="monitor-button">
+	<audio id="monitor-audio" autoplay controls></audio>
+</div>
 
 <div id="net-graph">
 
@@ -222,6 +225,8 @@
     }
 
     var connectDevices = function(capture, playback) {
+		var isWebStream = playback.node == "browser";
+		
         if(playback.device.isCapture == capture.device.isCapture) {
             throw new GraphException("Trying to connect two devices that are both playback or capture!");
         }
@@ -230,15 +235,19 @@
         }
         console.log('Connect', capture, '---->', playback);
 
-        rpc('start-stream', {
-            hostname: playback.node.hostname,
-            playbackDeviceId: playback.device.id,
+        rpc(isWebStream ? 'web-monitor-stream' : 'start-stream', {
+            hostname: isWebStream ? rpcHost : playback.node.hostname,
+            playbackDeviceId: isWebStream ? "" : playback.device.id,
             captureNodeId: capture.node.id,
             captureDeviceId: capture.device.id,
             numChannels: 0, // TODO
             channelOffset: 0 // TODO
         }, function(result) {
             console.log(result);
+			
+			if(isWebStream) {
+				$('#monitor-audio').attr('src', 'http://' + rpcHost + ':26080' + result.streamUrl);
+			}
         });
     };
 
@@ -350,6 +359,11 @@
             }
         });
     };
+	
+	var monitorDevice = {isCapture: false, name: "webstream monitor"};
+	
+	$('#monitor-button').click({node: "browser", device: monitorDevice},onConnectorClicked);
+		
 
     window.setInterval(updateNetGraph, 10000);
     updateNetGraph();

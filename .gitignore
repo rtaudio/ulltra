@@ -61,3 +61,10 @@ obj/local
 /ulltra-android-console2/libs
 *.opendb
 /ulltra.VC.db
+/*.vcxproj
+
+*.vcxproj.filters
+*.cache
+*.sln
+
+clion-log.txt

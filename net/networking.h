@@ -105,7 +105,7 @@ inline std::string lastError( int err=0)
 			TEXT("%s failed with error %d: %s"),
 			"[]", dw, lpMsgBuf);
 
-		std::wstring  msg((LPCTSTR)lpDisplayBuf);
+		std::wstring  msg((wchar_t*)lpDisplayBuf);
 		LocalFree(lpMsgBuf);
 		LocalFree(lpDisplayBuf);
 
