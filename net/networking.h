@@ -298,6 +298,12 @@ union SocketAddress {
 		memcpy(&sa, &ss, sizeof(sin6));
 	}
 
+	SocketAddress(const sockaddr *ss, int len=sizeof(sockaddr))
+	{
+		memset(&sa, 0, sizeof(sin6));
+		memcpy(&sa, ss, std::min((int)sizeof(sin6), len));
+	}
+
 	SocketAddress()
 	{
 		memset(&sa, 0, sizeof(sin6));
@@ -317,6 +323,7 @@ union SocketAddress {
 
     inline std::string toString(bool hostOnly=false) const {
         char host[64], serv[32];
+
         int r = getnameinfo((const sockaddr*)&sin6, sizeof(sin6), host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV);
         if(r != 0) {
             LOG(logERROR) << "getnameinfo() failed! " << gai_strerror(r) << lastError();

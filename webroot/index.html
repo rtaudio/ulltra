@@ -246,7 +246,9 @@
             console.log(result);
 			
 			if(isWebStream) {
-				$('#monitor-audio').attr('src', 'http://' + rpcHost + ':26080' + result.streamUrl);
+			var fullUrl = 'http://' + rpcHost + ':26080' + result.streamUrl;
+				$('#monitor-audio').attr('src', fullUrl);
+				window.location.href = fullUrl;
 			}
         });
     };

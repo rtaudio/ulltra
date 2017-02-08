@@ -71,14 +71,14 @@ struct JsonNode {
 
 	// assign generic number types
 	template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
-	inline const T& operator=(T val) { t = Type::Number; 	return num = (double)val; }
+	inline const T& operator=(const T &val) { t = Type::Number; 	num = (double)val; return val; }
 
 	// assign std::vectors
 	template<typename T>
 	inline const std::vector<T>& operator=(const std::vector<T> &val) {
 		t = Type::Array;
 		auto &ref(*this);
-		for (int i = 0; i < val.size(); i++) {
+		for (size_t i = 0; i < val.size(); i++) {
 			ref[i] = val[i];
 		}
 		return val;

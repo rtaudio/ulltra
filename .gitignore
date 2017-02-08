@@ -68,3 +68,6 @@ obj/local
 *.sln
 
 clion-log.txt
+/*.sln
+/*.vcxproj
+/*.wav

@@ -16,6 +16,8 @@
 #include "audio/AudioCoder.h"
 #include "AudioStreamer.h"
 
+#include <rtt/rtt.h>
+
 /*
 stream hash:
 [Api]:[DeviceIndex]:[ChannelOffset]:[ChannelCount]@[EncoderId]:[EncoderParams]
@@ -29,18 +31,20 @@ class AudioCodingStream;
 
 
 
+
 class AudioIOManager
 {
 private:
 	struct RtaudioCallbackData {
 		AudioIOManager *mgr;
 		std::vector<AudioCodingStream*> streams, addStreams;
-		std::vector<std::pair<AudioCodingStream*, BinaryAudioStreamPump&>> addSinks;
 		volatile bool hasStreamsToAdd;
 		RtaudioCallbackData() : mgr(0), hasStreamsToAdd(false) {}
 	};
 
 public:
+	
+
 	struct DeviceState;
 
 	struct StreamEndpointInfo {
@@ -124,9 +128,11 @@ private:
 
 	std::unordered_map<AudioCodingStream::Info, AudioCodingStream*> streamers;
 
+	std::map<std::string, AudioCoder::Factory> coderFactories;
 
 
 	RtAudio rta;
+	mutable RttMutex apiMutex;
 
 	void openDevice(DeviceState &device, int sampleRate, int blockSize);
 
@@ -141,13 +147,17 @@ private:
 		return DeviceState::NoDevice;
 	}
 
+	
+
 public:
 	AudioIOManager();
 	~AudioIOManager();
 
 	void update();
 
-   const std::vector <DeviceState> & getDevices() const { return deviceStates; }
+   inline const std::vector <DeviceState> & getDevices() const { 
+	   return deviceStates;
+   }
 
    inline const DeviceState & getDevice(const std::string &id) const { 
 	   for (auto &s : deviceStates) {
@@ -157,7 +167,7 @@ public:
 	   return DeviceState::NoDevice;
    }
 
-   void streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encoder, BinaryAudioStreamPump &&pump);
+   void streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encoder, BinaryAudioStreamPump pump);
 
 
    static bool compareSampleRatesTo48KHz(int a, int b) {

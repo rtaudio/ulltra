@@ -40,7 +40,7 @@ void AudioStreamerRx::streamingThread()
 
 		// decode data directly into the ordering buffer
 		auto targetBlock = m_ordering->getBlockPointers(sfh->frameIndex);
-		m_decoder->decode(&sfh->content.firstByte, contentLen, targetBlock.samples, targetBlock.size);
+		//m_decoder->decode(&sfh->content.firstByte, contentLen, targetBlock.samples, targetBlock.size);
 		targetBlock.commit(); // make the decoded block available for audio rendering (playback or resampler)
 	}
 }

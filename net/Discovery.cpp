@@ -18,6 +18,9 @@
 
 #include <algorithm>
 
+// VS
+#pragma warning( disable : 4996 )
+
 // multicast utils
 int get_multicast_addrs(const char *hostname, const char *service, int   socktype, struct sockaddr_storage *addrToBind, struct sockaddr_storage *addrToSend);
 int isMulticast(struct sockaddr_storage *addr);
@@ -309,7 +312,7 @@ bool Discovery::update(uint64_t now)
 	}
 
 	// auto-purge dead nodes
-	long dt = (now - m_lastUpdateTime);
+	long dt = (long)(now - m_lastUpdateTime);
 	for (auto it = m_discovered.begin(); it != m_discovered.end(); it++) {
 		const NodeDevice &n = it->second;
         if(n.sinceVitalSign > (UlltraProto::BroadcastIntervalMs *1000*10)) {
@@ -781,4 +784,36 @@ isMulticast(struct sockaddr_storage *addr)
 	}
 
 	return retVal;
+}
+
+
+const std::vector<std::string> &Discovery::getLocalIPAddresses() {
+	static std::vector<std::string> adrs;
+
+	if (adrs.size() > 0)
+		return adrs;
+
+	PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+	DWORD flags = GAA_FLAG_INCLUDE_PREFIX | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER;
+	ULONG outBufLen = 0;
+
+
+	ULONG res;
+
+	while ((res=GetAdaptersAddresses(AF_INET, flags, NULL, pAddresses, &outBufLen)) == ERROR_BUFFER_OVERFLOW) {
+		if (pAddresses) free(pAddresses);
+		outBufLen *= 2;
+		pAddresses = (IP_ADAPTER_ADDRESSES *)malloc(outBufLen);
+	}
+
+	if (res == ERROR_SUCCESS) {
+		for (PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses; pCurrAddresses; ((pCurrAddresses = pCurrAddresses->Next) != NULL))
+		{
+			auto ua = pCurrAddresses->FirstUnicastAddress;
+			auto sa = SocketAddress(ua->Address.lpSockaddr, ua->Address.iSockaddrLength);
+			adrs.push_back(sa.toString(true));
+		}
+	}
+	free(pAddresses);
+	return adrs;
 }

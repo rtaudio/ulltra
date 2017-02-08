@@ -4,6 +4,9 @@
 #include <functional>
 #include <map>
 
+// VS's Call to 'std::basic_string::copy' with parameters that may be unsafe
+#pragma warning( disable : 4996 )
+
 class AudioCoder;
 
 typedef std::function<AudioCoder*()> AudioCoderGenerator;
@@ -15,7 +18,12 @@ class AudioCoder
 	AudioCoder(AudioCoder&) = delete;
 	AudioCoder& operator=(AudioCoder&) = delete;
 
+	// but move
+	AudioCoder(AudioCoder&&) = default;
+	AudioCoder& operator = (AudioCoder&&) = default;
+
 public:
+	
 
 	struct EncoderParams {
 		char coderName[16];
@@ -25,6 +33,7 @@ public:
 		uint8_t channelOffset;
 
 		void setCoderName(const std::string &name) {
+			memset(coderName, 0, sizeof(coderName));
 			name.copy(coderName, sizeof(coderName) - 1);
 		}
 
@@ -36,12 +45,42 @@ public:
 				&& numChannels == other.numChannels
 				&& channelOffset == other.channelOffset);
 		}
+
 	};
 
-	AudioCoder();
-	virtual ~AudioCoder();
+	enum CoderType {
+		Encoder,
+		Decoder
+	};
 
-	int encode(std::vector<float*> samples, uint8_t *buffer, int bufferLen);
-	int encode(float* samples, int numSamples, uint8_t *buffer, int bufferLen);
-	void decode(const uint8_t *ptr, int len, std::vector<float *> const& targetChannelBuffers, int blockSize);
+	struct CoderParams {
+		CoderType type;
+		union paramsencdec
+		{
+			char coderName[16];
+			EncoderParams enc;
+		};	
+
+		paramsencdec params;
+
+		CoderParams(CoderType type) : type(type) {
+			memset(&params, 0, sizeof(params));
+		}
+	};
+
+	typedef std::function<AudioCoder * (const AudioCoder::CoderParams& params)> Factory;
+
+	AudioCoder(const EncoderParams &params);
+	virtual ~AudioCoder();
+	
+	virtual int encodeInterleaved(const float* samples, int numSamples, uint8_t *buffer, int bufferLen) = 0;
+	virtual void decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames) = 0;
+
+
+	inline int encodeInterleaved(std::vector<float> samples, uint8_t *buffer, int bufferLen) {
+		return encodeInterleaved(samples.data(), (int)samples.size(), buffer, bufferLen);
+	}
+
+protected:
+	AudioCoder::EncoderParams encParams;
 };

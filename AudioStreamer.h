@@ -7,7 +7,7 @@
 class RttThread;
 class AudioIOStream;
 
-typedef std::function<bool(const uint8_t *buffer, int bufferLen, int numSamples, int numChannels)> BinaryAudioStreamPump;
+typedef std::function<bool(const uint8_t *buffer, int bufferLen, int numSamples)> BinaryAudioStreamPump;
 
 struct StreamFrameHeader {
 	uint16_t streamToken;//a "unique" stream token constant over all frames in a stream to avoid routing and format errors.
@@ -60,10 +60,11 @@ private:
 
 class AudioCodingStream
 {
-	friend class AudioIOManager;
+	//friend class AudioIOManager;
 	// no copy
 	AudioCodingStream(AudioCodingStream&) = delete;
 	AudioCodingStream& operator=(AudioCodingStream&) = delete;
+
 
 public:
 	struct Info {
@@ -79,20 +80,33 @@ public:
 		}
 	};
 
-	AudioCodingStream();
-	~AudioCodingStream() {}
+	AudioCodingStream(Info streamInfo, AudioCoder::Factory coderFactory);
+	~AudioCodingStream();
 
-	void addSink(BinaryAudioStreamPump &pump);
-	//void update();
-	//bool isAlive();
+	void addSink(const BinaryAudioStreamPump &pump);
 
-private:
-	RttThread *m_thread;
 
 	bool inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0);
 	bool outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0);
 
 	void notifyXRun();
+
+
+	inline bool stopped() const { return hasStopped; }
+
+private:
+	AudioCoder *coder;
+	std::vector<uint8_t> binaryBuffer;
+	std::vector<BinaryAudioStreamPump> sinks, addSinks;
+
+	volatile bool hasSinksToAdd;
+	bool hasStopped;
+
+	double timeLastPushedToASink;
+
+	Info params;
+
+
 };
 
 

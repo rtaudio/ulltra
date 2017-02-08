@@ -91,13 +91,6 @@ private:
 	struct ConnectionHandler {
 		std::future<void> future;
 
-
-		RttEvent done;
-		//std::mutex queue_mutex;
-		//std::condition_variable condition;
-
-
-
 		ConnectionHandler(const ConnectionHandler&) = delete;
 		ConnectionHandler& operator=(const ConnectionHandler&) = delete;
 		ConnectionHandler(ConnectionHandler&&) noexcept {}
@@ -105,9 +98,30 @@ private:
 
 		volatile bool connectionClosed;
 
+		std::string lastRequest;
+
+		void notifyDoneSync() {
+			//waitForPoll.Reset();
+			//waitForPoll.Wait();
+			done.Signal();
+		}
+
+		void notifyDoneNow() {
+			done.Signal();
+		}
+
+		void blockUntilDone() {
+			done.Wait();
+		}
+
+		void polled() {
+			//waitForPoll.Signal();
+		}
 
 		ConnectionHandler() : connectionClosed(false) {			
 		}
+	private:
+		RttEvent done;
 	};
 
 	//moodycamel::ConcurrentQueue<HandlerParamsAndPromise> dispatchQueue;

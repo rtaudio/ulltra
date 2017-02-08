@@ -2,9 +2,9 @@
 
 #include "pclog/pclog.h"
 
+#include <sndfile.hh>
 
-
-AacCoder::AacCoder(int numChannels, int sample_rate, Params &params) : convert_buf(0)
+AacCoder::AacCoder(const EncoderParams &params) : AudioCoder(params), convert_buf(0)
 {
 	/* AOT:
 	- 2: MPEG-4 AAC Low Complexity.
@@ -34,7 +34,7 @@ AacCoder::AacCoder(int numChannels, int sample_rate, Params &params) : convert_b
 
 
 	/* only used if vbr == 0 */
-	int bitrate = (params.bitrate <= 0) ? 64000 : params.bitrate;
+	int bitrate = (params.maxBitrate <= 0) ? 64000 : params.maxBitrate;
 
 
 	/*!< This parameter controls the use of the afterburner feature.
@@ -49,7 +49,7 @@ AacCoder::AacCoder(int numChannels, int sample_rate, Params &params) : convert_b
 	int afterburner = 0;
 
 
-	switch (numChannels) {
+	switch (params.numChannels) {
 	case 1: mode = MODE_1;       break;
 	case 2: mode = MODE_2;       break;
 	case 3: mode = MODE_1_2;     break;
@@ -60,7 +60,7 @@ AacCoder::AacCoder(int numChannels, int sample_rate, Params &params) : convert_b
 		throw std::runtime_error("Unsupported channels");
 	}
 
-	if (aacEncOpen(&handle, 0, numChannels) != AACENC_OK) {
+	if (aacEncOpen(&handle, 0, params.numChannels) != AACENC_OK) {
 		throw std::runtime_error("Unable to open encoder");
 	}
 
@@ -74,8 +74,8 @@ AacCoder::AacCoder(int numChannels, int sample_rate, Params &params) : convert_b
 		}
 	}
 
-	if (aacEncoder_SetParam(handle, AACENC_SAMPLERATE, sample_rate) != AACENC_OK) {
-		throw std::runtime_error("Unable to set the AOT");
+	if (aacEncoder_SetParam(handle, AACENC_SAMPLERATE, params.sampleRate) != AACENC_OK) {
+		throw std::runtime_error("Unable to set the sample rate!");
 	}
 
 	if (aacEncoder_SetParam(handle, AACENC_CHANNELMODE, mode) != AACENC_OK) {
@@ -125,12 +125,13 @@ AacCoder::AacCoder(int numChannels, int sample_rate, Params &params) : convert_b
 		throw std::runtime_error("Unable to get the encoder info");
 	}
 
-	int input_size = numChannels * 2 * info.frameLength;
+	int input_size = params.numChannels * 2 * info.frameLength;
 	LOG(logINFO) << "AAC frameLength=" << info.frameLength << ", inputSize=" << input_size;
 
 	convert_buf = (int16_t*)malloc(input_size);
 }
 
+//SndfileHandle fi("test.wav", SFM_WRITE, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 2, 44100);
 
 AacCoder::~AacCoder()
 {
@@ -177,12 +178,15 @@ int AacCoder::encodeInterleaved(const float* inputSamples, int numFrames, uint8_
 	int in_size, in_elem_size;
 	int out_identifier = OUT_BITSTREAM_DATA;
 	int out_size, out_elem_size;
-	int read, i;
+	int read;
 
-	int numChannels = 2; // TODO
+	int numChannels = encParams.numChannels;
+
 
 	void *in_ptr, *out_ptr;
 
+	//fi.write(inputSamples, numFrames * numChannels);
+	//return 0;
 
 	int numSamples = numFrames * numChannels;
 	read = numFrames * numChannels * sizeof(int16_t);
@@ -224,7 +228,8 @@ int AacCoder::encodeInterleaved(const float* inputSamples, int numFrames, uint8_
 		if (err == AACENC_ENCODE_EOF) {
 			return -1;
 		}
-		throw std::runtime_error("Encoding failed");
+		return -1;
+		//throw std::runtime_error("Encoding failed");
 	}
 
 	if (out_args.numOutBytes == 0)

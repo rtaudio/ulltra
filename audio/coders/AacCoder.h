@@ -11,7 +11,7 @@ public:
 		Params() : bitrate(64000) {}
 	};
 
-	AacCoder(int numChannels, int sample_rate, Params &params);
+	AacCoder(const EncoderParams &params);
 	virtual ~AacCoder();
 
 	int encodeInterleaved(const float* samples, int numFrames, uint8_t *buffer, int bufferLen);

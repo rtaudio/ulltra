@@ -47,7 +47,7 @@ JsonNode deviceState2Json(AudioIOManager::DeviceState const& state)
 
 Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 {
-	int seed = time(NULL);
+	auto seed = (unsigned int)time(NULL);
 	srand(seed);
 
 	m_linkEval.systemLatencyEval();
@@ -215,6 +215,8 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 	// JS!
 	m_rpcServer.on("get_graph", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
 		response["self_name"] = UP::getDeviceName();
+		response["self_addresses"] = Discovery::getLocalIPAddresses();
+
 		response["nodes"][0]["name"] = UP::getDeviceName();
 		response["nodes"][0]["id"] = m_discovery.getHwAddress();
 
@@ -388,8 +390,8 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 		// TODO
 
 		AudioIOManager::StreamEndpointInfo ei(captureDevice);
-		ei.channelOffset = channelOffset;
-		ei.numChannels = numChannels;
+		ei.channelOffset = (int)channelOffset;
+		ei.numChannels = (int)numChannels;
 		ei.sampleRate = selectedSampleRate;
 
 		// start our stream

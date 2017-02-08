@@ -99,6 +99,8 @@ public:
 
 	typedef std::function<void(const NodeDevice &node)> NodeEventHandler;
 
+	static const std::vector<std::string> & getLocalIPAddresses();
+
 	Discovery();
 	~Discovery();
 	void addExplicitHosts(const std::string &host);

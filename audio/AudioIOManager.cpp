@@ -1,6 +1,7 @@
 #include "AudioIOManager.h"
 
 #include "audio/AudioIO.h"
+#include "audio/coders/AacCoder.h"
 
 #include "AudioStreamer.h"
 
@@ -59,7 +60,7 @@ AudioIOManager::AudioIOManager()
 	So we create an extra "virtual" device if a physical device has both input and output.
 	Additionally, create a "virtual" loopback device if a playback device supports it
 	*/
-	auto n = rta.getDeviceCount();
+	auto n = (int)rta.getDeviceCount();
 	for (auto i = 0; i < n; i++) {
 		DeviceState state;
 		state.index = i;
@@ -93,6 +94,16 @@ AudioIOManager::AudioIOManager()
 			}
 		}		
 	}
+
+
+
+	// register coders
+	coderFactories["aac"] = AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
+		if (params.type == AudioCoder::Encoder)
+			return new AacCoder(params.params.enc);
+		else
+			return (AacCoder*)nullptr; // TODO
+	});
 }
 
 
@@ -117,24 +128,19 @@ int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned
 	DeviceState &ds(*(DeviceState*)data);
 	auto &streams(ds.cd.streams);
 
-
 	if (ds.cd.hasStreamsToAdd) {
 		for (auto as : ds.cd.addStreams)
 			streams.push_back(as);
 		ds.cd.addStreams.clear();
-
-		for (auto ss : ds.cd.addSinks)
-			ss.first->addSink(ss.second);
-		ds.cd.addSinks.clear();
-
 		ds.cd.hasStreamsToAdd = false;
 	}
-
-
 	
 	bool res;
 	int si = 0;
-	for (auto s : streams) {
+
+	for (auto it = streams.begin(); it != streams.end();) {
+		auto &s(*it);
+
 		if (status) {
 			s->notifyXRun();
 		}
@@ -147,15 +153,16 @@ int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned
 
 
 		if (!res) {
-			// remove streamer
-			ds.cd.streams.erase(ds.cd.streams.begin() + si);
-			si--;
+			it = streams.erase(it);
+			if (streams.size() == 0)
+				break;
 		}
-
-		si++;
+		else
+			it++;
 	}
-
-
+	if (streams.size() == 0) {
+		LOG(logDEBUG) << "end";
+	}
 	return streams.size() > 0 ? 0 : 1;
 }
 
@@ -173,6 +180,7 @@ void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSi
 	RtAudio::StreamParameters params;
 
 	// always open all device channels here, we split them later TODO
+	params.deviceId = device.index;
 	params.firstChannel = 0;
 	params.nChannels = device.numChannels();
 
@@ -185,28 +193,42 @@ void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSi
 			sampleRate,
 			&bufferFrames,
 			&AudioIOManager::rtAudioInout, (void *)&device);
-		device.rta->startStream();
 	}
 	catch (RtAudioError& e) {
-		LOG(logERROR) << "Cannot open device: " << e.getMessage() << std::endl;
+		LOG(logERROR) << "Failed to open device: " << e.getMessage() << std::endl;
 		throw e;
 	}
 }
 
 
-void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encParams, BinaryAudioStreamPump &&pump)
+void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encParams, BinaryAudioStreamPump pump)
 {
+	RttLocalLock ll(apiMutex);
+
 	// here we manage 2 classes of resources:
 	// 1. the audio devices
 	// 2. the encoders
 
+	if (sei.numChannels != encParams.numChannels || sei.channelOffset != encParams.channelOffset || sei.sampleRate != encParams.sampleRate) {
+		throw std::runtime_error("StreamEndpointInfo and CoderParams do not match in channels and sample rate!");
+	}
+
 	auto &device = _getDevice(sei.deviceId);
 	if (!device.exists() || !device.isCapture)
-		return;
+		throw std::runtime_error("Unknown device " + sei.deviceId);
 
+	/*
+	RtAudio bug?: WASAPI:
+	- capture only works with bs=512,sr=44100 (event though GetMixFormat reports 48000) ???
+	*/
 	// open device if needed // TODO: need to close!
+	bool startDevice = false;
 	if (!device.isOpen()) {
-		openDevice(device, sei.sampleRate, 512);
+		openDevice(device, sei.sampleRate, 512); // TODO
+		startDevice = true;
+	}
+	else if(!device.rta->isStreamRunning()) {
+		startDevice = true;
 	}
 
 	AudioCodingStream::Info acsi;
@@ -217,15 +239,29 @@ void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderPara
 	// the hash includes: device and encoder params (coderName, sampleRate, channels, bitrate)
 	auto streamerIt = streamers.find(acsi);
 	auto isNewStreamer = (streamerIt == streamers.end());
+
+	if (!isNewStreamer && streamerIt->second->stopped()) {
+		delete streamerIt->second;
+		streamers.erase(streamerIt);
+		isNewStreamer = true;
+	}
+
 	if (isNewStreamer) {
-		streamers[acsi] = new AudioCodingStream(); // TODO acsi.encoderParams
+		auto cfIt = coderFactories.find(encParams.coderName);
+		if (cfIt == coderFactories.end()) {
+			throw std::runtime_error("Unknown encoder " + std::string(encParams.coderName));
+		}
+		streamers[acsi] = new AudioCodingStream(acsi, cfIt->second); // TODO acsi.encoderParams
 	}
 
 	auto &streamer(streamers[acsi]);
 
+	streamer->addSink(pump);
+
 	while (device.cd.hasStreamsToAdd) { std::this_thread::yield(); }
 	if(isNewStreamer)
 		device.cd.addStreams.push_back(streamer);
-	device.cd.addSinks.push_back({ streamer, pump});
 	device.cd.hasStreamsToAdd = true;
+	if (startDevice)
+		device.rta->startStream();
 }

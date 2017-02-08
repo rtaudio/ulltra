@@ -7,6 +7,8 @@
 #include "JsonHttpServer.h"
 #include "pclog/pclog.h"
 
+// VS
+#pragma warning( disable : 4996 )
 
 
 #define MG_ENABLE_IPV6 1
@@ -43,6 +45,7 @@ void JsonHttpServer::update()
 	// poll untill all events processed
 	do {
 		m_mgEv = 0;
+		// TODO bug: access violation in mgr_poll_socket_if
 		mg_mgr_poll(m_mgr, 1);
 	} while (m_mgEv != 0);
 	
@@ -83,7 +86,6 @@ bool JsonHttpServer::start(const std::string &bindAddr)
 		return false;
 	}
 	mg_set_protocol_http_websocket(nc);
-	nc->user_data = (void*)this;
 
     LOG(logDebugHttp) << "started mongoose on " << bindAddr.c_str();
 
@@ -177,11 +179,11 @@ void  JsonHttpServer::rpc_dispatch(struct mg_connection *nc, struct http_message
 		return;
 	}
 
-	LOG(logDEBUG1) << "rpc_dispatch: " << method;
+	//LOG(logDEBUG1) << "rpc_dispatch: " << method;
 	auto f = hit->second;
 	f(*nodeAddr, requestNode["params"], response["result"]);
 
-	LOG(logDEBUG2) << "sending response: " << response;
+	//LOG(logDEBUG2) << "sending response: " << response;
 
 
 	rpcReponse(nc, response);
@@ -191,8 +193,8 @@ void  JsonHttpServer::rpc_dispatch(struct mg_connection *nc, struct http_message
 std::string urlDecode(std::string &SRC) {
 	std::string ret;
 	char ch;
-	int i, ii;
-	for (i = 0; i<SRC.length(); i++) {
+	int ii;
+	for (size_t i = 0; i<SRC.length(); i++) {
 		if (int(SRC[i]) == 37) {
 			sscanf(SRC.substr(i + 1, 2).c_str(), "%x", &ii);
 			ch = static_cast<char>(ii);
@@ -238,6 +240,7 @@ bool JsonHttpServer::StreamResponse::write(const void *buf, int len) {
 	if (len < 0)
 		return false;
 
+	// TODO BUG: access to deleted ch here
 	if (ch && ch->connectionClosed) {
 		return false;
 	}
@@ -306,67 +309,17 @@ void  JsonHttpServer::StreamResponse::sendHeaders() {
 	write(headerLines.c_str(), headerLines.size());	
 }
 
-/*
-void JsonHttpServer::handleHttpRequest(struct mg_connection *nc, struct http_message *hm)
+void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
 	static const struct mg_str s_get_method = MG_MK_STR("GET");
+	static const struct mg_str s_post_method = MG_MK_STR("POST");
 	static const struct mg_str s_stream_query_prefix = MG_MK_STR("/streamd/");
-
 	static struct mg_serve_http_opts s_http_server_opts;
 
-	auto nodeAddr = (SocketAddress*)&nc->sa;
-
-	// for any GET request server static content
-	if (is_equal(&hm->method, &s_get_method)) {
-
-		if (starts_with(&hm->uri, &s_stream_query_prefix)) {
-			auto streamName = std::string(&hm->uri.p[s_stream_query_prefix.len], &hm->uri.p[hm->uri.len]);
-			LOG(logDebugHttp) << "incoming http stream request " << streamName;
-
-			auto handlers = m_streamHandlers;
-			auto streamHandler = handlers.find(streamName);
-			if (streamHandler != handlers.end()) {
-				auto args = JsonNode(); // ;
-				
-				StreamResponse response(this, nc);
-				auto f = streamHandler->second;
-				f(*nodeAddr, args, response);
-
-				// if mg is running multithreaded, we are not in the polling thread
-				// so the stream handler called before has blocked, and we can close the connection
-//				if (multiThreadedHandling)
-					//nc->flags |= MG_F_SEND_AND_CLOSE;
-
-				return;
-			}
-		}
-
-		s_http_server_opts.document_root = "webroot";
-		mg_serve_http(nc, hm, s_http_server_opts);
-		return;
-	}
-	
-
-	std::string path(hm->uri.p, hm->uri.len);
-	LOG(logDebugHttp) << "incoming http " << std::string(hm->method.p, hm->method.len) << " request from " << nodeAddr << "; /" << path;
-
-	char buf[1024 * 16];
-
-	//auto params = rpc_dispatch_params(hm->body.p, hm->body.len, buf, sizeof(buf), nc);
-	//if(multiThreadedHandling)
-//		rpc_dispatchInvoking(params);
-//	else
-		//rpc_dispatch(params);
-
-
-	nc->flags |= MG_F_SEND_AND_CLOSE;
-}
-*/
-
-void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 	JsonHttpServer *jhs = static_cast<JsonHttpServer*>(nc->mgr->user_data);
 	struct http_message *hm = (struct http_message *) ev_data;
-	ConnectionHandler *chPtr = (ConnectionHandler*)(nc->user_data);
+	ConnectionHandler *ch = (ConnectionHandler *)nc->user_data;
+	auto nodeAddr = (SocketAddress*)&nc->sa;
 
 	if (!jhs) {
 		LOG(logERROR) << "Nullpointer to server object in ev_handler!";
@@ -380,112 +333,96 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 
 	switch (ev) {
 	case MG_EV_HTTP_REQUEST:
-		LOG(logDEBUG) << "MG_EV_HTTP_REQUEST " << nc << " on socket " << nc->sock;
+		LOG(logDEBUG) << "MG_EV_HTTP_REQUEST " << nc << " on socket " << nc->sock;		
 		
-		
-		if (chPtr != nullptr) {
+		if (ch != nullptr) {
 			LOG(logWARNING) << "MG_EV_HTTP_REQUEST for connection that is already handled, waiting...";
-			chPtr->done.Wait();
-			//if(chPtr->future.valid())
-			//	chPtr->future.wait(); // this should not take long
+			ch->polled();
+			ch->blockUntilDone();
 		}
 
+		// for any GET request server static content
+		if (is_equal(&hm->method, &s_get_method))
 		{
-			static const struct mg_str s_get_method = MG_MK_STR("GET");
-			static const struct mg_str s_stream_query_prefix = MG_MK_STR("/streamd/");
-
-			static struct mg_serve_http_opts s_http_server_opts;
-
-			auto nodeAddr = (SocketAddress*)&nc->sa;
-
-			// for any GET request server static content
-			if (is_equal(&hm->method, &s_get_method)) {
-				if (chPtr == nullptr) {
-					chPtr = new ConnectionHandler();
-					jhs->activeConnectionHandlers.push_back(chPtr);
-					nc->user_data = chPtr;
+			// async stream handling
+			if (starts_with(&hm->uri, &s_stream_query_prefix))
+			{
+				if (ch == nullptr) {
+					nc->user_data = ch = new ConnectionHandler();
+					jhs->activeConnectionHandlers.push_back(ch);
 				}
 
-				chPtr->connectionClosed = false;
+				ch->connectionClosed = false;
+				ch->lastRequest = std::string(hm->message.p, hm->message.len);
 
+				auto streamName = std::string(&hm->uri.p[s_stream_query_prefix.len], &hm->uri.p[hm->uri.len]);
+				LOG(logDebugHttp) << "incoming http stream request " << streamName;
+				auto streamHandler = jhs->m_streamHandlers.find(streamName);
+				if (streamHandler != jhs->m_streamHandlers.end()) {
+					auto f = streamHandler->second;
+					auto queryString = std::string(hm->query_string.p, hm->query_string.len);
 
-				if (starts_with(&hm->uri, &s_stream_query_prefix)) {
-					auto streamName = std::string(&hm->uri.p[s_stream_query_prefix.len], &hm->uri.p[hm->uri.len]);
-					LOG(logDebugHttp) << "incoming http stream request " << streamName;
-
-					auto streamHandler = jhs->m_streamHandlers.find(streamName);
-					if (streamHandler != jhs->m_streamHandlers.end()) {		
-						
-						auto f = streamHandler->second;
-						auto queryString = std::string(hm->query_string.p, hm->query_string.len);
-						
-
-						chPtr->future = jhs->threadPool.enqueue([queryString, jhs, nc, f, chPtr]() {
-							try {
-								auto args = JsonNode(parseQuery(queryString));
-								StreamResponse response(jhs, nc);
-
-								f(*(SocketAddress*)&nc->sa, args, response);
-							}
-							catch (std::exception &ex) {
-								LOG(logERROR) << "Streaming error:" << ex.what();
-							}
-							nc->flags |= MG_F_SEND_AND_CLOSE;
-							chPtr->done.Signal();
-						});
-
-						return;
-					}
+					ch->future = jhs->threadPool.enqueue([queryString, jhs, nc, f, ch]() {
+						try {
+							auto args = JsonNode(parseQuery(queryString));
+							StreamResponse response(jhs, nc);
+							f(*(SocketAddress*)&nc->sa, args, response);
+						}
+						catch (std::exception &ex) {
+							LOG(logERROR) << "Streaming error:" << ex.what();
+						}
+						nc->flags |= MG_F_SEND_AND_CLOSE; // stream connections always close
+						ch->notifyDoneSync();
+					});
+					return; // end handle streams
 				}
-
-				std::string httpMsgAndBody(hm->message.p, hm->message.len);
-
-				chPtr->future = jhs->threadPool.enqueue([nc, httpMsgAndBody, chPtr]() {
-					s_http_server_opts.document_root = "webroot";
-					http_message hm;
-					mg_parse_http(httpMsgAndBody.c_str(), httpMsgAndBody.length(), &hm, 1);
-					mg_serve_http(nc, &hm, s_http_server_opts);
-					chPtr->done.Signal();
-				});				
-
-				return;
 			}
 
+			s_http_server_opts.document_root = "webroot";
+			mg_serve_http(nc, hm, s_http_server_opts);
 
+			return; // end handle GET
+		} 
+		else if (is_equal(&hm->method, &s_post_method))
+		{
 			std::string path(hm->uri.p, hm->uri.len);
-			LOG(logDebugHttp) << "incoming http " << std::string(hm->method.p, hm->method.len) << " request from " << nodeAddr << "; /" << path;
 			jhs->rpc_dispatch(nc, hm);
-		}
-
-		break;
-
-
-	case MG_EV_CLOSE:
-		LOG(logDEBUG) << "MG_EV_CLOSE " << nc;
-		if (chPtr == nullptr) {
-			//LOG(logERROR) << "MG_EV_CLOSE for connection without handler reference!";
 			return;
 		}
 
-		// notify thread that we are closing down & join
-		chPtr->connectionClosed = true;
-		
-		chPtr->done.Wait();
-		
+		// Not Implemented other than POST and GET method
+		mg_http_send_error(nc, 501, NULL);
+		return; // ignore any other requests
 
-		// remove handler
-		for (auto it = jhs->activeConnectionHandlers.begin(); it != jhs->activeConnectionHandlers.end(); it++) {
-			if ((*it) == chPtr) {
-				jhs->activeConnectionHandlers.erase(it);
-				break;
+	case MG_EV_CLOSE:
+		LOG(logDEBUG) << "MG_EV_CLOSE " << nc;
+
+		if (ch) {
+
+			// notify thread that we are closing down & join
+			ch->connectionClosed = true; // this shuts down the StreamWriter
+			LOG(logDEBUG) << "Waiting for connection handler to stop...";
+			LOG(logDEBUG) << "\tHTTP message was:" << ch->lastRequest.substr(0, 30);
+			ch->polled();
+			ch->blockUntilDone();
+			LOG(logDEBUG) << "\tDONE WAITING!";
+
+			// remove handler
+			for (auto it = jhs->activeConnectionHandlers.begin(); it != jhs->activeConnectionHandlers.end(); it++) {
+				if ((*it) == ch) {
+					jhs->activeConnectionHandlers.erase(it);
+					break;
+				}
 			}
+
+			nc->user_data = nullptr;
+			delete ch;
 		}
+		return;
+	}
 
-		auto p = nc->user_data;
-		nc->user_data = nullptr;
-		delete p;
-
-		break;
+	if (nc && nc->user_data) {
+		((ConnectionHandler*)nc->user_data)->polled();
 	}
 }
 

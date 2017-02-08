@@ -58,7 +58,7 @@ void AudioStreamerTx::streamingThread()
 		}
 		*/
 
-		int dataLen = m_encoder->encode(samples, m_linkBuffer, sizeof(m_linkBuffer));
+		int dataLen = 0; // m_encoder->encode(samples, m_linkBuffer, sizeof(m_linkBuffer));
 		if (dataLen == 0) {
 			m_numErrorsLink++;
 			continue;

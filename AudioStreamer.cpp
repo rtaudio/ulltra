@@ -62,15 +62,74 @@ void AudioStreamer::reportStreamError() {}
 
 
 
-AudioCodingStream::AudioCodingStream()
+AudioCodingStream::AudioCodingStream(Info streamInfo, AudioCoder::Factory coderFactory)
+	:coder(nullptr), hasSinksToAdd(false), hasStopped(false)
 {
+	AudioCoder::CoderParams params(AudioCoder::Encoder);
+	params.params.enc = streamInfo.encoderParams;
+	coder = coderFactory(params);
 
+	if (coder == nullptr) {
+		throw std::runtime_error("Failed to create " + std::string(params.params.coderName) + " coder!");
+	}
+
+	binaryBuffer.resize(1024 * 10);
 }
 
+AudioCodingStream::~AudioCodingStream()
+{
+	hasStopped = true;
+	if (coder)
+		delete coder;
+}
+
+#include "autil/file_io.h"
 
 bool AudioCodingStream::inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time)
 {
-	return false;
+//	autil::fileio::writeWave();
+	if (hasStopped)
+		return false;
+
+	auto buf = binaryBuffer.data();
+	
+	int outBytes = coder->encodeInterleaved(samples, numFrames, buf, binaryBuffer.size());
+	if (outBytes < 0) {
+		hasStopped = true;
+		return false;
+	}
+		
+
+	if (hasSinksToAdd) {
+		for (auto &s : addSinks) {
+			sinks.push_back(s);
+		}
+		addSinks.clear();
+		hasSinksToAdd = false;
+	}
+	
+	// push to sinks, remove those that return false
+	for (auto it = sinks.begin(); it != sinks.end();) {
+		bool res = (*it)(buf, outBytes, numFrames);
+		if (!res) {
+			it = sinks.erase(it);
+			if (sinks.size() == 0) {
+				break;
+			}
+		}
+		else {
+			timeLastPushedToASink = time;
+			it++;
+		}
+	}
+
+	// keep running as long as we have sinks (delay for 2 seconds)
+	if(sinks.size() > 0 || (time - timeLastPushedToASink) < 2)
+		return true;
+	else {
+		hasStopped = true;
+		return false;
+	}
 }
 
 bool AudioCodingStream::outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time)
@@ -79,10 +138,24 @@ bool AudioCodingStream::outputInterleaved(float *samples, unsigned int numFrames
 }
 
 void AudioCodingStream::notifyXRun() {
-
+	LOG(logWARNING) << "XRUN";
 }
 
-void AudioCodingStream::addSink(BinaryAudioStreamPump &sink)
+void AudioCodingStream::addSink(const BinaryAudioStreamPump &sink)
 {
+	if (hasStopped) {
+		throw std::runtime_error("Cannot add sink to stopped coding stream!");
+	}
 
+	int waitedMs = 0;
+	while (hasSinksToAdd) {
+		usleep(1000 * 1);
+		waitedMs++;
+		if (waitedMs > 2000) {
+			throw std::runtime_error("Add sink coding stream timedout, audio I/O not polling!");
+		}
+	}
+
+	addSinks.push_back(sink);
+	hasSinksToAdd = true;
 }
