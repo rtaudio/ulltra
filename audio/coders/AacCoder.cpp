@@ -3,6 +3,7 @@
 #include "pclog/pclog.h"
 
 #include <sndfile.hh>
+#include <math.h>
 
 AacCoder::AacCoder(const EncoderParams &params) : AudioCoder(params), convert_buf(0)
 {

@@ -31,6 +31,26 @@ Discovery::NodeDevice Discovery::NodeDevice::localAny(-1);
 Discovery::NodeDevice Discovery::NodeDevice::local4(-1);
 Discovery::NodeDevice Discovery::NodeDevice::local6(-1);
 
+
+void Discovery::initNetworking() {
+#if _WIN32
+	WSADATA wsa;
+	WSAStartup(MAKEWORD(2, 0), &wsa);
+#endif
+
+	NodeDevice::local4 = NodeDevice(AF_INET);
+	NodeDevice::local6 = NodeDevice(AF_INET6);
+
+	// TODO: might detect ipv6! (see if can send to multicast address!)
+	// prefer ipv6, if we actually have an IPv6 address
+	// localAny will be used for bind() later
+	if (NodeDevice::local6.addrStorage.getFamily() == AF_INET6) {
+		NodeDevice::localAny = NodeDevice::local4;
+	}
+	else {
+		NodeDevice::localAny = NodeDevice::local4;
+	}
+}
 Discovery::Discovery()
     : m_updateCounter(0), m_receiver(0), m_broadcastPort(0),
 	m_socMulticast(-1), m_socBroadcast4(-1)
@@ -65,17 +85,7 @@ bool Discovery::start(int broadcastPort)
 	if (m_broadcastPort)
 		return false;
 
-	NodeDevice::local4 = NodeDevice(AF_INET);
-	NodeDevice::local6 = NodeDevice(AF_INET6);
 
-    // TODO: might detect ipv6! (see if can send to multicast address!)
-    // prefer ipv6, if we actually have an IPv6 address
-    // localAny will be used for bind() later
-    if(NodeDevice::local6.addrStorage.getFamily() == AF_INET6) {
-        NodeDevice::localAny = NodeDevice::local4;
-    } else {
-        NodeDevice::localAny = NodeDevice::local4;
-    }
 
     LOG(logDEBUG) << "default bind address set to " << NodeDevice::localAny;
 
@@ -403,7 +413,7 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 			
 			for (auto cai = ai; cai != 0; cai = cai->ai_next) {
 				struct in_addr daddr;
-				memcpy(&daddr, cai->ai_addr, std::min(sizeof(daddr),cai->ai_addrlen));
+                memcpy(&daddr, cai->ai_addr, std::min(sizeof(daddr), (size_t)cai->ai_addrlen));
 				addr4.sin_addr.s_addr = daddr.s_addr | (255) << (8 * 3);
 
 				std::string ip4(inet_ntoa(addr4.sin_addr));
@@ -797,6 +807,8 @@ const std::vector<std::string> &Discovery::getLocalIPAddresses() {
 	if (adrs.size() > 0)
 		return adrs;
 
+#if _WIN32
+
 	PIP_ADAPTER_ADDRESSES pAddresses = NULL;
 	DWORD flags = GAA_FLAG_INCLUDE_PREFIX | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER;
 	ULONG outBufLen = 0;
@@ -819,5 +831,10 @@ const std::vector<std::string> &Discovery::getLocalIPAddresses() {
 		}
 	}
 	free(pAddresses);
+#else
+
+    LOG(logWARNING) << "getLocalIPAddresses() impl missing!";
+#endif
 	return adrs;
+
 }

@@ -101,6 +101,8 @@ public:
 
 	static const std::vector<std::string> & getLocalIPAddresses();
 
+	static void initNetworking();
+
 	Discovery();
 	~Discovery();
 	void addExplicitHosts(const std::string &host);

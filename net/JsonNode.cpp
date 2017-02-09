@@ -1,6 +1,16 @@
-#include "JsonNode.h"
 #include <iostream>
+#include <iomanip>
 #include <sstream>
+#include <math.h>
+#include <cmath>
+#include <cctype>
+#include <string>
+
+
+#include "JsonNode.h"
+
+
+
 #include "mongoose/mongoose.h"
 #ifdef ANDROID
 #include "ulltra-android/android-compat.h"
@@ -35,15 +45,15 @@ JsonNode& JsonNode::operator[](const std::string &key) {
 }
 
 
-JsonNode& JsonNode::operator[](const uint64_t &index) {
+JsonNode& JsonNode::operator[](std::vector<JsonNode>::size_type index) {
 	if (t == Type::Undefined) {
 		t = Type::Array;
-		arr = std::vector<JsonNode>(index + 1, JsonNode());
+		arr = std::vector<JsonNode>(index + 1U, JsonNode());
 		return arr[index];
 	}
 	else if (t == Type::Array) {
 		if (index >= arr.size()) {
-			arr.resize(index + 1, JsonNode());
+			arr.resize(index + 1U, JsonNode());
 		}
 		return arr[index];
 	}
@@ -69,7 +79,7 @@ JsonNode const& JsonNode::operator[](const std::string &key) const {
 }
 
 
-JsonNode const& JsonNode::operator[](const uint64_t &index) const {
+JsonNode const& JsonNode::operator[](std::vector<JsonNode>::size_type index) const {
 	if (t != Type::Array || index >= arr.size()) {
 		return undefined;
 	}
@@ -100,14 +110,11 @@ bool JsonNode::tryParse(const char *str, int len)
 	}
 }
 
-#include <cctype>
-#include <iomanip>
-#include <sstream>
-#include <string>
 
-using namespace std;
 
-string url_encode(const string &value) {
+
+std::string url_encode(const std::string &value) {
+    using namespace std;
 	ostringstream escaped;
 	escaped.fill('0');
 	escaped << hex;
@@ -143,8 +150,8 @@ std::string JsonNode::toQueryString() {
 		{
 		case Type::String: ss << url_encode(a.second.str); break;
 		case Type::Number: {
-			auto d = a.second.num;
-			auto r = std::round(d);
+            double d = a.second.num;
+            double r = round(d);
 			if (std::abs(d - r) < 0.001) ss << (int)r;
 			else ss << d;
 		}

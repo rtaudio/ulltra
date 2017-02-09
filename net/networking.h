@@ -326,7 +326,9 @@ union SocketAddress {
 
         int r = getnameinfo((const sockaddr*)&sin6, sizeof(sin6), host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV);
         if(r != 0) {
-            LOG(logERROR) << "getnameinfo() failed! " << gai_strerror(r) << lastError();
+		// TODO bug: this prints weird chars
+			LOG(logERROR) << "getnameinfo() failed! " << gai_strerror(r);
+			LOG(logERROR) << lastError();
             return "";
         }
 

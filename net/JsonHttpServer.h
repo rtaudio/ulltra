@@ -48,7 +48,7 @@ public:
 			sendBuffer.resize(minSendLen * 2);
 		}
 
-		void sendHeaders();
+		bool sendHeaders();
 
 	public:
 		void addHeader(const std::string &name, const std::string &value);
@@ -96,7 +96,7 @@ private:
 		ConnectionHandler(ConnectionHandler&&) noexcept {}
 		ConnectionHandler& operator=(ConnectionHandler&&) noexcept {}
 
-		volatile bool connectionClosed;
+		std::atomic<bool> connectionClosed;
 
 		std::string lastRequest;
 

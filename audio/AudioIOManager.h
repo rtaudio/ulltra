@@ -12,6 +12,7 @@
 #endif
 
 #include <unordered_map>
+#include  <atomic>
 
 #include "audio/AudioCoder.h"
 #include "AudioStreamer.h"
@@ -38,8 +39,13 @@ private:
 	struct RtaudioCallbackData {
 		AudioIOManager *mgr;
 		std::vector<AudioCodingStream*> streams, addStreams;
-		volatile bool hasStreamsToAdd;
+		std::atomic<bool> hasStreamsToAdd;
 		RtaudioCallbackData() : mgr(0), hasStreamsToAdd(false) {}
+
+		RtaudioCallbackData(RtaudioCallbackData&& other)
+			: hasStreamsToAdd(other.hasStreamsToAdd.load())	{
+			mgr = other.mgr;
+		}
 	};
 
 public:

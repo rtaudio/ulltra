@@ -52,15 +52,6 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 
 	//m_linkEval.systemLatencyEval();
 
-#if _WIN32
-    static bool needWSInit = true;
-
-    if (needWSInit) {
-        WSADATA wsa;
-        WSAStartup(MAKEWORD(2, 0), &wsa);
-        needWSInit = false;
-    }
-#endif
 
     LOG(logINFO) << "Nodes file: " << params.nodesFileName;
     std::ifstream nfs(params.nodesFileName);

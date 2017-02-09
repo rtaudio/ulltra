@@ -2,7 +2,6 @@
 
 #include "JsonHttpClient.h"
 
-#define MG_ENABLE_IPV6 1
 #undef LOG
 #include "mongoose/mongoose.h"
 

@@ -65,12 +65,24 @@ AudioIOManager::AudioIOManager()
 		DeviceState state;
 		state.index = i;
 		state.info = rta.getDeviceInfo(i);
+
+        // windows devices sometimes have some weird spaces
+        myReplace(state.info.name, "  ", " ");
+        myReplace(state.info.name, " )", ")");
+        myReplace(state.info.name, "( ", "(");
+
+        if(state.info.name == "default" && state.info.outputChannels > 16) {
+            continue;
+        }
+
+        if(state.info.id.empty()) {
+            LOG(logWARNING) << "Audio Device " << state.info.name << " with empty id, using name.";
+            state.info.id = state.info.name;
+        }
+
 		state.id = state.info.id;
 
-		// windows devices sometimes have some weird spaces
-		myReplace(state.info.name, "  ", " ");
-		myReplace(state.info.name, " )", ")");
-		myReplace(state.info.name, "( ", "(");
+
 
 		if (state.info.inputChannels > 0) {
 			state.isCapture = true;
@@ -126,13 +138,14 @@ void AudioIOManager::update()
 int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
 	double streamTime, RtAudioStreamStatus status, void *data) {
 	DeviceState &ds(*(DeviceState*)data);
-	auto &streams(ds.cd.streams);
+	RtaudioCallbackData &rcd(ds.cd);
+	auto &streams(rcd.streams);
 
-	if (ds.cd.hasStreamsToAdd) {
-		for (auto as : ds.cd.addStreams)
+	if (rcd.hasStreamsToAdd) {
+		for (auto as : rcd.addStreams)
 			streams.push_back(as);
-		ds.cd.addStreams.clear();
-		ds.cd.hasStreamsToAdd = false;
+		rcd.addStreams.clear();
+		rcd.hasStreamsToAdd = false;
 	}
 	
 	bool res;

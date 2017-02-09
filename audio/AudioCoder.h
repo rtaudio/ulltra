@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <functional>
 #include <map>
+#include <cstring>
 
 // VS's Call to 'std::basic_string::copy' with parameters that may be unsafe
 #pragma warning( disable : 4996 )
@@ -64,7 +65,7 @@ public:
 		paramsencdec params;
 
 		CoderParams(CoderType type) : type(type) {
-			memset(&params, 0, sizeof(params));
+            std::memset(&params, 0, sizeof(params));
 		}
 	};
 

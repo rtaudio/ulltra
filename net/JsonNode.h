@@ -62,9 +62,9 @@ struct JsonNode {
 	}
 
 	JsonNode& operator[](const std::string &key);
-	JsonNode& operator[](const uint64_t &index);
+	JsonNode& operator[](std::vector<JsonNode>::size_type index);
 	const JsonNode& operator[](const std::string &key) const;
-	const JsonNode& operator[](const uint64_t &index) const;
+	const JsonNode& operator[](std::vector<JsonNode>::size_type index) const;
 
 	// assign strings
 	inline const std::string& operator=(const std::string &val) { t = Type::String; return str = val; }

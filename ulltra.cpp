@@ -11,7 +11,7 @@
 
 #include "Controller.h"
 
-volatile int g_isRunning;
+std::atomic<int> g_isRunning;
 Controller *g_controller;
 
 #ifdef _WIN32
@@ -41,6 +41,8 @@ bool ulltraInit()
 	
 	LOG(logDEBUG1) << "UlltraProto initialized!";
 
+	Discovery::initNetworking();
+
 
 	g_isRunning = true;
 	signal(SIGINT, sigintHandler);
@@ -49,6 +51,7 @@ bool ulltraInit()
 	Controller::Params params;
 	params.nodesFileName = "nodes.txt";	
 	g_controller = new Controller(params);
+
 
 	LOG(logINFO) << "ulltra is running ..." << std::endl;
 	return true;
@@ -68,6 +71,20 @@ int main(int argc, const char* argv[])
 {
 	if (!ulltraInit())
 		return 1;
+
+/*
+	g_isRunning = 1;
+	JsonHttpServer server;
+	SocketAddress httpBindAddr(Discovery::NodeDevice::localAny.getAddr(UP::HttpControlPort));
+	if (!server.start(httpBindAddr.toString())) {
+		g_isRunning = false;
+		//LOG(logERROR) << "RPC server init failed on address " << httpBindAddr.toString() << "!";
+	}
+
+	while (g_isRunning) {
+		server.update();
+	}
+*/
 
 	while (g_controller->isRunning() && g_isRunning) {
 #ifdef _WIN32

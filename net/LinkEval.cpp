@@ -821,7 +821,7 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
 
         bool err = false;
 
-#ifdef _DEBUG
+#ifdef DEBUG
         std::vector<std::vector<float>> statMat(nBlockSizes, std::vector<float>(nPasses, 0));
         std::vector<std::string> legend(nBlockSizes, "");
 #endif
@@ -924,13 +924,13 @@ void LinkEval::latencyTestMaster(const Discovery::NodeDevice &nd)
             stats[bsi].getStats(min, max, med);
             LOG(logDEBUG2) << "acc : min: " << std::setw(8) << min << ", max: " << std::setw(8) << max << ", median: " << std::setw(8) << med;
 
-#ifdef _DEBUG
+#ifdef DEBUG
             statMat[bsi] = stats[bsi].getAccTS<float>();
             legend[bsi] = "bs " + std::to_string(blockSize);
 #endif
         }
 
-#ifdef _DEBUG
+#ifdef DEBUG
         std::string fn("./latencies_" + nd.name + "_" + std::to_string(UlltraProto::getMicroSeconds()) + ".m");
         std::ofstream f(fn);
         f << "figure; plot(" << statMat << "','LineWidth',2);" << std::endl << "legend(" << legend << "); title('" << nd << "');";

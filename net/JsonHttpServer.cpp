@@ -4,6 +4,11 @@
 #include <regex>
 #include <sstream>
 
+
+#ifndef _WIN32
+#include <netinet/tcp.h>
+#endif
+
 #include "JsonHttpServer.h"
 #include "pclog/pclog.h"
 
@@ -11,7 +16,6 @@
 #pragma warning( disable : 4996 )
 
 
-#define MG_ENABLE_IPV6 1
 #undef LOG
 #include "mongoose/mongoose.h"
 #undef LOG // need to override LOG() macro:
@@ -75,6 +79,7 @@ void JsonHttpServer::onStream(std::string streamPrefix, const StreamRequestHandl
 
 bool JsonHttpServer::start(const std::string &bindAddr)
 {
+
 	nc = mg_bind(m_mgr, bindAddr.c_str(), ev_handler);
 	if (!nc) {
         LOG(logERROR) << "Failed to bind mongoose web server to " << bindAddr.c_str();
@@ -119,7 +124,7 @@ void rpcReponse(struct mg_connection *nc, const JsonNode &response) {
 		"Access-Control-Allow-Origin: *\r\n"
 		"Content-Type: application/json\r\n\r\n%s", (int)strlen(cs), cs);
 	// HEAP corruption here! TODO!!
-	nc->flags |= MG_F_SEND_AND_CLOSE & 0;
+	//nc->flags |= MG_F_SEND_AND_CLOSE & 0;
 }
 
 void  JsonHttpServer::rpc_dispatch(struct mg_connection *nc, struct http_message *hm) {
@@ -158,9 +163,8 @@ void  JsonHttpServer::rpc_dispatch(struct mg_connection *nc, struct http_message
 	}
 
 
-// TODO: noref on iterator!
 	// find & execute handlers
-	auto const& hit(m_handlers.find(method));
+	auto hit(m_handlers.find(method));
 	if (hit == m_handlers.end() || !hit->second) {
 		LOG(logERROR) << "No handler for " << method;
 		rpcReponse(nc, rpcErrorReponse(response, "No handler for " + method));
@@ -228,23 +232,33 @@ bool JsonHttpServer::StreamResponse::write(const void *buf, int len) {
 	if (len < 0)
 		return false;
 
-	// TODO BUG: access to deleted ch here
+	
+
+	if (nc->flags != 0) {
+		return false;
+	}
+
 	if (ch && ch->connectionClosed) {
 		return false;
 	}
 
 
-
 	if (!headersSent) {
-		sendHeaders();
+		if (!sendHeaders())
+			return false;
 	}
+
+	int res;
 
 	// if len is too small always add to buffer
 	if (len < minSendLen) {
 		memcpy(&sendBuffer[curSendBufferBytes], buf, len);
 		curSendBufferBytes += len;
 		if (curSendBufferBytes >= minSendLen) {
-			send(nc->sock, (const char *)sendBuffer.data(), curSendBufferBytes, 0);
+			res = send(nc->sock, (const char *)sendBuffer.data(), curSendBufferBytes, 0);
+			if (res != curSendBufferBytes) {
+				return false;
+			}
 			curSendBufferBytes = 0;
 		}
 	}
@@ -252,10 +266,16 @@ bool JsonHttpServer::StreamResponse::write(const void *buf, int len) {
 	{
 		// instant flush
 		if (curSendBufferBytes > 0) {
-			send(nc->sock, (const char *)sendBuffer.data(), curSendBufferBytes, 0);
+			res = send(nc->sock, (const char *)sendBuffer.data(), curSendBufferBytes, 0);
+			if (res != curSendBufferBytes) {
+				return false;
+			}
 			curSendBufferBytes = 0;
 		}
-		send(nc->sock, (const char *)buf, len, 0);
+		res = send(nc->sock, (const char *)buf, len, 0);
+		if (res != len) {
+			return false;
+		}
 	}
 
 
@@ -267,7 +287,7 @@ bool JsonHttpServer::StreamResponse::write(const void *buf, int len) {
 	return true;
 }
 
-void  JsonHttpServer::StreamResponse::sendHeaders() {
+bool  JsonHttpServer::StreamResponse::sendHeaders() {
 
 #if _WIN32
 	DWORD  flagYes = 1;
@@ -294,7 +314,7 @@ void  JsonHttpServer::StreamResponse::sendHeaders() {
 	}
 
 	headersSent = true;
-	write(headerLines.c_str(), headerLines.size());	
+	return write(headerLines.c_str(), headerLines.size());	
 }
 
 void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
@@ -322,7 +342,8 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 	switch (ev) {
 	case MG_EV_HTTP_REQUEST:
 		LOG(logDEBUG) << "MG_EV_HTTP_REQUEST " << nc << " on socket " << nc->sock;		
-		
+
+
 		if (ch != nullptr) {
 			LOG(logWARNING) << "MG_EV_HTTP_REQUEST for connection that is already handled, waiting...";
 			ch->polled();
@@ -345,13 +366,19 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 
 				auto streamName = std::string(&hm->uri.p[s_stream_query_prefix.len], &hm->uri.p[hm->uri.len]);
 				LOG(logDebugHttp) << "incoming http stream request " << streamName;
+
+
 				auto streamHandler = jhs->m_streamHandlers.find(streamName);
 				if (streamHandler != jhs->m_streamHandlers.end()) {
 					auto f = streamHandler->second;
 					auto queryString = std::string(hm->query_string.p, hm->query_string.len);
 
+
+
+
 					ch->future = jhs->threadPool.enqueue([queryString, jhs, nc, f, ch]() {
 						try {
+
 							auto args = JsonNode(parseQuery(queryString));
 							StreamResponse response(jhs, nc);
 							f(*(SocketAddress*)&nc->sa, args, response);
@@ -359,7 +386,8 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 						catch (std::exception &ex) {
 							LOG(logERROR) << "Streaming error:" << ex.what();
 						}
-						nc->flags |= MG_F_SEND_AND_CLOSE; // stream connections always close
+						if(!ch->connectionClosed)
+							nc->flags |= MG_F_CLOSE_IMMEDIATELY; // stream connections always close
 						ch->notifyDoneSync();
 					});
 					return; // end handle streams
@@ -383,6 +411,7 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 
 	case MG_EV_CLOSE:
 		LOG(logDEBUG) << "MG_EV_CLOSE " << nc;
+		//printf("MG_EV_CLOSE (%p)\n", nc);
 
 		if (ch) {
 
@@ -409,7 +438,7 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 	}
 
 	if (nc && nc->user_data) {
-		LOG(logWARNING) << "Polling connectio handler";
+		//LOG(logWARNING) << "Polling connectio handler";
 		((ConnectionHandler*)nc->user_data)->polled();
 	}
 }
