@@ -35,15 +35,15 @@ JsonNode& JsonNode::operator[](const std::string &key) {
 }
 
 
-JsonNode& JsonNode::operator[](const uint64_t &index) {
+JsonNode& JsonNode::operator[](std::vector<JsonNode>::size_type index) {
 	if (t == Type::Undefined) {
 		t = Type::Array;
-		arr = std::vector<JsonNode>(index + 1, JsonNode());
+		arr = std::vector<JsonNode>(index + 1U, JsonNode());
 		return arr[index];
 	}
 	else if (t == Type::Array) {
 		if (index >= arr.size()) {
-			arr.resize(index + 1, JsonNode());
+			arr.resize(index + 1U, JsonNode());
 		}
 		return arr[index];
 	}
@@ -69,7 +69,7 @@ JsonNode const& JsonNode::operator[](const std::string &key) const {
 }
 
 
-JsonNode const& JsonNode::operator[](const uint64_t &index) const {
+JsonNode const& JsonNode::operator[](std::vector<JsonNode>::size_type index) const {
 	if (t != Type::Array || index >= arr.size()) {
 		return undefined;
 	}

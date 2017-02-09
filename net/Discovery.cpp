@@ -391,17 +391,19 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 			}
 
 			// Windows broadcast fix (for ipv4): send broadcast on each host addr
-			char ac[200];
+			char ac[1000];
 			if (gethostname(ac, sizeof(ac)) == -1)
 				return false;
 
-			struct hostent *phe = gethostbyname(ac);
-			if (phe == 0)
+			// TODO bug gethostbyname causes seg fault on windows in release (maybe mongoose?)
+			addrinfo *ai;
+			if (getaddrinfo(ac, NULL, NULL, &ai) != 0) {
 				return false;
-
-			for (int i = 0; phe->h_addr_list[i] != 0; ++i) {
+			}
+			
+			for (auto cai = ai; cai != 0; cai = cai->ai_next) {
 				struct in_addr daddr;
-				memcpy(&daddr, phe->h_addr_list[i], sizeof(daddr));
+				memcpy(&daddr, cai->ai_addr, std::min(sizeof(daddr),cai->ai_addrlen));
 				addr4.sin_addr.s_addr = daddr.s_addr | (255) << (8 * 3);
 
 				std::string ip4(inet_ntoa(addr4.sin_addr));
@@ -411,6 +413,8 @@ bool  Discovery::send(const std::string &msg, const NodeDevice &node)
 					LOG(logERROR) << "Could not send broadcast message  to " << ip4 << "!" << std::endl;
 				}
 			}
+
+			freeaddrinfo(ai);
 		}
 
 		// ipv6 multicast

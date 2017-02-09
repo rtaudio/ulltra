@@ -75,12 +75,7 @@ void JsonHttpServer::onStream(std::string streamPrefix, const StreamRequestHandl
 
 bool JsonHttpServer::start(const std::string &bindAddr)
 {
-	mg_bind_opts opts;
-	memset(&opts, 0, sizeof(opts));
-	opts.user_data = this;
-	nc = mg_bind_opt(m_mgr, bindAddr.c_str(), ev_handler, opts);
-
-    //nc = mg_bind(m_mgr, bindAddr.c_str(), JsonHttpServer::ev_handler);
+	nc = mg_bind(m_mgr, bindAddr.c_str(), ev_handler);
 	if (!nc) {
         LOG(logERROR) << "Failed to bind mongoose web server to " << bindAddr.c_str();
 		return false;
@@ -103,17 +98,6 @@ static int starts_with(const struct mg_str *s1, const struct mg_str *s2) {
 }
 
 
-/*
-int JsonHttpServer::rpc_dispatchInvoking(const rpc_dispatch_params &params){
-	RttEvent done;
-	HandlerParamsAndPromise hpp(params, done);
-	dispatchQueue.enqueue(hpp);
-	done.Wait();
-	return hpp.result;
-}
-*/
-
-
 JsonNode & rpcErrorReponse(JsonNode &response, const std::string &message, int code=1) {	
 	response["error"]["code"] = code;
 	response["error"]["message"] = message;
@@ -122,8 +106,7 @@ JsonNode & rpcErrorReponse(JsonNode &response, const std::string &message, int c
 }
 
 
-void rpcReponse(struct mg_connection *nc, const JsonNode &response) {
-	
+void rpcReponse(struct mg_connection *nc, const JsonNode &response) {	
 
 	std::stringstream ss;
 	ss << response;
@@ -135,7 +118,8 @@ void rpcReponse(struct mg_connection *nc, const JsonNode &response) {
 	mg_printf(nc, "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n"
 		"Access-Control-Allow-Origin: *\r\n"
 		"Content-Type: application/json\r\n\r\n%s", (int)strlen(cs), cs);
-	nc->flags |= MG_F_SEND_AND_CLOSE;
+	// HEAP corruption here! TODO!!
+	nc->flags |= MG_F_SEND_AND_CLOSE & 0;
 }
 
 void  JsonHttpServer::rpc_dispatch(struct mg_connection *nc, struct http_message *hm) {
@@ -145,6 +129,9 @@ void  JsonHttpServer::rpc_dispatch(struct mg_connection *nc, struct http_message
 	JsonNode response;
 	response["id"] = 0;
 	response["jsonrpc"] = "2.0";
+
+	//rpcReponse(nc, rpcErrorReponse(response, "Server Error"));
+	//return;
 
 	if (nodeAddr->getFamily() == 0) {
 		LOG(logERROR) << "Invalid/no client address!";
@@ -171,6 +158,7 @@ void  JsonHttpServer::rpc_dispatch(struct mg_connection *nc, struct http_message
 	}
 
 
+// TODO: noref on iterator!
 	// find & execute handlers
 	auto const& hit(m_handlers.find(method));
 	if (hit == m_handlers.end() || !hit->second) {
@@ -385,7 +373,6 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 		} 
 		else if (is_equal(&hm->method, &s_post_method))
 		{
-			std::string path(hm->uri.p, hm->uri.len);
 			jhs->rpc_dispatch(nc, hm);
 			return;
 		}
@@ -422,6 +409,7 @@ void JsonHttpServer::ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 	}
 
 	if (nc && nc->user_data) {
+		LOG(logWARNING) << "Polling connectio handler";
 		((ConnectionHandler*)nc->user_data)->polled();
 	}
 }

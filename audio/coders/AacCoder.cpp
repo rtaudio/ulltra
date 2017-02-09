@@ -34,7 +34,7 @@ AacCoder::AacCoder(const EncoderParams &params) : AudioCoder(params), convert_bu
 
 
 	/* only used if vbr == 0 */
-	int bitrate = (params.maxBitrate <= 0) ? 64000 : params.maxBitrate;
+	int bitrate = (params.maxBitrate <= 0) ? 256000 : params.maxBitrate;
 
 
 	/*!< This parameter controls the use of the afterburner feature.
@@ -46,7 +46,7 @@ AacCoder::AacCoder(const EncoderParams &params) : AudioCoder(params), convert_bu
 	in audio quality on a case by case basis.
 	- 0: Disable afterburner (default).
 	- 1: Enable afterburner. */
-	int afterburner = 0;
+	int afterburner = 1;
 
 
 	switch (params.numChannels) {
@@ -142,8 +142,8 @@ AacCoder::~AacCoder()
 #define NORMALIZED_FLOAT_MIN -1.0f
 #define NORMALIZED_FLOAT_MAX  1.0f
 #define SAMPLE_16BIT_SCALING  32767.0f
-#define SAMPLE_16BIT_MAX  32767
-#define SAMPLE_16BIT_MIN  -32767
+const short SAMPLE_16BIT_MAX = 32767;
+const short SAMPLE_16BIT_MIN = -32767;
 
 
 #define f_round(f) lrintf(f)

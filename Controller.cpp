@@ -50,7 +50,7 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 	auto seed = (unsigned int)time(NULL);
 	srand(seed);
 
-	m_linkEval.systemLatencyEval();
+	//m_linkEval.systemLatencyEval();
 
 #if _WIN32
     static bool needWSInit = true;
