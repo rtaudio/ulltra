@@ -4,10 +4,14 @@
 #include "audio/AudioCoder.h"
 #include "audio/AudioIOStream.h"
 
+#include "concurrentqueue/concurrentqueue.h"
+
 class RttThread;
 class AudioIOStream;
 
 typedef std::function<bool(const uint8_t *buffer, int bufferLen, int numSamples)> BinaryAudioStreamPump;
+
+typedef float DefaultSampleType;
 
 struct StreamFrameHeader {
 	uint16_t streamToken;//a "unique" stream token constant over all frames in a stream to avoid routing and format errors.
@@ -30,11 +34,21 @@ class AudioStreamer
 public:
 	AudioStreamer(LLLinkGenerator &linkGen, const Discovery::NodeDevice &nd, int port);
 	~AudioStreamer();
-	bool start(AudioIOStream *streamSource, int token);
-	virtual void streamingThread() = 0;
 
+	// Controller API:
 	void update();
 	bool isAlive();
+	bool start(AudioIOStream *streamSource, int token);
+
+	virtual void streamingThread() = 0;// TODO
+
+	// Audio API:
+	virtual bool inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0) = 0;
+	virtual bool outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0) = 0;
+	void notifyXRun();
+
+
+
 
 protected:
 	LLLink *m_link;
@@ -51,10 +65,9 @@ protected:
 private:
 	RttThread *m_thread;
 
-	virtual bool inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0) = 0;
-	virtual bool outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0) = 0;
 
-	void notifyXRun();
+
+	
 };
 
 
@@ -67,55 +80,69 @@ class AudioCodingStream
 
 
 public:
-	struct Info {
+	struct Params {
 		char deviceId[64];
+		bool async;
 		AudioCoder::EncoderParams encoderParams;
+
+		Params() { memset(this, 0, sizeof(*this)); }
+
 		void setDeviceId(const std::string &id) {
 			id.copy(deviceId, sizeof(deviceId) - 1);
 		}
 
-		bool operator==(const Info &other) const
+		bool operator==(const Params &other) const
 		{
 			return (strcmp(deviceId, other.deviceId) == 0 && encoderParams == other.encoderParams);
 		}
 	};
 
-	AudioCodingStream(Info streamInfo, AudioCoder::Factory coderFactory);
+	AudioCodingStream(Params streamInfo, AudioCoder::Factory coderFactory);
 	~AudioCodingStream();
 
+	// Controller API:
 	void addSink(const BinaryAudioStreamPump &pump);
-
-
-	bool inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0);
-	bool outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0);
-
-	void notifyXRun();
-
-
 	inline bool stopped() const { return hasStopped; }
 
+	// Audio API:
+	bool inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0);
+	bool outputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0);
+	void notifyXRun();
+
 private:
+	void codingThread();
+
+	bool _inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time = 0.0);
+
+	Params params;
+
+	struct asyncData {
+		moodycamel::ConcurrentQueue<DefaultSampleType> queue;
+		std::vector<DefaultSampleType> sampleBuffer;
+		RttThread * thread;
+	};
+
+	asyncData async;
+
+	
+
 	AudioCoder *coder;
 	std::vector<uint8_t> binaryBuffer;
+
 	std::vector<BinaryAudioStreamPump> sinks, addSinks;
-
 	volatile bool hasSinksToAdd;
+
 	bool hasStopped;
-
 	double timeLastPushedToASink;
-
-	Info params;
-
-
 };
 
 
 
 namespace std {
 	template <>
-	struct hash<AudioCodingStream::Info> : public std::unary_function<const AudioCodingStream::Info &, std::size_t>
+	struct hash<AudioCodingStream::Params> : public std::unary_function<const AudioCodingStream::Params &, std::size_t>
 	{
-		inline std::size_t operator()(const AudioCodingStream::Info & obj) const
+		inline std::size_t operator()(const AudioCodingStream::Params & obj) const
 		{
 			const unsigned char* p = reinterpret_cast<const unsigned char*>(&obj);
 			std::size_t h = 2166136261;

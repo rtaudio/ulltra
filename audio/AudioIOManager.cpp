@@ -244,9 +244,10 @@ void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderPara
 		startDevice = true;
 	}
 
-	AudioCodingStream::Info acsi;
+	AudioCodingStream::Params acsi;
 	acsi.setDeviceId(device.id);
 	acsi.encoderParams = encParams;
+	acsi.async = true; // TODO
 
 	// find an existing streamer with same info
 	// the hash includes: device and encoder params (coderName, sampleRate, channels, bitrate)

@@ -80,7 +80,7 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		params.channelOffset = 0;
 
 		AacCoder coder(params);
-		int blockSize = coder.getFrameLength();
+		int blockSize = coder.getBlockSize();
 
 		std::vector<float> musicBuf(numSamplesMusic, 0.0f);
 		autil::test::generateMusic(musicBuf.data(), numSamplesMusic, true);
@@ -156,6 +156,9 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		
 		response.addHeader("Content-Type", "audio/aac");
 
+		// instantly flush
+		response.setSendBufferSize(0);
+
 		auto pump = BinaryAudioStreamPump([&](const uint8_t *buffer, int bufferLen, int numSamples) {
 			return response.write(buffer, bufferLen);
 		});
@@ -167,5 +170,26 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		}
 
 		LOG(logINFO) << "webstream end";
+	});
+
+
+
+
+
+
+
+
+
+	server.onStream("text-stream-test", [this](const SocketAddress &addr, const JsonNode &request, JsonHttpServer::StreamResponse &response) {
+		response.addHeader("Content-Type", "text/html");
+		response.setSendBufferSize(0);
+		response.write("<html><head><title>textstream</title></head><body><pre>");
+		int i = 0;
+		while (true) {
+			std::string l = "LINE:" + std::to_string(i++) + " @ " + std::to_string(std::clock()) + "\n";
+			if (!response.write(l.c_str(), l.length() + 1))
+				break;
+			usleep(1000 * 1000);
+		}
 	});
 }

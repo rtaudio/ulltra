@@ -44,8 +44,8 @@ JsonNode deviceState2Json(AudioIOManager::DeviceState const& state)
 	return jsi;
 }
 
-
 Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
+	, m_rpcServer(UP::HttpServerThreadPoolSize)
 {
 	auto seed = (unsigned int)time(NULL);
 	srand(seed);
@@ -74,8 +74,7 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 	}, false, "cntrlupdate");
 
 	// after discovery each node should say hello
-	m_rpcServer.on("hello", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
-	
+	m_rpcServer.on("hello", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {	
 		if (request["name"].str.empty() || request["id"].str.empty()) {
 			response["error"] = "Say your name!";
 			return;
@@ -137,7 +136,6 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 		auto n = validateOrigin(addr, request);
 
 		auto &devList = m_audioManager.getDevices();
-
 		int i = 0;
 		for (auto &d : devList) {
 			response[i++] = deviceState2Json(d);
@@ -319,13 +317,11 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 			return;
 		}
 
-
 		if (captureDevice.numChannels() < (channelOffset + numChannels)) {
 			LOG(logERROR) << "start-stream-capture request with more channels than capture device has!";
 			response["error"] = "Invalid channel count for capture!";
 			return;
 		}
-
 
 		// find sample rate(s)
 		auto captureSampleRates = captureDevice.getSampleRateCurrentlyAvailable();
@@ -390,12 +386,7 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 
 
 		response["ok"] = 1;
-	});
-
-
-
-	
-	
+	});	
 
 	m_webAudio.registerWithServer(m_rpcServer);	
 }
@@ -539,8 +530,8 @@ void Controller::updateThreadMain()
 					}					
 				}
 			} 
-			catch (const JsonHttpClient::Exception ex) {
-				LOG(logDEBUG1) << " http client exception: " << ex.statusString;
+			catch (const std::exception &ex) {
+				LOG(logDEBUG1) << " http client exception: " << ex.what();
 			}
         }
 
@@ -576,8 +567,8 @@ void Controller::updateThreadMain()
 			}));
 			LOG(logDEBUG2) << res;
 		}
-		catch (const JsonHttpClient::Exception ex) {
-			LOG(logDEBUG1) << " http client exception: " << ex.statusString;
+		catch (const std::exception &ex) {
+			LOG(logDEBUG1) << " http client exception: " << ex.what();
 		}
 	}
 

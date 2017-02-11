@@ -2,6 +2,7 @@
 #include "audio/AudioIOStream.h"
 #include "audio/AudioCoder.h"
 #include <rtt/rtt.h>
+#include "autil/file_io.h"
 
 #define MIN_SAMPLES_PER_FRAME 60
 
@@ -62,18 +63,26 @@ void AudioStreamer::reportStreamError() {}
 
 
 
-AudioCodingStream::AudioCodingStream(Info streamInfo, AudioCoder::Factory coderFactory)
-	:coder(nullptr), hasSinksToAdd(false), hasStopped(false)
+AudioCodingStream::AudioCodingStream(Params streamInfo, AudioCoder::Factory coderFactory)
+	:coder(nullptr), hasSinksToAdd(false), hasStopped(false), params(streamInfo)
 {
-	AudioCoder::CoderParams params(AudioCoder::Encoder);
-	params.params.enc = streamInfo.encoderParams;
-	coder = coderFactory(params);
+	AudioCoder::CoderParams codeParams(AudioCoder::Encoder);
+	codeParams.params.enc = params.encoderParams;
+	coder = coderFactory(codeParams);
 
 	if (coder == nullptr) {
-		throw std::runtime_error("Failed to create " + std::string(params.params.coderName) + " coder!");
+		throw std::runtime_error("Failed to create " + std::string(codeParams.params.coderName) + " coder!");
 	}
 
-	binaryBuffer.resize(1024 * 10);
+	binaryBuffer.resize(coder->getRequiredBinaryBufferSize());
+
+	if (streamInfo.async) {
+		async.sampleBuffer.resize(coder->getBlockSize() * params.encoderParams.numChannels);
+		async.thread = new RttThread([this]() { codingThread(); }, true);
+	}
+	else {
+		async.thread = nullptr;
+	}
 }
 
 AudioCodingStream::~AudioCodingStream()
@@ -81,11 +90,43 @@ AudioCodingStream::~AudioCodingStream()
 	hasStopped = true;
 	if (coder)
 		delete coder;
+
+	if (async.thread)
+		delete async.thread;
 }
 
-#include "autil/file_io.h"
+
+void AudioCodingStream::codingThread() {
+	auto buf = async.sampleBuffer.data();
+	auto bufSize = async.sampleBuffer.size();
+	while (!hasStopped) {
+		auto numSamplesAllChannels = async.queue.try_dequeue_bulk(buf, bufSize);
+		if (numSamplesAllChannels > 0) {
+			if ((numSamplesAllChannels % params.encoderParams.numChannels) != 0) {
+				LOG(logWARNING) << "Async coding stream dequeued unaligned sample count!";
+			}
+			_inputInterleaved(buf, numSamplesAllChannels / params.encoderParams.numChannels, params.encoderParams.numChannels); // TODO time
+		}
+		std::this_thread::yield();
+	}
+}
 
 bool AudioCodingStream::inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time)
+{
+	if (params.async) {
+		// timeout of 4 seconds
+		if (async.queue.size_approx() > (numChannels * params.encoderParams.sampleRate * 4)) {
+			return false;
+		}
+		return async.queue.enqueue_bulk(samples, numFrames * numChannels);
+	}
+	else
+	{
+		return _inputInterleaved(samples, numFrames, numChannels, time);
+	}
+}
+
+bool AudioCodingStream::_inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time)
 {
 //	autil::fileio::writeWave();
 	if (hasStopped)
@@ -98,7 +139,10 @@ bool AudioCodingStream::inputInterleaved(float *samples, unsigned int numFrames,
 		hasStopped = true;
 		return false;
 	}
-		
+
+	
+
+
 
 	if (hasSinksToAdd) {
 		for (auto &s : addSinks) {
@@ -108,18 +152,20 @@ bool AudioCodingStream::inputInterleaved(float *samples, unsigned int numFrames,
 		hasSinksToAdd = false;
 	}
 	
-	// push to sinks, remove those that return false
-	for (auto it = sinks.begin(); it != sinks.end();) {
-		bool res = (*it)(buf, outBytes, numFrames);
-		if (!res) {
-			it = sinks.erase(it);
-			if (sinks.size() == 0) {
-				break;
+	if (outBytes > 0) {
+		// push to sinks, remove those that return false
+		for (auto it = sinks.begin(); it != sinks.end();) {
+			bool res = (*it)(buf, outBytes, numFrames);
+			if (!res) {
+				it = sinks.erase(it);
+				if (sinks.size() == 0) {
+					break;
+				}
 			}
-		}
-		else {
-			timeLastPushedToASink = time;
-			it++;
+			else {
+				timeLastPushedToASink = time;
+				it++;
+			}
 		}
 	}
 

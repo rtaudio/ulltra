@@ -5,8 +5,8 @@
 
 #include "net/Discovery.h"
 #include "net/LinkEval.h"
-#include "net/JsonHttpServer.h"
-#include "net/JsonHttpClient.h"
+#include "masaj/JsonHttpServer.h"
+#include "masaj/JsonHttpClient.h"
 #include "audio/AudioIOManager.h"
 #include "audio/AudioCoder.h"
 #include "audio/WebAudio.h"

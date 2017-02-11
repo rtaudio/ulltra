@@ -1,9 +1,6 @@
 [submodule "rtt"]
 	path = rtt
 	url = https://github.com/rtaudio/rtt.git
-[submodule "mongoose"]
-	path = mongoose
-	url = https://github.com/cesanta/mongoose
 [submodule "pclog"]
 	path = pclog
 	url = https://github.com/rtaudio/pclog
@@ -19,9 +16,9 @@
 [submodule "concurrentqueue"]
 	path = concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue
-[submodule "frozen"]
-	path = frozen
-	url = https://github.com/cesanta/frozen
 [submodule "ThreadPool"]
 	path = ThreadPool
 	url = https://github.com/progschj/ThreadPool
+[submodule "masaj"]
+	path = masaj
+	url = https://github.com/rtaudio/masaj

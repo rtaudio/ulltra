@@ -181,7 +181,7 @@ int AacCoder::encodeInterleaved(const float* inputSamples, int numFrames, uint8_
 	int out_size, out_elem_size;
 	int read;
 
-	int numChannels = encParams.numChannels;
+	int numChannels = params.params.enc.numChannels;
 
 
 	void *in_ptr, *out_ptr;

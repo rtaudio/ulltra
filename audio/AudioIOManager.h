@@ -132,7 +132,7 @@ private:
 
 	std::vector<DeviceState> deviceStates;
 
-	std::unordered_map<AudioCodingStream::Info, AudioCodingStream*> streamers;
+	std::unordered_map<AudioCodingStream::Params, AudioCodingStream*> streamers;
 
 	std::map<std::string, AudioCoder::Factory> coderFactories;
 

@@ -16,9 +16,9 @@ public:
 
 	int encodeInterleaved(const float* samples, int numFrames, uint8_t *buffer, int bufferLen);
 	void decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames);
-
-	int getFrameLength() {
-		return info.frameLength;
+	
+	int getBlockSize() {
+		return info.frameLength / params.params.enc.numChannels;
 	}
 private:
 	HANDLE_AACENCODER handle;

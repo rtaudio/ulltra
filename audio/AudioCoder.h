@@ -67,6 +67,12 @@ public:
 		CoderParams(CoderType type) : type(type) {
             std::memset(&params, 0, sizeof(params));
 		}
+
+		CoderParams(const EncoderParams& enc) {
+			type = Encoder;
+			params.enc = enc;
+			std::copy(std::begin(enc.coderName), std::end(enc.coderName), std::begin(params.coderName));
+		}
 	};
 
 	typedef std::function<AudioCoder * (const AudioCoder::CoderParams& params)> Factory;
@@ -74,8 +80,12 @@ public:
 	AudioCoder(const EncoderParams &params);
 	virtual ~AudioCoder();
 	
+	virtual int getBlockSize() = 0;
 	virtual int encodeInterleaved(const float* samples, int numSamples, uint8_t *buffer, int bufferLen) = 0;
 	virtual void decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames) = 0;
+
+
+	virtual size_t getRequiredBinaryBufferSize();
 
 
 	inline int encodeInterleaved(std::vector<float> samples, uint8_t *buffer, int bufferLen) {
@@ -83,5 +93,5 @@ public:
 	}
 
 protected:
-	AudioCoder::EncoderParams encParams;
+	CoderParams params;
 };
