@@ -1,11 +1,14 @@
 #include "WebAudio.h"
 
-#include "net/JsonHttpServer.h"
-#include "audio/coders/AacCoder.h"
+#include "masaj/JsonHttpServer.h"
 #include "autil/test.h"
 #include "rtt/rtt.h"
 
 #include "audio/AudioIOManager.h"
+
+
+#include "audio/coders/AacCoder.h"
+#include "audio/coders/OpusCoder.h"
 
 WebAudio::WebAudio(AudioIOManager &audioMgr) : audioMgr(audioMgr)
 {
@@ -56,15 +59,17 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		streamParams["numChannels"] = numChannels;
 		streamParams["sampleRate"] = sampleRate;
 		streamParams["bitrate"] = 64000;
+        streamParams["t"] = (double)std::clock();
 
 
-		response["streamUrl"] = "/streamd/monitor?" + streamParams.toQueryString();
+        response["streamUrl"] = "/streamd/monitor?" + streamParams.toQueryString();
+        response["wsUrl"] = "/streamd/monitor-ws?" + streamParams.toQueryString();
 
 		response["ok"] = 1;
 	});
 
-	server.onStream("test", [this](const SocketAddress &addr, const JsonNode &request, JsonHttpServer::StreamResponse &response) {
-		response.addHeader("Content-Type", "audio/aac");
+    server.onStream("test", [this](const JsonHttpServer::StreamRequest &request, JsonHttpServer::StreamResponse &response) {
+
 		const int fillBufferSeconds = 8;
 
 		const int bufSize = 1024 * 2;
@@ -73,13 +78,16 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		const int numSamplesMusic = 30 * fs;
 
 
-		AacCoder::EncoderParams params;
-		params.maxBitrate = std::stoi(request["bitrate"].str);
+        AudioCoder::EncoderParams params;
+        params.reset();
+        params.maxBitrate = std::stoi(request.data["bitrate"].str);
 		params.numChannels = numChannels;
 		params.sampleRate = fs;
 		params.channelOffset = 0;
 
-		AacCoder coder(params);
+        std::unique_ptr<AudioCoder> coderPtr(createCoder(params, request.getHeader("User-Agent"), response));
+        auto &coder(*coderPtr);
+
 		int blockSize = coder.getBlockSize();
 
 		std::vector<float> musicBuf(numSamplesMusic, 0.0f);
@@ -126,16 +134,14 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		LOG(logWARNING) << "Streaming end!";
 	});
 
-	server.onStream("monitor", [this](const SocketAddress &addr, const JsonNode &request, JsonHttpServer::StreamResponse &response) {
-		auto captureDeviceId = request["captureDeviceId"].str;
+    server.onStream("monitor", [this](const JsonHttpServer::StreamRequest &request, JsonHttpServer::StreamResponse &response) {
+        auto captureDeviceId = request.data["captureDeviceId"].str;
 
-		AudioCoder::EncoderParams encParams;
-		encParams.sampleRate = std::stoi(request["sampleRate"].str);
-		encParams.channelOffset = std::stoi(request["channelOffset"].str);
-		encParams.numChannels = std::stoi(request["numChannels"].str);
-		encParams.maxBitrate = std::stoi(request["bitrate"].str);
-		encParams.setCoderName("aac");
-
+        AudioCoder::EncoderParams encParams;
+                encParams.sampleRate = std::stoi(request.data["sampleRate"].str);
+                encParams.channelOffset = std::stoi(request.data["channelOffset"].str);
+                encParams.numChannels = std::stoi(request.data["numChannels"].str);
+        encParams.maxBitrate = std::stoi(request.data["bitrate"].str);
 
 	
 		auto &captureDevice = audioMgr.getDevice(captureDeviceId);
@@ -154,10 +160,9 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		ei.numChannels = encParams.numChannels;
 		
 		
-		response.addHeader("Content-Type", "audio/aac");
-
-		// instantly flush
-		response.setSendBufferSize(0);
+        encParams.setCoderName("aac");
+        response.setContentType("audio/aac");
+        response.setSendBufferSize(0); // instantly flush
 
 		auto pump = BinaryAudioStreamPump([&](const uint8_t *buffer, int bufferLen, int numSamples) {
 			return response.write(buffer, bufferLen);
@@ -180,7 +185,7 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 
 
 
-	server.onStream("text-stream-test", [this](const SocketAddress &addr, const JsonNode &request, JsonHttpServer::StreamResponse &response) {
+    server.onStream("text-stream-test", [this](const JsonHttpServer::StreamRequest & /*request*/, JsonHttpServer::StreamResponse &response) {
 		response.addHeader("Content-Type", "text/html");
 		response.setSendBufferSize(0);
 		response.write("<html><head><title>textstream</title></head><body><pre>");
@@ -192,4 +197,82 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 			usleep(1000 * 1000);
 		}
 	});
+
+
+
+    server.onWS("monitor", [this](const JsonHttpServer::WsRequest &request, JsonHttpServer::WsConnection &conn) {
+        auto captureDeviceId = request.data["captureDeviceId"].str;
+
+        AudioCoder::EncoderParams encParams;
+                encParams.sampleRate = std::stoi(request.data["sampleRate"].str);
+                encParams.channelOffset = std::stoi(request.data["channelOffset"].str);
+                encParams.numChannels = std::stoi(request.data["numChannels"].str);
+        encParams.maxBitrate = std::stoi(request.data["bitrate"].str);
+
+
+        auto &captureDevice = audioMgr.getDevice(captureDeviceId);
+        if (!captureDevice.exists() || !captureDevice.isCapture) {
+            throw std::runtime_error("monitor stream with non-existing capture device!");
+        }
+
+        if (captureDevice.numChannels() < (encParams.channelOffset + encParams.numChannels)) {
+            throw std::runtime_error("monitor stream start with more channels than capture device has!");
+        }
+
+
+        AudioIOManager::StreamEndpointInfo ei(captureDevice);
+        ei.sampleRate = encParams.sampleRate;
+        ei.channelOffset = encParams.channelOffset;
+        ei.numChannels = encParams.numChannels;
+
+
+        encParams.setCoderName("aac");
+
+        auto pump = BinaryAudioStreamPump([&](const uint8_t *buffer, int bufferLen, int numSamples) {
+            return conn.write({buffer, buffer + bufferLen});
+        });
+
+        audioMgr.streamFrom(ei, encParams, pump);
+
+        while (conn.isConnected()) {
+            usleep(200 * 1000);
+        }
+
+        LOG(logINFO) << "webstream end";
+    });
+
+
+    server.onWS("test", [this](const JsonHttpServer::WsRequest &request, JsonHttpServer::WsConnection &conn) {
+
+        int i = 0;
+        while (conn.isConnected()) {
+            std::string l = "LINE:" + std::to_string(i++) + " @ " + std::to_string(std::clock()) + "\n";
+            if (!conn.write(std::vector<uint8_t>((uint8_t*)l.c_str(), (uint8_t*)l.c_str()+ l.length())))
+                break;
+
+            uint8_t buf[1000];
+            size_t read;
+            if( (read = conn.tryRead(buf, sizeof(buf)))) {
+                conn.write({buf, buf + read});
+            }
+
+            usleep(1000 * 1000);
+        }
+
+        LOG(logINFO) << "webstream end";
+    });
 }
+
+ AudioCoder *WebAudio::createCoder(AudioCoder::EncoderParams &params, const std::string &userAgent, JsonHttpServer::StreamResponse &response) const
+ {
+    //if(userAgent.find("Firefox") != std::string::npos || userAgent.find("Chrome") != std::string::npos || userAgent.find("Chromium") != std::string::npos) {
+    //    params.setCoderName("opus");
+    //    response.setContentType("audio/opus");
+    //} else {
+        params.setCoderName("aac");
+        response.setContentType("audio/aac");
+   // }
+
+
+    return audioMgr.createEncoder(params);
+ }
