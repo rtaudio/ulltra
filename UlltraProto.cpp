@@ -10,7 +10,12 @@ VOID(WINAPI*UlltraProto::myGetSystemTime)(_Out_ LPFILETIME);
 static UINT gPeriod = 0;
 #endif
 
+ std::atomic<uint64_t> UlltraProto::tickSeconds;
+
 bool UlltraProto::init() {
+
+    tickSeconds = 0;
+    //startTime = std::clock();
 
 #ifdef _WIN32
 	TIMECAPS caps;

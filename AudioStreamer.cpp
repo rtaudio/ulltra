@@ -63,6 +63,21 @@ void AudioStreamer::reportStreamError() {}
 
 
 
+unsigned long upper_power_of_two(unsigned long v)
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+
+}
+
+
+
 AudioCodingStream::AudioCodingStream(Params streamInfo, AudioCoder::Factory coderFactory)
 	:coder(nullptr), hasSinksToAdd(false), hasStopped(false), params(streamInfo)
 {
@@ -74,7 +89,10 @@ AudioCodingStream::AudioCodingStream(Params streamInfo, AudioCoder::Factory code
 		throw std::runtime_error("Failed to create " + std::string(codeParams.params.coderName) + " coder!");
 	}
 
-	binaryBuffer.resize(coder->getRequiredBinaryBufferSize());
+    size_t bufSize = upper_power_of_two(1024*2 + coder->getRequiredBinaryBufferSize());
+    if(bufSize > 1024*1024*4)
+        throw std::runtime_error("Coder requires more than 4 MB frame buffer, thats too much!");
+    binaryBuffer.resize(bufSize);
 
 	if (streamInfo.async) {
 		async.sampleBuffer.resize(coder->getBlockSize() * params.encoderParams.numChannels);
@@ -97,22 +115,37 @@ AudioCodingStream::~AudioCodingStream()
 
 
 void AudioCodingStream::codingThread() {
+    RttThread::GetCurrent().SetName(("coding-thread"));
 	auto buf = async.sampleBuffer.data();
 	auto bufSize = async.sampleBuffer.size();
+    auto lastDeq = UP::getWallClockSeconds();
+
 	while (!hasStopped) {
 		auto numSamplesAllChannels = async.queue.try_dequeue_bulk(buf, bufSize);
+        auto now = UP::getWallClockSeconds();
 		if (numSamplesAllChannels > 0) {
 			if ((numSamplesAllChannels % params.encoderParams.numChannels) != 0) {
 				LOG(logWARNING) << "Async coding stream dequeued unaligned sample count!";
 			}
-			_inputInterleaved(buf, numSamplesAllChannels / params.encoderParams.numChannels, params.encoderParams.numChannels); // TODO time
-		}
-		std::this_thread::yield();
+            if(!_inputInterleaved(buf, numSamplesAllChannels / params.encoderParams.numChannels, params.encoderParams.numChannels)) { // TODO time
+                hasStopped = true;
+            }
+            lastDeq = now;
+        } else {
+            if((now - lastDeq) > 4) {
+                LOG(logWARNING) << "Aborting AudioCodintStream after no input for 4 seconds!";
+                hasStopped = true;
+            }
+            std::this_thread::yield();
+        }
 	}
 }
 
 bool AudioCodingStream::inputInterleaved(float *samples, unsigned int numFrames, int numChannels, double time)
 {
+    if(hasStopped)
+            return false;
+
 	if (params.async) {
 		// timeout of 4 seconds
 		if (async.queue.size_approx() > (numChannels * params.encoderParams.sampleRate * 4)) {
@@ -137,8 +170,14 @@ bool AudioCodingStream::_inputInterleaved(float *samples, unsigned int numFrames
 	int outBytes = coder->encodeInterleaved(samples, numFrames, buf, binaryBuffer.size());
 	if (outBytes < 0) {
 		hasStopped = true;
+        LOG(logERROR) << "Stopping streamer after encoder error!";
 		return false;
 	}
+
+    if(outBytes > binaryBuffer.size()) {
+        LOG(logERROR) << "Encoder output is longer than buffer, heap might be corrupted, exit!";
+        exit(1);
+    }
 
 	
 
@@ -157,6 +196,7 @@ bool AudioCodingStream::_inputInterleaved(float *samples, unsigned int numFrames
 		for (auto it = sinks.begin(); it != sinks.end();) {
 			bool res = (*it)(buf, outBytes, numFrames);
 			if (!res) {
+                LOG(logDEBUG) << "Removing sink after write failure!";
 				it = sinks.erase(it);
 				if (sinks.size() == 0) {
 					break;
@@ -169,10 +209,11 @@ bool AudioCodingStream::_inputInterleaved(float *samples, unsigned int numFrames
 		}
 	}
 
-	// keep running as long as we have sinks (delay for 2 seconds)
-	if(sinks.size() > 0 || (time - timeLastPushedToASink) < 2)
+    // keep running as long as we have sinks (delay for 4 seconds)
+    if(sinks.size() > 0 || (time - timeLastPushedToASink) < 4)
 		return true;
 	else {
+        LOG(logDEBUG) << "Stopping streamer after 4 seconds of no successful sink write!";
 		hasStopped = true;
 		return false;
 	}

@@ -86,6 +86,7 @@ int main(int argc, const char* argv[])
 	}
 */
 
+    RttThread::GetCurrent().SetName("main");
 	while (g_controller->isRunning() && g_isRunning) {
 #ifdef _WIN32
 		Sleep(1000);

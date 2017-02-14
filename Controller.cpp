@@ -451,6 +451,8 @@ void Controller::listNodes()
 
 void Controller::updateThreadMain()
 {
+    UP::tick();
+
 	// we use 2-stage discovery: after actual discovery must say hello over tcp
 	// any inital actions are done in on("hello") handler
 	m_discovery.onNodeDiscovered = [this](const Discovery::NodeDevice &node) {

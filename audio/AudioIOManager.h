@@ -40,7 +40,12 @@ private:
 		AudioIOManager *mgr;
 		std::vector<AudioCodingStream*> streams, addStreams;
 		std::atomic<bool> hasStreamsToAdd;
-		RtaudioCallbackData() : mgr(0), hasStreamsToAdd(false) {}
+
+        uint64_t lastCallbackTime;
+        uint64_t lastIOTime;
+
+        RtaudioCallbackData() : mgr(0), hasStreamsToAdd(false), lastCallbackTime(0), lastIOTime(0) {}
+
 
 		RtaudioCallbackData(RtaudioCallbackData&& other)
 			: hasStreamsToAdd(other.hasStreamsToAdd.load())	{
@@ -83,6 +88,7 @@ public:
 		DeviceState(DeviceState&&) = default;
 		DeviceState& operator = (DeviceState&&) = default;
 
+        RtAudio::Api api;
 		int index;
 		std::string id;
 		RtAudio::DeviceInfo info;
@@ -105,11 +111,16 @@ public:
 		inline bool exists() const { return index >= 0; }
 
 		static DeviceState NoDevice;
+
+
+
+
 	private:
 		RtaudioCallbackData cd;
 
 		inline DeviceState copy(const std::string &idSuffix) {
 			DeviceState c;
+            c.api = api;
 			c.index = index;
 			c.id = id + idSuffix;
 			c.info = info;
@@ -137,7 +148,6 @@ private:
 	std::map<std::string, AudioCoder::Factory> coderFactories;
 
 
-	RtAudio rta;
 	mutable RttMutex apiMutex;
 
 	void openDevice(DeviceState &device, int sampleRate, int blockSize);
@@ -160,6 +170,8 @@ public:
 	~AudioIOManager();
 
 	void update();
+
+     AudioCoder *createEncoder(const AudioCoder::EncoderParams &encParams);
 
    inline const std::vector <DeviceState> & getDevices() const { 
 	   return deviceStates;

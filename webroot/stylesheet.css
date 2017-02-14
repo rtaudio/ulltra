@@ -67,7 +67,7 @@ body.error {
 	letter-spacing: -0.05em;
 }
 
-.audio-node:hover, .audio-node:focus, .audio-node:active {
+.audio-node:hover, .audio-node:focus, .audio-node:active, .audio-node.active {
 	z-index: 10;
 	opacity: 1;
 	transform: scale(1.15);
@@ -112,7 +112,7 @@ body.error {
 	transition: .3s ease;
 }
 
-.audio-node:hover .node-border, .audio-node:focus .node-border, .audio-node:active .node-border {
+.audio-node:hover .node-border, .audio-node:focus .node-border, .audio-node:active .node-border, .audio-node.active .node-border {
 	opacity: 1;
 	visibility: visible;
 }
@@ -171,15 +171,15 @@ body.error {
 	transition: .3s ease;
 }
 
-.audio-node:not(:hover):not(:focus):not(:active) .audio-device {
+.audio-node:not(:hover):not(:focus):not(:active):not(.active) .audio-device {
 	visibility: hidden;
 }
 
-.audio-node:not(:hover):not(:focus):not(:active) .audio-device .name {
+.audio-node:not(:hover):not(:focus):not(:active):not(.active) .audio-device .name {
 	margin: 0 !important;
 }
 
-.audio-node:hover .audio-device , .audio-node:focus .audio-device , .audio-node:active .audio-device {
+.audio-node:hover .audio-device , .audio-node:focus .audio-device , .audio-node:active .audio-device , .audio-node.active .audio-device {
 	z-index: 10;
 	opacity: 1;
 }
@@ -312,6 +312,6 @@ body.error #no-sinks {
 	left: -12rem;
 }
 
-body.connecting-capture #monitor-button {
+body.connecting-capture #monitor-button, #monitor-button.active {
 	left: 2rem;
 }

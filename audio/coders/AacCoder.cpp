@@ -3,7 +3,6 @@
 #include "pclog/pclog.h"
 
 #include <sndfile.hh>
-#include <math.h>
 
 AacCoder::AacCoder(const EncoderParams &params) : AudioCoder(params), convert_buf(0)
 {
@@ -140,37 +139,7 @@ AacCoder::~AacCoder()
 		free(convert_buf);
 }
 
-#define NORMALIZED_FLOAT_MIN -1.0f
-#define NORMALIZED_FLOAT_MAX  1.0f
-#define SAMPLE_16BIT_SCALING  32767.0f
-const short SAMPLE_16BIT_MAX = 32767;
-const short SAMPLE_16BIT_MIN = -32767;
-
-
-#define f_round(f) lrintf(f)
-
-#define float_16(s, d)\
-	if ((s) <= NORMALIZED_FLOAT_MIN) {\
-		(d) = SAMPLE_16BIT_MIN;\
-	} else if ((s) >= NORMALIZED_FLOAT_MAX) {\
-		(d) = SAMPLE_16BIT_MAX;\
-	} else {\
-		(d) = f_round ((s) * SAMPLE_16BIT_SCALING);\
-	}
-
-
-// float -> int16
-void sample_move_d16_sS(int16_t *dst, const float *src, unsigned long nsamples, unsigned long dst_skip)
-{
-	while (nsamples--) {
-		float_16(*src, *(dst));
-		dst += dst_skip;
-		src++;
-	}
-}
-
-
-int AacCoder::encodeInterleaved(const float* inputSamples, int numFrames, uint8_t *outBuffer, int bufferLen)
+int AacCoder::encodeInterleaved(const float* inputSamples, int numSamplesPerChannel, uint8_t *outBuffer, int bufferLen)
 {
 	AACENC_BufDesc in_buf = { 0 }, out_buf = { 0 };
 	AACENC_InArgs in_args = { 0 };
@@ -189,16 +158,16 @@ int AacCoder::encodeInterleaved(const float* inputSamples, int numFrames, uint8_
 	//fi.write(inputSamples, numFrames * numChannels);
 	//return 0;
 
-	int numSamples = numFrames * numChannels;
-	read = numFrames * numChannels * sizeof(int16_t);
+    int numSamples = numSamplesPerChannel * numChannels;
+    read = numSamples * sizeof(int16_t);
 
-	if (numFrames <= 0) {
+    if (numSamplesPerChannel <= 0) {
 		in_args.numInSamples = -1;
 	}
 	else {
 
 		// float -> int16_t
-		sample_move_d16_sS(convert_buf, inputSamples, numSamples, 1);
+        sample_copy_float_to_int16(convert_buf, inputSamples, numSamples, 1);
 
 		// here we assums 16bit PCM interleaved per sample
 		in_ptr = convert_buf;
@@ -229,6 +198,9 @@ int AacCoder::encodeInterleaved(const float* inputSamples, int numFrames, uint8_
 		if (err == AACENC_ENCODE_EOF) {
 			return -1;
 		}
+        if(err == AACENC_ENCODE_ERROR) {
+            LOG(logERROR) << "AACENC_ENCODE_ERROR, probably outBuffer to small (is " << bufferLen << ")";
+        }
 		return -1;
 		//throw std::runtime_error("Encoding failed");
 	}

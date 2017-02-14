@@ -32,6 +32,13 @@ public:
 		int sampleRate;
 		uint8_t numChannels;
 		uint8_t channelOffset;
+        bool lowDelay;
+        int8_t complexity;//0-10
+
+        void reset() {
+            memset(this, 0, sizeof(*this));
+            complexity = -1;
+        }
 
 		void setCoderName(const std::string &name) {
 			memset(coderName, 0, sizeof(coderName));
@@ -94,4 +101,7 @@ public:
 
 protected:
 	CoderParams params;
+    // float -> int16
+    void sample_copy_float_to_int16(int16_t *dst, const float *src, unsigned long nsamples, unsigned long dst_skip);
+
 };

@@ -87,7 +87,7 @@ bool Discovery::start(int broadcastPort)
 
 
 
-    LOG(logDEBUG) << "default bind address set to " << NodeDevice::localAny;
+   // LOG(logDEBUG) << "default bind address set to " << NodeDevice::localAny;
 
 	m_broadcastPort = broadcastPort;
 	m_updateCounter = 0;

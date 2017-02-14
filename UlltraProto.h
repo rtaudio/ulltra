@@ -38,6 +38,7 @@
 #include <cctype>
 #include <locale>
 #include <string>
+#include <atomic>
 
 #include "pclog/pclog.h"
 
@@ -57,7 +58,7 @@ public:
     static const int DiscoveryTcpTimeout = 800; // milliseconds
 
 	static const int HttpControlPort = 26080;
-	static const int HttpServerThreadPoolSize = 4;
+    static const int HttpServerThreadPoolSize = 8;
 
 	static const int HttpConnectTimeout = 0;// milliseconds
 	static const int HttpResponseTimeoutMs = 1200;// milliseconds
@@ -71,6 +72,17 @@ public:
 
 	static bool init();
 	static const std::string& getDeviceName();
+
+    static void tick() {
+        static clock_t lastTick = 0;
+        auto now = std::clock();
+        if(lastTick > 0) {
+            tickSeconds += (now - lastTick) / CLOCKS_PER_SEC;
+        }
+        lastTick = now;
+    }
+
+    static std::atomic<uint64_t> tickSeconds;
 
 	inline static uint64_t getMicroSeconds()
 	{
@@ -86,6 +98,11 @@ public:
 		return (uint64_t)(((double)t1.QuadPart) / ((double)timerFreq.QuadPart) * 1000000.0);
 #endif
 	}
+
+    inline static uint64_t getWallClockSeconds()
+    {
+        return tickSeconds.load();
+    }
 
 	// this is faster
 	inline static uint64_t getMicroSecondsCoarse()

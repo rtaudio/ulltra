@@ -1,12 +1,24 @@
-#include "AudioIOManager.h"
-
-#include "audio/AudioIO.h"
-#include "audio/coders/AacCoder.h"
-
-#include "AudioStreamer.h"
-
 #include <chrono>
 #include <thread>
+
+
+#include "AudioIOManager.h"
+#include "audio/AudioIO.h"
+#include "AudioStreamer.h"
+
+
+#include "audio/coders/AacCoder.h"
+#include "audio/coders/OpusCoder.h"
+
+
+
+
+/*
+ *
+ *
+ * TODO
+ * - device guard, check for last callback time, if beafore 4 sec, restart device
+ */
 
 AudioIOManager::DeviceState AudioIOManager::DeviceState::NoDevice;
 
@@ -50,7 +62,7 @@ AudioIOManager::AudioIOManager()
 #endif
 */
 
-
+    auto enumApiDevices = [this] (RtAudio &rta){
 	/*
 	here we create our device list.
 	On Windows, for each physical device RtAudio lists a seperate device for input and output
@@ -60,9 +72,10 @@ AudioIOManager::AudioIOManager()
 	So we create an extra "virtual" device if a physical device has both input and output.
 	Additionally, create a "virtual" loopback device if a playback device supports it
 	*/
-	auto n = (int)rta.getDeviceCount();
+    auto n = (int)rta.getDeviceCount();
 	for (auto i = 0; i < n; i++) {
 		DeviceState state;
+        state.api = rta.getCurrentApi();
 		state.index = i;
 		state.info = rta.getDeviceInfo(i);
 
@@ -75,8 +88,12 @@ AudioIOManager::AudioIOManager()
             continue;
         }
 
+        if(!state.info.probed) {
+            continue;
+        }
+
         if(state.info.id.empty()) {
-            LOG(logWARNING) << "Audio Device " << state.info.name << " with empty id, using name.";
+            //LOG(logWARNING) << "Audio Device " << state.info.name << " with empty id, using name.";
             state.info.id = state.info.name;
         }
 
@@ -106,16 +123,40 @@ AudioIOManager::AudioIOManager()
 			}
 		}		
 	}
+    };
+
+
+
+    // iterate over all apis and enum their devices
+    std::vector<RtAudio::Api> apis;
+     RtAudio::getCompiledApi(apis);
+    for(RtAudio::Api api : apis) {
+       RtAudio rta(api);
+       enumApiDevices(rta);
+    }
 
 
 
 	// register coders
-	coderFactories["aac"] = AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
-		if (params.type == AudioCoder::Encoder)
-			return new AacCoder(params.params.enc);
-		else
-			return (AacCoder*)nullptr; // TODO
-	});
+
+
+    // AAC
+    coderFactories["aac"] = AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
+        if (params.type == AudioCoder::Encoder)
+            return new AacCoder(params.params.enc);
+        else
+            return (AacCoder*)nullptr; // TODO
+    });
+
+
+
+    // Opus
+    coderFactories["opus"] = AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
+        if (params.type == AudioCoder::Encoder)
+            return new OpusCoder(params.params.enc);
+        else
+            return (OpusCoder*)nullptr; // TODO
+    });
 }
 
 
@@ -135,13 +176,30 @@ void AudioIOManager::update()
 
 
 
+AudioCoder *AudioIOManager::createEncoder(const AudioCoder::EncoderParams &encParams) {
+    auto cfIt = coderFactories.find(encParams.coderName);
+    if (cfIt == coderFactories.end()) {
+        return nullptr;
+    }
+    auto &f(cfIt->second);
+    return f(encParams);
+}
+
+
+
 int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
 	double streamTime, RtAudioStreamStatus status, void *data) {
 	DeviceState &ds(*(DeviceState*)data);
 	RtaudioCallbackData &rcd(ds.cd);
 	auto &streams(rcd.streams);
 
+    rcd.lastCallbackTime = UP::getWallClockSeconds();
+
 	if (rcd.hasStreamsToAdd) {
+        LOG(logDEBUG) << "rtAudioInout adding stream!" << rcd.addStreams.size();
+        if(rcd.addStreams.size() == 0) {
+               LOG(logERROR) << "hasStreamsToAdd but empty vector!";
+        }
 		for (auto as : rcd.addStreams)
 			streams.push_back(as);
 		rcd.addStreams.clear();
@@ -149,14 +207,14 @@ int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned
 	}
 	
 	bool res;
-	int si = 0;
+    bool anyOk = false;
 
 	for (auto it = streams.begin(); it != streams.end();) {
 		auto &s(*it);
 
 		if (status) {
 			s->notifyXRun();
-		}
+        }
 
 		if (ds.isCapture) {
 			res = s->inputInterleaved((float*)inputBuffer, nBufferFrames, ds.numChannels(), streamTime);
@@ -167,16 +225,25 @@ int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned
 
 		if (!res) {
 			it = streams.erase(it);
+                        LOG(logDEBUG) << "removed stream, still active:" << streams.size();
 			if (streams.size() == 0)
 				break;
 		}
-		else
+        else {
 			it++;
+            anyOk = true;
+        }
 	}
-	if (streams.size() == 0) {
-		LOG(logDEBUG) << "end";
+
+    if(anyOk) {
+        rcd.lastIOTime = rcd.lastCallbackTime;
+    }
+
+	if (streams.size() == 0 && (rcd.lastCallbackTime - rcd.lastIOTime) > 4) {
+        	LOG(logDEBUG) << "rtAudioInout end after 4 seconds, no more streams!";
+		return 1;
 	}
-	return streams.size() > 0 ? 0 : 1;
+	return 0;
 }
 
 void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSize)
@@ -184,7 +251,7 @@ void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSi
 	unsigned int bufferFrames = (unsigned int)blockSize;
 
 	if (!device.rta) {
-		device.rta = new RtAudio(rta.getCurrentApi());
+        device.rta = new RtAudio(device.api);
 	}
 
 	if (device.isOpen())
@@ -205,7 +272,7 @@ void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSi
 			RTAUDIO_FLOAT32,
 			sampleRate,
 			&bufferFrames,
-			&AudioIOManager::rtAudioInout, (void *)&device);
+            &rtAudioInout, (void *)&device);
 	}
 	catch (RtAudioError& e) {
 		LOG(logERROR) << "Failed to open device: " << e.getMessage() << std::endl;
@@ -272,10 +339,12 @@ void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderPara
 
 	streamer->addSink(pump);
 
-	while (device.cd.hasStreamsToAdd) { std::this_thread::yield(); }
-	if(isNewStreamer)
+    if(isNewStreamer) {
+    while (device.cd.hasStreamsToAdd) { std::this_thread::yield(); }
 		device.cd.addStreams.push_back(streamer);
+       LOG(logDEBUG) << "notifying audio io thread about new streamer";
 	device.cd.hasStreamsToAdd = true;
+    }
 	if (startDevice)
 		device.rta->startStream();
 }
