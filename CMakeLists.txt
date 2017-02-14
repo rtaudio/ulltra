@@ -4,6 +4,8 @@ project(ulltra)
 
 option(AUDIO_LINUX_PULSE "Build Linux PulseAudio API" ON)
 
+option(AUDIO_CODEC_OPUS "Enable Opus" OFF)
+
 set (CMAKE_CXX_STANDARD 11)
 
 
@@ -61,6 +63,9 @@ if (UNIX AND NOT APPLE)
 	SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${SANITZE_FLAGS}" )
 endif (UNIX AND NOT APPLE)
 
+
+
+
 add_subdirectory (rtt)
 add_subdirectory (rtaudio)
 add_subdirectory (fdk-aac)
@@ -68,16 +73,23 @@ add_subdirectory (autil)
 add_subdirectory (masaj)
 
 
-find_library(OPUS_LIB opus)
-list(APPEND ULLTRA_LINKLIBS ${OPUS_LIB})
 
 
-set(src_main ulltra.cpp Controller.cpp UlltraProto.cpp)
 
-set(src_audio audio/AudioIOManager.cpp audio/AudioCoder.cpp audio/coders/AacCoder.cpp audio/WebAudio.cpp audio/coders/OpusCoder.cpp)
+set(src_main src/ulltra.cpp src/Controller.cpp src/UlltraProto.cpp)
+
+set(src_audio src/audio/AudioIOManager.cpp src/audio/AudioCoder.cpp src/audio/coders/AacCoder.cpp src/audio/WebAudio.cpp )
 # autil/test.cpp
-set(src_net net/Discovery.cpp net/LinkEval.cpp net/LLLink.cpp net/LLTcp.cpp net/LLUdpLink.cpp net/LLUdpQWave.cpp net/SimpleUdpReceiver.cpp net/LLCustomBlock.cpp)
-set(src_streaming AudioStreamer.cpp AudioStreamerRx.cpp AudioStreamerTx.cpp OrderingBuffer.cpp)
+set(src_net src/net/Discovery.cpp src/net/LinkEval.cpp src/net/LLLink.cpp src/net/LLTcp.cpp src/net/LLUdpLink.cpp src/net/LLUdpQWave.cpp src/net/SimpleUdpReceiver.cpp src/net/LLCustomBlock.cpp)
+set(src_streaming src/AudioStreamer.cpp src/AudioStreamerRx.cpp src/AudioStreamerTx.cpp src/OrderingBuffer.cpp)
+
+
+if(AUDIO_CODEC_OPUS)
+	find_library(OPUS_LIB opus)
+	list(APPEND ULLTRA_LINKLIBS ${OPUS_LIB})
+	list(APPEND src_audio src/audio/coders/OpusCoder.cpp)
+endif(AUDIO_CODEC_OPUS)
+
 
 add_executable(ulltra ${src_main} ${src_audio} ${src_net} ${src_streaming})
 

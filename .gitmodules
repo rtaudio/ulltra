@@ -16,9 +16,6 @@
 [submodule "concurrentqueue"]
 	path = concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue
-[submodule "ThreadPool"]
-	path = ThreadPool
-	url = https://github.com/progschj/ThreadPool
 [submodule "masaj"]
 	path = masaj
 	url = https://github.com/rtaudio/masaj
