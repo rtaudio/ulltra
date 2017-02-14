@@ -1,7 +1,7 @@
 #pragma once
 
 #include "networking.h"
-#include "UlltraProto.h"
+#include "../UlltraProto.h"
 #include "Discovery.h"
 
 #include <functional>

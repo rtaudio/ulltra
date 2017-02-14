@@ -72,7 +72,7 @@ WebSocketAudioStreamer.prototype._processStreamData = function (data) {
 };
 
 
-var asset = AV.Asset.fromURL('s.aac');
+var asset = AV.Asset.fromURL('monitor.aac');
 var buffer = asset.decodeToBuffer(function (buf) {
 	console.log(buf);
 });

@@ -4,11 +4,11 @@
 #include "autil/test.h"
 #include "rtt/rtt.h"
 
-#include "audio/AudioIOManager.h"
+#include "AudioIOManager.h"
 
 
-#include "audio/coders/AacCoder.h"
-#include "audio/coders/OpusCoder.h"
+#include "coders/AacCoder.h"
+#include "coders/OpusCoder.h"
 
 WebAudio::WebAudio(AudioIOManager &audioMgr) : audioMgr(audioMgr)
 {
@@ -59,11 +59,11 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		streamParams["numChannels"] = numChannels;
 		streamParams["sampleRate"] = sampleRate;
 		streamParams["bitrate"] = 64000;
-        streamParams["t"] = (double)std::clock();
+        streamParams["t"] = (double)std::clock(); // no-cache (Firefox has some weird issues with stalls otherwiese)
 
 
         response["streamUrl"] = "/streamd/monitor?" + streamParams.toQueryString();
-        response["wsUrl"] = "/streamd/monitor-ws?" + streamParams.toQueryString();
+        response["wsUrl"] = "/monitor?" + streamParams.toQueryString();
 
 		response["ok"] = 1;
 	});

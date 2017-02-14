@@ -6,7 +6,7 @@
 
 #include "networking.h"
 
-#include "UlltraProto.h"
+#include "../UlltraProto.h"
 #include "Discovery.h"
 #include "SimpleUdpReceiver.h"
 

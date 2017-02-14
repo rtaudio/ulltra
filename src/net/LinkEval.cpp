@@ -14,7 +14,7 @@
 
 #include "SimpleUdpReceiver.h"
 #include "LLUdpLink.h"
-#include "histogram.h"
+#include "../histogram.h"
 
 struct TestDataHeader {
     uint8_t moreData;
@@ -42,7 +42,7 @@ void LinkEval::update(time_t now) {
 }
 
 void systemTimerAccuracy() {
-    const static int tDurationUs = 1e6;
+    const static int tDurationUs = (int)1e6;
     LOG(logINFO) << "evaluating timer for  " << (tDurationUs / 1000) << " ms";
 
     int numHits = 0;

@@ -23,7 +23,7 @@ HANDLE LLLink::s_qosHandle = NULL;
 
 #include<iomanip>
 
-#include "UlltraProto.h"
+#include "../UlltraProto.h"
 
 int LLLink::s_timeStampingEnabled = 0;
 

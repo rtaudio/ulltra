@@ -1,9 +1,13 @@
 #pragma once
+
+#ifdef WITH_OPUS
 #include <vector>
 #include "../AudioCoder.h"
 
-#include <opus/opus.h>
-#include <opus/opus_multistream.h>
+struct OpusEncoder;
+struct OpusMSEncoder;
+struct OpusDecoder;
+struct OpusMSDecoder;
 
 class OpusCoder : public AudioCoder
 {
@@ -25,13 +29,8 @@ private:
        OpusDecoder *dec;
        OpusMSDecoder *MSdec;
 
+       std::vector<int16_t> convertBuffer;
 
-
-           std::vector<int16_t> convertBuffer;
-
-
-
-
-	
 };
 
+#endif

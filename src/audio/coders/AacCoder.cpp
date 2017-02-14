@@ -22,7 +22,7 @@ AacCoder::AacCoder(const EncoderParams &params) : AudioCoder(params), convert_bu
 	- -1: Use ELD SBR auto configurator (default).
 	- 0: Disable Spectral Band Replication.
 	- 1: Enable Spectral Band Replication. */
-	int eld_sbr = -1; // was 0
+	int eld_sbr = 0; // was 0
 
 
 	/*!< Bitrate mode. Configuration can be different kind of bitrate configurations:

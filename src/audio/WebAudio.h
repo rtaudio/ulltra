@@ -5,8 +5,8 @@
 class JsonHttpServer;
 class AudioIOManager;
 
-#include "audio/AudioCoder.h"
-#include "masaj/JsonHttpServer.h"
+#include "AudioCoder.h"
+#include "../masaj/JsonHttpServer.h"
 
 
 class WebAudio

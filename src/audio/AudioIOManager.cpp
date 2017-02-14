@@ -3,12 +3,12 @@
 
 
 #include "AudioIOManager.h"
-#include "audio/AudioIO.h"
-#include "AudioStreamer.h"
+#include "AudioIO.h"
+#include "../AudioStreamer.h"
 
 
-#include "audio/coders/AacCoder.h"
-#include "audio/coders/OpusCoder.h"
+#include "coders/AacCoder.h"
+#include "coders/OpusCoder.h"
 
 
 
@@ -150,13 +150,14 @@ AudioIOManager::AudioIOManager()
 
 
 
-    // Opus
+#ifdef WITH_OPUS // Opus Codec    
     coderFactories["opus"] = AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
         if (params.type == AudioCoder::Encoder)
             return new OpusCoder(params.params.enc);
         else
             return (OpusCoder*)nullptr; // TODO
     });
+#endif
 }
 
 

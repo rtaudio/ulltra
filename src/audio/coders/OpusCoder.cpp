@@ -5,6 +5,9 @@
 #include <sndfile.hh>
 #include <math.h>
 
+#include <opus/opus.h>
+#include <opus/opus_multistream.h>
+
 OpusCoder::OpusCoder(const EncoderParams &params)
     : AudioCoder(params), MSenc(nullptr), enc(nullptr), MSdec(nullptr), dec(nullptr)
 {

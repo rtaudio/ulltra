@@ -1,21 +1,21 @@
 #pragma once
 
-#include "UlltraProto.h"
+#include "../UlltraProto.h"
 
 #include "rtaudio/RtAudio.h"
 
 #ifdef WITH_JACK
-#include "audio/JackClient.h"
+#include "../audio/JackClient.h"
 #endif
 #ifdef _WIN32
-#include "audio/WindowsMM.h"
+#include "../audio/WindowsMM.h"
 #endif
 
 #include <unordered_map>
 #include  <atomic>
 
-#include "audio/AudioCoder.h"
-#include "AudioStreamer.h"
+#include "AudioCoder.h"
+#include "../AudioStreamer.h"
 
 #include <rtt/rtt.h>
 

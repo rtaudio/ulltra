@@ -88,6 +88,7 @@ if(AUDIO_CODEC_OPUS)
 	find_library(OPUS_LIB opus)
 	list(APPEND ULLTRA_LINKLIBS ${OPUS_LIB})
 	list(APPEND src_audio src/audio/coders/OpusCoder.cpp)
+	add_definitions("-DWITH_OPUS")
 endif(AUDIO_CODEC_OPUS)
 
 

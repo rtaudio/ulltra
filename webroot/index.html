@@ -165,10 +165,12 @@
                     var host = capture.node.hostname + ':26080';
                     var fullUrl = 'http://' + host + result.streamUrl;
                     var wsUrl = 'ws://' + host+ result.wsUrl;
+					console.log([fullUrl, wsUrl]);
+					
                     //$('#monitor-audio').attr('src', fullUrl);
-                    $('#monitor-button').addClass('active');
+                    //$('#monitor-button').addClass('active');
                     //window.location.href = fullUrl + '&t=' + Date.now();
-                    new WebSocketAudioStreamer(wsUrl, app.audio.getContext());
+                    //new WebSocketAudioStreamer(wsUrl, app.audio.getContext());
                 }
             });
         };

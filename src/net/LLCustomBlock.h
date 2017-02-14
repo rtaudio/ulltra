@@ -19,6 +19,7 @@ public:
 		case Mode::Select: return Str << "Select";
 		case Mode::Undefined: return Str << "Undefined";
 		}
+		return Str;
 	}
 
 	bool setRxBlockingMode(Mode mode);
