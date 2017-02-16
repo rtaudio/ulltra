@@ -24,14 +24,17 @@ class AudioCoder
 	AudioCoder& operator = (AudioCoder&&) = default;
 
 public:
-	
 
-	struct EncoderParams {
+	struct CoderParams {
 		char coderName[16];
-		int maxBitrate;
 		int sampleRate;
 		uint8_t numChannels;
 		uint8_t channelOffset;
+	};
+	
+
+	struct EncoderParams : CoderParams {		
+		int maxBitrate;	
         bool lowDelay;
         int8_t complexity;//0-10
 
@@ -54,6 +57,9 @@ public:
 				&& channelOffset == other.channelOffset);
 		}
 
+	};
+
+	struct DecoderParams : CoderParams {
 	};
 
 	enum CoderType {
@@ -87,7 +93,12 @@ public:
 	AudioCoder(const EncoderParams &params);
 	virtual ~AudioCoder();
 	
-	virtual int getBlockSize() = 0;
+	virtual int getBlockSize() { return 1024 * 8; }; // just choose large block size we wont reach with audio hardware
+
+	virtual int getHeader(uint8_t *outBuffer, int bufferLen) const {
+		return 0;
+	}
+
 	virtual int encodeInterleaved(const float* samples, int numSamples, uint8_t *buffer, int bufferLen) = 0;
 	virtual void decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames) = 0;
 

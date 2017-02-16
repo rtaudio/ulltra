@@ -19,3 +19,6 @@
 [submodule "masaj"]
 	path = masaj
 	url = https://github.com/rtaudio/masaj
+[submodule "opus-cmake"]
+	path = opus-cmake
+	url = https://github.com/rtaudio/opus-cmake

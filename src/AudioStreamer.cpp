@@ -89,13 +89,15 @@ AudioCodingStream::AudioCodingStream(Params streamInfo, AudioCoder::Factory code
 		throw std::runtime_error("Failed to create " + std::string(codeParams.params.coderName) + " coder!");
 	}
 
-    size_t bufSize = upper_power_of_two(1024*2 + coder->getRequiredBinaryBufferSize());
+	int blockSize = coder->getBlockSize();
+	if (blockSize <= 0) blockSize = 1024 * 4; // fallback
+
+    size_t bufSize = upper_power_of_two(1024*4 + coder->getRequiredBinaryBufferSize());
     if(bufSize > 1024*1024*4)
         throw std::runtime_error("Coder requires more than 4 MB frame buffer, thats too much!");
     binaryBuffer.resize(bufSize);
 
 	if (streamInfo.async) {
-		async.sampleBuffer.resize(coder->getBlockSize() * params.encoderParams.numChannels);
 		async.thread = new RttThread([this]() { codingThread(); }, true);
 	}
 	else {
@@ -116,27 +118,39 @@ AudioCodingStream::~AudioCodingStream()
 
 void AudioCodingStream::codingThread() {
     RttThread::GetCurrent().SetName(("coding-thread"));
-	auto buf = async.sampleBuffer.data();
-	auto bufSize = async.sampleBuffer.size();
+
+	std::vector<DefaultSampleType> sampleBuffer;
+	auto bufSize = coder->getBlockSize() * params.encoderParams.numChannels;
+	sampleBuffer.resize(bufSize);
+	auto buf = sampleBuffer.data();	
+	int bufPos = 0;
+
     auto lastDeq = UP::getWallClockSeconds();
 
+	using namespace std::chrono_literals;
+	auto halfFramePeriod = 1000ms * coder->getBlockSize() / params.encoderParams.sampleRate / 2;
+
 	while (!hasStopped) {
-		auto numSamplesAllChannels = async.queue.try_dequeue_bulk(buf, bufSize);
+		bufPos += async.queue.try_dequeue_bulk(&buf[bufPos], bufSize - bufPos);
         auto now = UP::getWallClockSeconds();
-		if (numSamplesAllChannels > 0) {
-			if ((numSamplesAllChannels % params.encoderParams.numChannels) != 0) {
-				LOG(logWARNING) << "Async coding stream dequeued unaligned sample count!";
-			}
-            if(!_inputInterleaved(buf, numSamplesAllChannels / params.encoderParams.numChannels, params.encoderParams.numChannels)) { // TODO time
+		if (bufPos == bufSize) {
+            if(!_inputInterleaved(buf, bufSize / params.encoderParams.numChannels, params.encoderParams.numChannels)) { // TODO time
                 hasStopped = true;
             }
+			bufPos = 0;
             lastDeq = now;
         } else {
             if((now - lastDeq) > 4) {
                 LOG(logWARNING) << "Aborting AudioCodintStream after no input for 4 seconds!";
                 hasStopped = true;
             }
-            std::this_thread::yield();
+
+			
+#if !ENERGY_SAVING
+			std::this_thread::sleep_for(halfFramePeriod);
+#else
+			std::this_thread::yield();
+#endif
         }
 	}
 }
@@ -166,8 +180,26 @@ bool AudioCodingStream::_inputInterleaved(float *samples, unsigned int numFrames
 		return false;
 
 	auto buf = binaryBuffer.data();
+	auto bufSize = binaryBuffer.size();
+
+
+	if (hasSinksToAdd) {
+		int headerLen = coder->getHeader(buf, bufSize);
+		for (auto &s : addSinks) {
+			sinks.push_back(s);
+			if (headerLen > 0) {
+				bool res = s(buf, headerLen, 0);
+				if (!res) {
+					LOG(logERROR) << "Failed to send stream header to sink!";
+				}
+			}
+		}
+		addSinks.clear();
+		hasSinksToAdd = false;
+	}
+
 	
-	int outBytes = coder->encodeInterleaved(samples, numFrames, buf, binaryBuffer.size());
+	int outBytes = coder->encodeInterleaved(samples, numFrames, buf, bufSize);
 	if (outBytes < 0) {
 		hasStopped = true;
         LOG(logERROR) << "Stopping streamer after encoder error!";
@@ -183,13 +215,7 @@ bool AudioCodingStream::_inputInterleaved(float *samples, unsigned int numFrames
 
 
 
-	if (hasSinksToAdd) {
-		for (auto &s : addSinks) {
-			sinks.push_back(s);
-		}
-		addSinks.clear();
-		hasSinksToAdd = false;
-	}
+
 	
 	if (outBytes > 0) {
 		// push to sinks, remove those that return false

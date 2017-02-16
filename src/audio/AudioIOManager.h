@@ -13,6 +13,7 @@
 
 #include <unordered_map>
 #include  <atomic>
+#include <future>
 
 #include "AudioCoder.h"
 #include "../AudioStreamer.h"
@@ -145,7 +146,12 @@ private:
 
 	std::unordered_map<AudioCodingStream::Params, AudioCodingStream*> streamers;
 
-	std::map<std::string, AudioCoder::Factory> coderFactories;
+	struct CoderDescription {
+		AudioCoder::Factory factory;
+		std::vector<int> supportedSampleRates;
+	};
+
+	std::map<std::string, CoderDescription> coderFactories;
 
 
 	mutable RttMutex apiMutex;
@@ -185,7 +191,9 @@ public:
 	   return DeviceState::NoDevice;
    }
 
-   void streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encoder, BinaryAudioStreamPump pump);
+
+   std::future<void> streamFrom(StreamEndpointInfo &endpoint, AudioCoder::EncoderParams &encoder, BinaryAudioStreamPump pump);
+   std::future<void> streamTo(BinaryAudioStreamPump pull, AudioCoder::DecoderParams &decParams, StreamEndpointInfo &endpoint);
 
 
    static bool compareSampleRatesTo48KHz(int a, int b) {
@@ -199,5 +207,8 @@ public:
 
 	   return a < b;
    }
+
+   private:
+	   void openEndpoint_(StreamEndpointInfo &endpoint, const AudioCoder::CoderParams &coderParams);
 };
 

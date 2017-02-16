@@ -84,8 +84,9 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		params.numChannels = numChannels;
 		params.sampleRate = fs;
 		params.channelOffset = 0;
+		params.setCoderName(chooseCoder(request, response));
 
-        std::unique_ptr<AudioCoder> coderPtr(createCoder(params, request.getHeader("User-Agent"), response));
+        std::unique_ptr<AudioCoder> coderPtr(audioMgr.createEncoder(params));
         auto &coder(*coderPtr);
 
 		int blockSize = coder.getBlockSize();
@@ -159,9 +160,8 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		ei.channelOffset = encParams.channelOffset;
 		ei.numChannels = encParams.numChannels;
 		
-		
-        encParams.setCoderName("aac");
-        response.setContentType("audio/aac");
+		encParams.setCoderName(chooseCoder(request, response));
+
         response.setSendBufferSize(0); // instantly flush
 
 		auto pump = BinaryAudioStreamPump([&](const uint8_t *buffer, int bufferLen, int numSamples) {
@@ -199,7 +199,11 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 	});
 
 
-
+	/*
+	stream compressed audio over a websocket connection
+	issues with AAC: it does not decode properly, neither using the native AudioContext.decodeAudio(), nor audiocogs/aac.js
+	(NaNs in decoded audio)
+	*/
     server.onWS("monitor", [this](const JsonHttpServer::WsRequest &request, JsonHttpServer::WsConnection &conn) {
         auto captureDeviceId = request.data["captureDeviceId"].str;
 
@@ -226,17 +230,22 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
         ei.numChannels = encParams.numChannels;
 
 
-        encParams.setCoderName("aac");
+        encParams.setCoderName("opus");
+		encParams.complexity = -1;
 
-        auto pump = BinaryAudioStreamPump([&](const uint8_t *buffer, int bufferLen, int numSamples) {
-            return conn.write({buffer, buffer + bufferLen});
+		bool running = true; // TODO audioMgr.streamFrom should return a future or handle that can be stopped
+		auto cp = &conn;
+        auto pump = BinaryAudioStreamPump([cp, &running](const uint8_t *buffer, int bufferLen, int numSamples) {
+            return running && cp->write({buffer, buffer + bufferLen});
         });
 
         audioMgr.streamFrom(ei, encParams, pump);
 
-        while (conn.isConnected()) {
-            usleep(200 * 1000);
-        }
+       while (conn.isConnected()) {
+            usleep(100 * 1000);
+       }
+			running = false;
+			usleep(400 * 1000);
 
         LOG(logINFO) << "webstream end";
     });
@@ -263,16 +272,29 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
     });
 }
 
- AudioCoder *WebAudio::createCoder(AudioCoder::EncoderParams &params, const std::string &userAgent, JsonHttpServer::StreamResponse &response) const
+ std::string WebAudio::chooseCoder(const JsonHttpServer::StreamRequest &request, JsonHttpServer::StreamResponse &response) const
  {
+	 auto coderName = request.data["codec"].str;
+
+	 if (coderName.empty() || coderName == "aac")
+	 {
+		 response.setContentType("audio/aac");
+		 coderName = "aac";
+	 }
+	 else {
+		 if(coderName == "opus") {
+			 response.setContentType("audio/ogg; codecs=opus");
+		 }
+	 }
+
+	 return coderName;
+
+	 //  request.getHeader("User-Agent");
     //if(userAgent.find("Firefox") != std::string::npos || userAgent.find("Chrome") != std::string::npos || userAgent.find("Chromium") != std::string::npos) {
     //    params.setCoderName("opus");
     //    response.setContentType("audio/opus");
     //} else {
-        params.setCoderName("aac");
-        response.setContentType("audio/aac");
+        //params.setCoderName("aac");
+        
    // }
-
-
-    return audioMgr.createEncoder(params);
  }

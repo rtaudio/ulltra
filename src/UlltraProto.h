@@ -43,6 +43,8 @@
 #include "pclog/pclog.h"
 
 
+#define ENERGY_SAVING 1
+
 class UlltraProto {
 private:
 	static std::string deviceName;

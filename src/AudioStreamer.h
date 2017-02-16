@@ -27,6 +27,7 @@ struct StreamFrameHeader {
 	const int Overhead = sizeof(StreamFrameHeader) - sizeof(content);
 };
 
+
 class AudioStreamer
 {
 	friend class AudioIOManager;
@@ -118,7 +119,6 @@ private:
 
 	struct asyncData {
 		moodycamel::ConcurrentQueue<DefaultSampleType> queue;
-		std::vector<DefaultSampleType> sampleBuffer;
 		RttThread * thread;
 	};
 
@@ -134,6 +134,8 @@ private:
 
 	bool hasStopped;
 	double timeLastPushedToASink;
+
+	bool energySaving;
 };
 
 

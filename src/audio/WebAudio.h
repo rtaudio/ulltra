@@ -21,6 +21,7 @@ private:
 	JsonHttpServer *server;
 	AudioIOManager &audioMgr;
 
-    AudioCoder *createCoder(AudioCoder::EncoderParams &params, const std::string &userAgent, JsonHttpServer::StreamResponse &response) const;
+    //AudioCoder *createCoder(AudioCoder::EncoderParams &params, const std::string &userAgent, JsonHttpServer::StreamResponse &response) const;
+	std::string chooseCoder(const JsonHttpServer::StreamRequest &request, JsonHttpServer::StreamResponse &response) const;
 };
 

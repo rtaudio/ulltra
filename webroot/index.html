@@ -20,6 +20,7 @@
       <script src="lib/aac.js"></script>
 
            <script src="streaming.js"></script>
+		    <script src="ulltra.js/stream_monitor.js"></script>
 
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheet.css">
@@ -166,6 +167,9 @@
                     var fullUrl = 'http://' + host + result.streamUrl;
                     var wsUrl = 'ws://' + host+ result.wsUrl;
 					console.log([fullUrl, wsUrl]);
+
+                    var mon = new StreamMonitor(1024*4, 20);
+                    mon.play(wsUrl, 44100);
 					
                     //$('#monitor-audio').attr('src', fullUrl);
                     //$('#monitor-button').addClass('active');

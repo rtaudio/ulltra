@@ -6,38 +6,41 @@ function WebSocketAudioStreamer(wsStreamUrl, audioContext) {
 	this.socket = new WebSocket(wsStreamUrl);
 
 	this.socket.onopen = function (event) {
-		console.log('estabslished');
-		scope.socket.send("Here's some text that the server is urgently awaiting!");
+		console.log('WS opened', event);
+		scope.socket.send("START");
 	};
 
-
+	var decWorker = new Worker('lib/opus_decoder.js');
+	this.decodeWorker = decWorker;
 	
+	var packetDecoded = function(ev) {
+					console.log(ev.data);
+				};
+	this.decodeWorker.onmessage = function(ev) {
+                if (ev.data.status != 0) {
+					console.error('Opus header error', ev.data.reason);
+                    return;
+                }
+				
+				this.samplingRate = ev.data.sampling_rate
+				this.numChannels = ev.data.num_of_channels;
+	
+                console.log('decodedHeader', {fs: this.samplingRate, nch: this.numChannels});
+				decWorker.onmessage = packetDecoded;
+            };
+			
 
+	this.messageIndex = 0;
 
+	this.socket.binaryType = 'arraybuffer';
 	this.socket.onmessage = function (event) {
-		var ourl = URL.createObjectURL(event.data);
 		
-		var xhr = new XMLHttpRequest();
-		xhr.responseType = 'arraybuffer';
-		xhr.open('GET', ourl, true);
-		xhr.onload = function () {
-			//URL.revokeObjectURL(ourl);
-			scope._processStreamData(this.response);
-		};
-		xhr.send();
+		scope._processStreamData(event.data);
 	}
 }
 
 
 
-WebSocketAudioStreamer.prototype.getInfo = function () {
-	return this.color + ' ' + this.type + ' apple';
-};
-
-
-WebSocketAudioStreamer.prototype._receivedFrame = function () {
-	return this.color + ' ' + this.type + ' apple';
-};
 
 
 
@@ -53,7 +56,27 @@ WebSocketAudioStreamer.prototype._decodeObjectURL = function (ourl) {
 
 
 WebSocketAudioStreamer.prototype._processStreamData = function (data) {
-	var scope = this;
+	//console.log('_processStreamData', data.byteLength, data.data);
+	
+	
+	if(this.messageIndex == 0) {
+		console.log('decoding header packet');
+		this.decodeWorker.postMessage({ config: {}, packets: [{data:data}]}, [data]);
+	} else {
+		this.decodeWorker.postMessage({data:data}, [data]);		
+	}	
+
+this.messageIndex++;	
+
+};
+
+
+//var asset = AV.Asset.fromURL('monitor.aac');
+//var buffer = asset.decodeToBuffer(function (buf) {
+//	console.log(buf);
+//});
+/* AAC:
+var scope = this;
 	var asset = scope.asset;
 	if (!asset) {
 		asset = scope.asset = AV.Asset.fromBuffer(data);
@@ -69,48 +92,9 @@ WebSocketAudioStreamer.prototype._processStreamData = function (data) {
 	} else {
 		console.log('Dropping stream data while starting up...');
 	}
-};
+	*/
 
 
-var asset = AV.Asset.fromURL('monitor.aac');
-var buffer = asset.decodeToBuffer(function (buf) {
-	console.log(buf);
-});
-
-/*
-
-function blobToUint8Array(b) {
-	var uri = URL.createObjectURL(b),
-		xhr = new XMLHttpRequest(),
-		i,
-		ui8;
-	xhr.responseType = 'arraybuffer';
-	xhr.open('GET', uri, true);
-	xhr.onload = function () {
-		var audioData = xhr.response;
-
-		console.log(audioData.byteLength);
-
-
-		audioCtx.decodeAudioData(audioData, function (buffer) {
-			source.buffer = buffer;
-
-			source.connect(audioCtx.destination);
-			source.loop = true;
-		},
-
-			function (e) { "Error with decoding audio data" + e.err });
-
-
-	};
-
-	xhr.send();
-
-	URL.revokeObjectURL(uri);
-
-	return xhr.response;
-}
-*/
 
 /*
 https://github.com/kazuki/opus.js-sample

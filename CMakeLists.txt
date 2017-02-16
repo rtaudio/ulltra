@@ -4,7 +4,7 @@ project(ulltra)
 
 option(AUDIO_LINUX_PULSE "Build Linux PulseAudio API" ON)
 
-option(AUDIO_CODEC_OPUS "Enable Opus" OFF)
+option(AUDIO_CODEC_OPUS "Enable Opus" ON)
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -85,14 +85,16 @@ set(src_streaming src/AudioStreamer.cpp src/AudioStreamerRx.cpp src/AudioStreame
 
 
 if(AUDIO_CODEC_OPUS)
-	find_library(OPUS_LIB opus)
-	list(APPEND ULLTRA_LINKLIBS ${OPUS_LIB})
+	#find_library(OPUS_LIB NAMES opus opus-0)	
+	add_subdirectory (opus-cmake)
+	list(APPEND ULLTRA_LINKLIBS opus)
 	list(APPEND src_audio src/audio/coders/OpusCoder.cpp)
+	list(APPEND FDK_AAC_INCLUDES opus-cmake/opus/include)
 	add_definitions("-DWITH_OPUS")
 endif(AUDIO_CODEC_OPUS)
 
 
-add_executable(ulltra ${src_main} ${src_audio} ${src_net} ${src_streaming})
+add_executable(ulltra ${src_main} ${src_audio} ${src_net} ${src_streaming} webroot/ulltra.js/stream_monitor.js)
 
 target_include_directories (ulltra PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${FDK_AAC_INCLUDES} fdk-aac/libSYS/include)
 
@@ -104,3 +106,9 @@ source_group("net"             FILES ${src_net})
 source_group("streaming"       FILES ${src_streaming})
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ulltra)
+
+
+add_custom_command(OUTPUT webroot/ulltra.js/stream_monitor.js 
+DEPENDS  webroot/ulltra.js/
+                   COMMAND tsc --out stream_monitor.js stream_monitor.ts WORKING_DIRECTORY webroot/ulltra.js)
+				   

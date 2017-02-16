@@ -141,22 +141,22 @@ AudioIOManager::AudioIOManager()
 
 
     // AAC
-    coderFactories["aac"] = AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
-        if (params.type == AudioCoder::Encoder)
-            return new AacCoder(params.params.enc);
-        else
-            return (AacCoder*)nullptr; // TODO
-    });
+	coderFactories["aac"] = { AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
+		if (params.type == AudioCoder::Encoder)
+			return new AacCoder(params.params.enc);
+		else
+			return (AacCoder*)nullptr; // TODO
+	}), {8000, 16000, 22050, 44100, 48000, 88200, 96000} };
 
 
 
 #ifdef WITH_OPUS // Opus Codec    
-    coderFactories["opus"] = AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
-        if (params.type == AudioCoder::Encoder)
-            return new OpusCoder(params.params.enc);
-        else
-            return (OpusCoder*)nullptr; // TODO
-    });
+	coderFactories["opus"] = { AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
+		if (params.type == AudioCoder::Encoder)
+			return new OpusCoder(params.params.enc);
+		else
+			return (OpusCoder*)nullptr; // TODO
+	}), {48000} };
 #endif
 }
 
@@ -180,10 +180,11 @@ void AudioIOManager::update()
 AudioCoder *AudioIOManager::createEncoder(const AudioCoder::EncoderParams &encParams) {
     auto cfIt = coderFactories.find(encParams.coderName);
     if (cfIt == coderFactories.end()) {
+		throw std::runtime_error("Unknown encoder!");
         return nullptr;
     }
     auto &f(cfIt->second);
-    return f(encParams);
+    return f.factory(encParams);
 }
 
 
@@ -282,7 +283,7 @@ void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSi
 }
 
 
-void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encParams, BinaryAudioStreamPump pump)
+std::future<void> AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encParams, BinaryAudioStreamPump pump)
 {
 	RttLocalLock ll(apiMutex);
 
@@ -290,13 +291,7 @@ void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderPara
 	// 1. the audio devices
 	// 2. the encoders
 
-	if (sei.numChannels != encParams.numChannels || sei.channelOffset != encParams.channelOffset || sei.sampleRate != encParams.sampleRate) {
-		throw std::runtime_error("StreamEndpointInfo and CoderParams do not match in channels and sample rate!");
-	}
-
-	auto &device = _getDevice(sei.deviceId);
-	if (!device.exists() || !device.isCapture)
-		throw std::runtime_error("Unknown device " + sei.deviceId);
+	openEndpoint_();
 
 	/*
 	RtAudio bug?: WASAPI:
@@ -333,7 +328,7 @@ void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderPara
 		if (cfIt == coderFactories.end()) {
 			throw std::runtime_error("Unknown encoder " + std::string(encParams.coderName));
 		}
-		streamers[acsi] = new AudioCodingStream(acsi, cfIt->second); // TODO acsi.encoderParams
+		streamers[acsi] = new AudioCodingStream(acsi, cfIt->second.factory); // TODO acsi.encoderParams
 	}
 
 	auto &streamer(streamers[acsi]);
@@ -348,4 +343,23 @@ void AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderPara
     }
 	if (startDevice)
 		device.rta->startStream();
+
+	return std::future<void>()
+}
+
+std::future<void> AudioIOManager::streamTo(BinaryAudioStreamPump pull, AudioCoder::DecoderParams &decParams, StreamEndpointInfo &sei)
+{
+
+}
+
+
+void AudioIOManager::openEndpoint_(StreamEndpointInfo &endpoint, const AudioCoder::CoderParams &coderParams)
+{
+	if (sei.numChannels != encParams.numChannels || sei.channelOffset != encParams.channelOffset || sei.sampleRate != encParams.sampleRate) {
+		throw std::runtime_error("StreamEndpointInfo and CoderParams do not match in channels and sample rate!");
+	}
+
+	auto &device = _getDevice(sei.deviceId);
+	if (!device.exists() || !device.isCapture)
+		throw std::runtime_error("Unknown device " + sei.deviceId);
 }

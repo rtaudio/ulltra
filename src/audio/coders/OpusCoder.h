@@ -15,13 +15,20 @@ public:
         OpusCoder(const EncoderParams &params);
         virtual ~OpusCoder();
 
+		int getHeader(uint8_t *outBuffer, int bufferLen) const;
+
 	int encodeInterleaved(const float* samples, int numFrames, uint8_t *buffer, int bufferLen);
 	void decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames);
+
+	virtual int getBlockSize() {
+		/*
+			*also see definition of encodeInterleaved*
+			we fix Fs to 48Khz, opus supports frame(aka. block) durations of 2.5ms, 5ms, 10ms...
+			we want to work with lowest delay, so use 48khz*2.5ms = 120
+		*/
+		return 120*8;
+	};
 	
-	int getBlockSize() {
-		//return info.frameLength / params.params.enc.numChannels;
-		return -1;
-	}
 private:
 	OpusEncoder *enc;
         OpusMSEncoder *MSenc;

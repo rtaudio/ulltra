@@ -5,22 +5,28 @@
 #include <sndfile.hh>
 #include <math.h>
 
-#include <opus/opus.h>
-#include <opus/opus_multistream.h>
+#include <opus.h>
+#include <opus_multistream.h>
 
 OpusCoder::OpusCoder(const EncoderParams &params)
     : AudioCoder(params), MSenc(nullptr), enc(nullptr), MSdec(nullptr), dec(nullptr)
 {
-    int numCouledStreams = params.numChannels == 2 ? 1 : 0;
 
-    unsigned char mapping[256] = {0,1,2,3,4,5,6,7,255};
+    int numCouledStreams = params.numChannels == 2 ? 1 : 0;
+	int numStreams = params.numChannels == 2 ? 1 : params.numChannels;
+
+	//unsigned char mapping[256] = { 0,1,2,3,4,5,6,7,255 };
+	unsigned char mapping[256] = { 0,1,255 };
 
 
     auto appl = params.lowDelay ? OPUS_APPLICATION_RESTRICTED_LOWDELAY : OPUS_APPLICATION_AUDIO;
-    int ret_err = OPUS_BAD_ARG;
+    int ret_err = -10;
 
+	if (params.sampleRate != 48000)
+		LOG(logWARNING) << "Warning: Opus coder requestes with other sample rate than 48000, using 48000!";
+		//throw std::invalid_argument("Opus only supports fs=48kHz");
 
-    MSenc = opus_multistream_encoder_create(params.sampleRate, params.numChannels,  params.numChannels, numCouledStreams, mapping, appl, &ret_err);
+    MSenc = opus_multistream_encoder_create(48000, params.numChannels,  numStreams, numCouledStreams, mapping, appl, &ret_err);
 
 
           if(ret_err != OPUS_OK ) {
@@ -45,15 +51,16 @@ OpusCoder::OpusCoder(const EncoderParams &params)
               throw std::runtime_error("Opus: failed to set bitrate!");
           }
 
+		  
 
-          if(opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_AUTO))!=OPUS_OK) {
+          if(opus_multistream_encoder_ctl(MSenc, OPUS_SET_BANDWIDTH(OPUS_AUTO))!=OPUS_OK) {
               throw std::runtime_error("Opus: failed to set bandwidth!");
           }
            // if(opus_encoder_ctl(enc, OPUS_SET_FORCE_MODE(-2))!=OPUS_BAD_ARG)test_failed();
          // if(opus_multistream_encoder_ctl(MSenc, OPUS_GET_LSB_DEPTH(&i))!=OPUS_OK)test_failed();
 
           if(params.complexity >= 0) {
-           if(opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY((opus_int32)params.complexity))!=OPUS_OK) {
+           if(opus_multistream_encoder_ctl(MSenc, OPUS_SET_COMPLEXITY((opus_int32)params.complexity))!=OPUS_OK) {
                throw std::runtime_error("Opus: failed to set complexity!");
            }
           }
@@ -73,9 +80,47 @@ OpusCoder::~OpusCoder()
         }
 }
 
+int OpusCoder::getHeader(uint8_t *outBuffer, int bufferLen) const {
+	//https://wiki.xiph.org/OggOpus
+	uint8_t head[19];
+	auto hp(head);
+
+	if (bufferLen < sizeof(head)) {
+		throw std::runtime_error("buffer to small to create header");
+	}
+
+	strcpy((char*)hp, "OpusHead"); hp += 8;
+	*hp = 0x01; hp += 1; // ver
+	*hp = params.params.enc.numChannels; hp += 1; // numChannels
+	
+	*reinterpret_cast<uint16_t*>(hp) = 3840;  // pre-skip (spec says convergences after 3840)
+	hp += 2;
+
+	if (params.params.enc.sampleRate != 48000) {
+		LOG(logWARNING) << "Opus Warning: sending header with 48KHz samplring rate, it actually is " << params.params.enc.sampleRate;
+	}
+	
+	*reinterpret_cast<uint32_t*>(hp) = 48000;  // params.params.enc.sampleRate; // sampleRate
+	hp += 4;
+
+	*reinterpret_cast<int16_t*>(hp) = 0;// gain
+	hp += 2;
+	
+	*hp = params.params.enc.numChannels <= 2 ? 0 : 1; // channel mapping family (0 = one stream: mono or L,R stereo)
+
+	memcpy(outBuffer, head, sizeof(head));
+	return sizeof(head);
+}
 
 int OpusCoder::encodeInterleaved(const float* inputSamples, int numSamplesPerChannel, uint8_t *outBuffer, int bufferLen)
 {
+	/*
+	about opus frame_size: take a look at opus_encoder.c / frame_size_select()
+	Opus supports frame durations of 2.5 ms, 5 ms, 10 ms, etc.
+	We fix Fs to 48Khz, want low latency, so our min frame size is 120 samples
+	*/
+
+
     auto ts = (numSamplesPerChannel * params.params.enc.numChannels) ;
     if(ts > convertBuffer.size()) {
         convertBuffer.resize(ts * 2);
@@ -86,7 +131,7 @@ int OpusCoder::encodeInterleaved(const float* inputSamples, int numSamplesPerCha
 
      auto len = opus_multistream_encode(MSenc, buf, numSamplesPerChannel, outBuffer, bufferLen);
      if(len < 0) {
-         LOG(logERROR) << "Opus encoder error!";
+         LOG(logERROR) << "Opus encoder error encoding " << numSamplesPerChannel << " samples per channel";
          return -1;
      }
      return len;
