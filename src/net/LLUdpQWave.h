@@ -18,7 +18,8 @@ public:
 
 	/* rx */
 	bool onBlockingTimeoutChanged(uint64_t timeoutUs);
-	const uint8_t *receive(int &receivedBytes);
+	//const uint8_t *receive(int &receivedBytes);
+	int receive(uint8_t *buffer, int max);
 
 	/* tx */
 	bool send(const uint8_t *data, int dataLength);
@@ -29,7 +30,6 @@ private:
 	SocketAddress m_addr;
 
 	uint8_t  m_txBuffer[1024 * 8 + 1];
-	uint8_t  m_rxBuffer[1024 * 8 + 1];
 
 	WSAOVERLAPPED               m_sendOverlapped;
 	LPTRANSMIT_PACKETS_ELEMENT  m_transmitEl;//buffer

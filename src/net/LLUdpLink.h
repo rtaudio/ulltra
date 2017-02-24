@@ -21,14 +21,14 @@ public:
 
 	/* rx */
 	bool onBlockingTimeoutChanged(uint64_t timeoutUs);
-	const uint8_t *receive(int &receivedBytes);
+	//const uint8_t *receive(int &receivedBytes);
+	int receive(uint8_t *buffer, int max);
 
 	/* tx */
 	bool send(const uint8_t *data, int dataLength);
 	
 private:
 	SOCKET m_socketRx, m_socketTx;
-	uint8_t  m_rxBuffer[1024 * 8 + 1];
 	SocketAddress m_addr;
 	std::string m_desc;
 };

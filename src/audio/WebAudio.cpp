@@ -5,6 +5,7 @@
 #include "rtt/rtt.h"
 
 #include "AudioIOManager.h"
+#include "StreamEndpointInfo.h"
 
 
 #include "coders/AacCoder.h"
@@ -25,28 +26,9 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 
 
 	server.on("web-monitor-stream", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
-		auto captureDeviceId = request["captureDeviceId"].str;
-		auto channelOffset = request["channelOffset"].num;
-		auto numChannels = request["numChannels"].num;
-
-		auto &captureDevice = audioMgr.getDevice(captureDeviceId);
-		if (!captureDevice.exists() || !captureDevice.isCapture) {
-			LOG(logERROR) << "start-stream-capture request with non-existing capture device!";
-			response["error"] = "Capture devices does not exist!";
-			return;
-		}
-
-		if (channelOffset < 0 || std::isnan(channelOffset))
-			channelOffset = 0;
-
-		if (numChannels == 0 || std::isnan(numChannels))
-			numChannels = captureDevice.numChannels() - channelOffset;
-
-		if (captureDevice.numChannels() < (channelOffset + numChannels)) {
-			LOG(logERROR) << "start-stream-capture request with more channels than capture device has!";
-			response["error"] = "Invalid channel count for capture!";
-			return;
-		}
+		StreamEndpointInfo sei(request["captureEndpoint"]);
+		
+		sei.validOrThrow(audioMgr);
 
 		// TODO: temporary fix to 44khz, due to RtAudio bug with WASAPI
 		auto sampleRate = 44100; // captureDevice.getSampleRateCurrentlyAvailable()[0];
@@ -54,9 +36,9 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		response["sampleRate"] = sampleRate;
 
 		JsonNode streamParams;
-		streamParams["captureDeviceId"] = captureDeviceId;
-		streamParams["channelOffset"] = channelOffset;
-		streamParams["numChannels"] = numChannels;
+		streamParams["deviceId"] = sei.deviceId;
+		streamParams["channelOffset"] = sei.channelOffset;
+		streamParams["numChannels"] = sei.numChannels;
 		streamParams["sampleRate"] = sampleRate;
 		streamParams["bitrate"] = 64000;
         streamParams["t"] = (double)std::clock(); // no-cache (Firefox has some weird issues with stalls otherwiese)
@@ -77,14 +59,8 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		const int numChannels = 2;
 		const int numSamplesMusic = 30 * fs;
 
-
-        AudioCoder::EncoderParams params;
-        params.reset();
-        params.maxBitrate = std::stoi(request.data["bitrate"].str);
-		params.numChannels = numChannels;
-		params.sampleRate = fs;
-		params.channelOffset = 0;
-		params.setCoderName(chooseCoder(request, response));
+        AudioCoder::CoderParams params(chooseCoder(request, response), AudioCoder::Encoder, fs, numChannels);
+        params.enc.maxBitrate = std::stoi(request.data["bitrate"].str);
 
         std::unique_ptr<AudioCoder> coderPtr(audioMgr.createEncoder(params));
         auto &coder(*coderPtr);
@@ -135,57 +111,62 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 		LOG(logWARNING) << "Streaming end!";
 	});
 
+
     server.onStream("monitor", [this](const JsonHttpServer::StreamRequest &request, JsonHttpServer::StreamResponse &response) {
-        auto captureDeviceId = request.data["captureDeviceId"].str;
 
-        AudioCoder::EncoderParams encParams;
-                encParams.sampleRate = std::stoi(request.data["sampleRate"].str);
-                encParams.channelOffset = std::stoi(request.data["channelOffset"].str);
-                encParams.numChannels = std::stoi(request.data["numChannels"].str);
-        encParams.maxBitrate = std::stoi(request.data["bitrate"].str);
-
-	
-		auto &captureDevice = audioMgr.getDevice(captureDeviceId);
-		if (!captureDevice.exists() || !captureDevice.isCapture) {
-			throw std::runtime_error("monitor stream with non-existing capture device!");
-		}
-
-		if (captureDevice.numChannels() < (encParams.channelOffset + encParams.numChannels)) {
-			throw std::runtime_error("monitor stream start with more channels than capture device has!");
-		}
-
-
-		AudioIOManager::StreamEndpointInfo ei(captureDevice);
-		ei.sampleRate = encParams.sampleRate;
-		ei.channelOffset = encParams.channelOffset;
-		ei.numChannels = encParams.numChannels;
-		
-		encParams.setCoderName(chooseCoder(request, response));
+		StreamEndpointInfo ei(request.data);
+        AudioCoder::CoderParams encParams(chooseCoder(request, response), AudioCoder::Encoder, ei);
+		encParams.enc.maxBitrate = (int)request.data["bitrate"].asNum();
+		encParams.enc.complexity = -1; // TODO
 
         response.setSendBufferSize(0); // instantly flush
 
-		auto pump = BinaryAudioStreamPump([&](const uint8_t *buffer, int bufferLen, int numSamples) {
-			return response.write(buffer, bufferLen);
+		bool alive = true;
+		auto streamHandle = audioMgr.streamFrom(ei, encParams, [&](const uint8_t *buffer, int bufferLen, int numSamples) {
+			return alive && response.write(buffer, bufferLen);
 		});
 
-		audioMgr.streamFrom(ei, encParams, pump);
-
-		while (response.isConnected()) {
+		while (response.isConnected() && streamHandle.isAlive()) {
 			usleep(200 * 1000);
 		}
+
+		alive = false;
+		usleep(200 * 1000);
+		//streamHandle.requestCancel();
 
 		LOG(logINFO) << "webstream end";
 	});
 
 
+	/*
+	stream compressed audio over a websocket connection
+	issues with AAC: it does not decode properly, neither using the native AudioContext.decodeAudio(), nor audiocogs/aac.js
+	(NaNs in decoded audio)
+	*/
+	server.onWS("monitor", [this](const JsonHttpServer::WsRequest &request, JsonHttpServer::WsConnection &conn) {
+		StreamEndpointInfo ei(request.data["capture"]);
+		AudioCoder::CoderParams encParams("opus", AudioCoder::Encoder, ei);
+		encParams.enc.maxBitrate = (int)request.data["bitrate"].asNum();
+		encParams.enc.complexity = -1;
+
+		bool alive = true;
+		auto streamHandle = audioMgr.streamFrom(ei, encParams, [&](const uint8_t *buffer, int bufferLen, int numSamples) {
+			return alive && conn.write({ buffer, buffer + bufferLen });
+		});
+
+		while (conn.isConnected() && streamHandle.isAlive()) {
+			usleep(200 * 1000);
+		}
+
+		alive = false;
+		usleep(200 * 1000);
+		//streamHandle.requestCancel(); TODO
+
+		LOG(logINFO) << "webstream end";
+	});
 
 
-
-
-
-
-
-    server.onStream("text-stream-test", [this](const JsonHttpServer::StreamRequest & /*request*/, JsonHttpServer::StreamResponse &response) {
+	server.onStream("text-stream-test", [this](const JsonHttpServer::StreamRequest & /*request*/, JsonHttpServer::StreamResponse &response) {
 		response.addHeader("Content-Type", "text/html");
 		response.setSendBufferSize(0);
 		response.write("<html><head><title>textstream</title></head><body><pre>");
@@ -197,59 +178,6 @@ void WebAudio::registerWithServer(JsonHttpServer &server)
 			usleep(1000 * 1000);
 		}
 	});
-
-
-	/*
-	stream compressed audio over a websocket connection
-	issues with AAC: it does not decode properly, neither using the native AudioContext.decodeAudio(), nor audiocogs/aac.js
-	(NaNs in decoded audio)
-	*/
-    server.onWS("monitor", [this](const JsonHttpServer::WsRequest &request, JsonHttpServer::WsConnection &conn) {
-        auto captureDeviceId = request.data["captureDeviceId"].str;
-
-        AudioCoder::EncoderParams encParams;
-                encParams.sampleRate = std::stoi(request.data["sampleRate"].str);
-                encParams.channelOffset = std::stoi(request.data["channelOffset"].str);
-                encParams.numChannels = std::stoi(request.data["numChannels"].str);
-        encParams.maxBitrate = std::stoi(request.data["bitrate"].str);
-
-
-        auto &captureDevice = audioMgr.getDevice(captureDeviceId);
-        if (!captureDevice.exists() || !captureDevice.isCapture) {
-            throw std::runtime_error("monitor stream with non-existing capture device!");
-        }
-
-        if (captureDevice.numChannels() < (encParams.channelOffset + encParams.numChannels)) {
-            throw std::runtime_error("monitor stream start with more channels than capture device has!");
-        }
-
-
-        AudioIOManager::StreamEndpointInfo ei(captureDevice);
-        ei.sampleRate = encParams.sampleRate;
-        ei.channelOffset = encParams.channelOffset;
-        ei.numChannels = encParams.numChannels;
-
-
-        encParams.setCoderName("opus");
-		encParams.complexity = -1;
-
-		bool running = true; // TODO audioMgr.streamFrom should return a future or handle that can be stopped
-		auto cp = &conn;
-        auto pump = BinaryAudioStreamPump([cp, &running](const uint8_t *buffer, int bufferLen, int numSamples) {
-            return running && cp->write({buffer, buffer + bufferLen});
-        });
-
-        audioMgr.streamFrom(ei, encParams, pump);
-
-       while (conn.isConnected()) {
-            usleep(100 * 1000);
-       }
-			running = false;
-			usleep(400 * 1000);
-
-        LOG(logINFO) << "webstream end";
-    });
-
 
     server.onWS("test", [this](const JsonHttpServer::WsRequest &request, JsonHttpServer::WsConnection &conn) {
 

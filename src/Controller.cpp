@@ -9,24 +9,12 @@
 #include <rtt/rtt.h>
 
 
-#include "AudioStreamerTx.h"
-#include "AudioStreamerRx.h"
-
 #include "net/LLUdpLink.h"
 #include "net/LLTcp.h"
 #include "net/LLUdpQWave.h"
 
 
-JsonNode streamInfo2Json(AudioStreamInfo const& asi)
-{
-	JsonNode jsi;
-	jsi["name"] = asi.name;
-	jsi["sample_rate"] = asi.sampleRate;
-	jsi["block_size"] = asi.blockSize;
-	jsi["channel_count"] = asi.channelCount;
-	jsi["latency"] = asi.latency;
-	return jsi;
-}
+
 
 JsonNode deviceState2Json(AudioIOManager::DeviceState const& state)
 {
@@ -44,27 +32,37 @@ JsonNode deviceState2Json(AudioIOManager::DeviceState const& state)
 	return jsi;
 }
 
-Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
+std::vector<std::string> readLines(const std::string &fileName) {
+	std::ifstream nfs(fileName);
+	std::vector<std::string> lines;
+	while (nfs.good() && !nfs.eof()) {
+		std::string nh;
+		nfs >> nh;
+		trim(nh);
+		if (nh.empty() || nh[0] == '#') continue;
+		lines.push_back(nh);
+	}
+	return lines;
+}
+
+Controller::Controller(const Params &params)
+	: m_webAudio(m_audioManager)
 	, m_rpcServer(UP::HttpServerThreadPoolSize)
+	, m_streamManager(*this)
 {
 	auto seed = (unsigned int)time(NULL);
 	srand(seed);
 
 	//m_linkEval.systemLatencyEval();
 
-
     LOG(logINFO) << "Nodes file: " << params.nodesFileName;
-    std::ifstream nfs(params.nodesFileName);
-    while(nfs.good() && !nfs.eof()) {
-        std::string nh;
-        nfs >> nh;
-        trim(nh);
-        if(nh.empty() || nh[0] == '#') continue;
-        Discovery::NodeDevice nd(nh);
-        LOG(logINFO) << "Explicit node: " << nd;
-        m_explicitNodes.push_back((nd));
-        m_discovery.addExplicitHosts(nh); // TODO comment out?
-    }
+	auto nodeHosts = readLines(params.nodesFileName);
+	for (auto nh : nodeHosts) {
+		Discovery::NodeDevice nd(nh);
+		LOG(logINFO) << "Explicit node: " << nd;
+		m_explicitNodes.push_back(nd);
+		m_discovery.addExplicitHosts(nh); // TODO comment out?
+	}
 
 	defaultLinkCandidates();
 
@@ -142,65 +140,6 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 		}
 	});
 
-	
-
-	// 
-	/*
-		sink -> source stream request
-		The sink sends {source_id,links,codecs} in the request
-		source_id: This is a the id of the stream source
-	*/
-	/*
-	m_rpcServer.on("stream-start", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
-		auto n = validateOrigin(addr, request);
-		if (!n.exists()) {
-			response["error"] = "Who are you?";
-			return;
-		}
-
-		auto source_id = request["source_id"].str;
-		auto links = request["links"].arr; // available links on the requesting sink
-		auto codecs = request["codecs"].arr; // available codecs on the requesting sink
-
-		if (source_id.empty()) {
-			LOG(logERROR) << addr << " requested stream-start without specifiying a source_id! " << request;
-			response["error"] = "Specify stream id";
-			return;
-		}
-
-		auto stream = m_audioManager.stream(source_id);
-
-		if (!stream) {
-			response["error"] = "Unknown stream " + source_id;
-			return;
-		}
-
-		// just choose first requested link generator!
-		auto selectedLinkGen = links.front().str;
-
-		// check if selected link is available
-		auto slgi = m_linkCandidates.find(selectedLinkGen);
-		if (slgi == m_linkCandidates.end()) {
-			LOG(logERROR) << "selected stream link " << selectedLinkGen << " not available!";
-			response["error"] = "No supported link available!";
-			return;
-		}
-
-		LLLinkGenerator linkGen = slgi->second;
-
-		// generate a random stream token for validation
-		// this is included in the header of each stream frame
-		auto streamToken = rand();
-
-		response["link"] = selectedLinkGen;
-		response["token"] = streamToken;
-		response["info"] = streamInfo2Json(stream->getInfo());
-		
-		//auto streamer = new AudioStreamerTx(linkGen, n, 6000);
-		//streamer->start(stream, streamToken);
-		//m_streamers.push_back(streamer);
-	});*/
-
 	// JS!
 	m_rpcServer.on("get_graph", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
 		response["self_name"] = UP::getDeviceName();
@@ -217,176 +156,12 @@ Controller::Controller(const Params &params) : m_webAudio(m_audioManager)
 			response["nodes"][i]["hostname"] = n.getHost();
 			i++;
 		}
-
 		/*
 		response["nodes"][i]["name"] = "dummy";
 		response["nodes"][i]["id"] = "dummy" + std::to_string(i);
 		response["nodes"][i]["hostname"] = "s";
-		i++;
-		*/
+		i++; */
 	});
-
-	
-	
-
-	// from gui
-	// request for starting a stream, handled on playback node
-	m_rpcServer.on("start-stream", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
-		// TODO: need to authenticate browser
-
-		auto captureNodeId = request["captureNodeId"].str;
-		auto captureDeviceId = request["captureDeviceId"].str;	
-
-		if (captureNodeId.empty() || captureDeviceId.empty()) {
-			LOG(logERROR) << "start-stream request does not specify capture node and/or device!";
-			response["error"] = "Specify captureNodeId and captureDeviceId!";
-			return;
-		}
-
-		auto playbackDeviceId = request["playbackDeviceId"].str;
-		if (playbackDeviceId.empty()) {
-			LOG(logERROR) << "start-stream request does not specify playback device!";
-			response["error"] = "Specify playbackDeviceId!";
-			return;
-		}
-
-		auto &playbackDevice = m_audioManager.getDevice(playbackDeviceId);
-		if (!playbackDevice.exists() || playbackDevice.isCapture) {
-			LOG(logERROR) << "start-stream request with non-existing playback device!";
-			response["error"] = "Playback devices does not exist!";
-			return;
-		}
-
-		auto channelOffset = std::max((int)request["channelOffset"].num, 0);
-		auto numChannels = std::max((int)request["numChannels"].num, 0);
-
-		if (playbackDevice.numChannels() < (channelOffset+numChannels)) {
-			LOG(logERROR) << "start-stream request with more channels than playback device has!";
-			response["error"] = "Invalid channel count for playback!";
-			return;
-		}
-		
-		auto cnit = m_presentNodes.find(captureNodeId);
-		if (cnit == m_presentNodes.end()) {
-			LOG(logERROR) << "start-stream request with unknown node!";
-			response["error"] = "Capture node unknown!";
-			return;
-		}
-
-		auto captureNode = cnit->second;
-
-		JsonNode captureRequest;
-		captureRequest["captureDeviceId"] = captureDeviceId;
-		captureRequest["channelOffset"] = channelOffset;
-		captureRequest["numChannels"] = numChannels;
-		captureRequest["sampleRates"] = playbackDevice.getSampleRateCurrentlyAvailable();
-		captureRequest["coders"] = std::vector<std::string>(); // TODO	
-		
-		// include available link names
-		std::vector<std::string> linkIds;
-		for (auto &l : m_linkCandidates) {
-			linkIds.push_back(l.first);
-		}
-		captureRequest["linkIds"] = linkIds;
-		
-
-		auto captureResponse = rpc(captureNode, "start-stream-capture", captureRequest);
-		LOG(logDEBUG) << "captureResponse: " << captureResponse;
-	});
-
-
-	// from playback node
-	m_rpcServer.on("start-stream-capture", [this](const SocketAddress &addr, const JsonNode &request, JsonNode &response) {
-		auto n = validateOrigin(addr, request);
-		if (!n.exists()) {
-			response["error"] = "Who are you?";
-			return;
-		}
-
-		auto captureDeviceId = request["captureDeviceId"].str;
-		auto channelOffset = request["channelOffset"].num;
-		auto numChannels = request["numChannels"].num;
-		auto playbackSampleRates = request["sampleRates"].arr;
-		auto coders = request["coders"].arr;
-		auto linkIds = request["linkIds"].arr;
-
-		auto &captureDevice = m_audioManager.getDevice(captureDeviceId);
-		if (!captureDevice.exists() || !captureDevice.isCapture) {
-			LOG(logERROR) << "start-stream-capture request with non-existing capture device!";
-			response["error"] = "Capture devices does not exist!";
-			return;
-		}
-
-		if (captureDevice.numChannels() < (channelOffset + numChannels)) {
-			LOG(logERROR) << "start-stream-capture request with more channels than capture device has!";
-			response["error"] = "Invalid channel count for capture!";
-			return;
-		}
-
-		// find sample rate(s)
-		auto captureSampleRates = captureDevice.getSampleRateCurrentlyAvailable();
-
-		std::vector<int> sampleRateMatches;
-		for (auto &sr : playbackSampleRates) {
-			for (auto csr : captureSampleRates) {
-				if (csr == (int)sr.num) {
-					sampleRateMatches.push_back(csr);
-				}
-			}
-		}
-
-		if (sampleRateMatches.size() == 0) {
-			LOG(logINFO) << "start-stream-capture request with non-matching sample rates!";
-		}
-		else {
-			LOG(logINFO) << "start-stream-capture  request found matching sample rate (maybe more) " << sampleRateMatches[0];
-		}
-
-		// skip first entry because this is preferred sample rate
-		std::sort(sampleRateMatches.begin() + 1, sampleRateMatches.end(), AudioIOManager::compareSampleRatesTo48KHz);
-
-		response["commonSampleRates"] = sampleRateMatches;
-
-		// choose the sample rate
-		// if we dont have a mitch pick lower sample rate
-		int selectedSampleRate = (sampleRateMatches.size() > 0)
-			? sampleRateMatches[0]
-			: std::min((int)playbackSampleRates[0].num, captureSampleRates[0]);
-
-		response["selectedSampleRate"] = selectedSampleRate;
-
-
-		// find link
-		if (linkIds.size() == 0) {
-			LOG(logERROR) << "start-stream-capture request without link candidates!";
-			response["error"] = "Give linkIds!";
-			return;
-		}
-
-		std::vector<std::string> linkMatches;
-		for (auto &lid : linkIds) {
-			for (auto &l : m_linkCandidates) {
-				if (l.first == lid.str) {
-					linkMatches.push_back(lid.str);
-				}
-			}
-		}
-		response["commonLinkIds"] = linkMatches;
-
-		// now we start link evaluation
-		// TODO
-
-		AudioIOManager::StreamEndpointInfo ei(captureDevice);
-		ei.channelOffset = (int)channelOffset;
-		ei.numChannels = (int)numChannels;
-		ei.sampleRate = selectedSampleRate;
-
-		// start our stream
-		//m_audioManager.stream(ei);
-
-
-		response["ok"] = 1;
-	});	
 
 	m_webAudio.registerWithServer(m_rpcServer);	
 }
@@ -415,10 +190,8 @@ Discovery::NodeDevice const& Controller::validateOrigin(const SocketAddress &add
 	if (skipClientNodeId == std::string::npos || skipBothNodeId == std::string::npos) {
 		return Discovery::NodeDevice::none;
 	}
-
 	
 	auto selfId = id.substr(skipClientNodeId + 1, skipBothNodeId - skipClientNodeId - 1);
-
 	if (selfId != m_discovery.getHwAddress()) {
 		return Discovery::NodeDevice::none;
 	}
@@ -442,11 +215,11 @@ Discovery::NodeDevice const& Controller::validateOrigin(const SocketAddress &add
 
 void Controller::listNodes()
 {
-	LOG(logINFO) << "Present nodes:";
+	LOG(logINFO) << "====== Present nodes: ======";
 	for (auto &n : m_presentNodes) {
 		LOG(logINFO) << "    " << n.second;
 	}
-	LOG(logINFO) << std::endl;
+	LOG(logINFO) << " ====== ====== ====== ======" << std::endl;
 }
 
 void Controller::updateThreadMain()
@@ -537,6 +310,7 @@ void Controller::updateThreadMain()
 			}
         }
 
+		/*
 		auto streamers(m_streamers);
 		for (auto si = m_streamers.begin(); si != m_streamers.end(); )
 		{
@@ -550,6 +324,7 @@ void Controller::updateThreadMain()
 				si = m_streamers.erase(si);
 			}
 		}
+		*/
 		
 		//if (!m_rpcServer.hasActiveConnection())
 //			usleep(UP::UpdateIntervalUS);
@@ -645,6 +420,15 @@ void Controller::defaultLinkCandidates()
 	});
 	**/
 
+	candidates["tcp_block"] = ([]() {
+		auto ll = new LLTcp();
+		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::Select)) {
+			delete ll;
+			return (ll = 0);
+		}
+		return ll;
+		});
+
 	// chose best known block modes (linux better in user space)
 	candidates["udp_ablock"] = ([]() {
 		LLUdpLink *ll = new LLUdpLink();
@@ -663,14 +447,7 @@ void Controller::defaultLinkCandidates()
 
 	return;
 	
-	candidates["tcp_block"] = ([]() {
-		auto ll = new LLTcp();
-		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::Select)) {
-			delete ll;
-			return (ll = 0);
-		}
-		return ll;
-	});
+
 	candidates["tcp_block"] = ([]() {
 		auto ll = new LLTcp();
 		if (!ll->setRxBlockingMode(LLCustomBlock::Mode::Select)) {

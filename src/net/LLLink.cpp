@@ -52,7 +52,8 @@ bool LLLink::flushReceiveBuffer() {
 	auto t = m_receiveBlockingTimeoutUs;
 	if (t != 0) setBlockingTimeout(0); // 0 means asyc!
 	int recvLen;
-	while (receive(recvLen)) {}
+	std::vector<uint8_t> buf;
+	while (receive(buf.data(), buf.size())) {}
 	if (t != 0) return setBlockingTimeout(t); // restore previous timeout
 	return true;
 }
@@ -342,6 +343,12 @@ static int recvpacket(int sock, char *pdata, int dataLen, int recvmsg_flags, int
 }
 #endif
 
+/*
+returns:
+ 0:	peer has shutdown
+-1:	on error:
+	- if no data and non-blocking socket (sets errno to EAGAIN or EWOULDBLOCK)
+*/
 int LLLink::socketReceive(SOCKET soc, uint8_t *buffer, int bufferSize)
 {
 	struct sockaddr_storage remote;

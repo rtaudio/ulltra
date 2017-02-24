@@ -377,13 +377,16 @@ void runTimedMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::st
 
 const uint8_t *slaveReceive(LLLink *link, int &testRunKey, uint64_t &tLastReceive, int dataLen) {
     const int MaxTimeouts = 50;
-    const uint8_t *data;
+    uint8_t *data;
+
+	std::vector<uint8_t> buffer(1024 * 10);
+	data = buffer.data();
 
     if (tLastReceive == 0)
         tLastReceive = UP::getMicroSecondsCoarse();;
 
     for (int i = 0; i <= MaxTimeouts; i++) {
-        data = link->receive(dataLen);
+		dataLen = link->receive(data, buffer.size());
 
         if (dataLen == -1) {
             LOG(logINFO) << "Link broke, cancelling!";
@@ -581,15 +584,15 @@ void runTestAsMaster(const Discovery::NodeDevice &nd, LLLink *link, const std::s
                 packetsSend++;
             }
 
-            const uint8_t *receivedData;
+            std::vector<uint8_t> receivedData(1024*10);
             int recvLen = 0;
-            while (packetsInFlight > 0 && (receivedData = link->receive(recvLen))) {
+            while (packetsInFlight > 0 && (recvLen = link->receive(receivedData.data(), receivedData.size()))) {
                 if (recvLen < sizeof(TestDataHeader)) {
                     LOG(logINFO) << "Received packet with invalid size " << recvLen << ", ignoring.";
                     continue;
                 }
 
-                auto tdh = reinterpret_cast<const TestDataHeader *>(receivedData);
+                auto tdh = reinterpret_cast<const TestDataHeader *>(receivedData.data());
 
                 // dont expect packages to arrive in-order, just check when it was sent!
                 if (tdh->testRunKey != key) {

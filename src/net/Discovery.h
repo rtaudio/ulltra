@@ -127,7 +127,7 @@ public:
 
     bool send(const std::string &msg, const NodeDevice &node = NodeDevice::none);
 
-	std::string getHwAddress();
+	static std::string getHwAddress();
     inline const std::string &getSelfName() const { return UP::getDeviceName(); }
 
 private:
@@ -135,7 +135,7 @@ private:
 	bool initBroadcast(int port);
 
 	void tryConnectExplictHosts();
-	NodeDevice &getNode(const std::string &id);	
+	NodeDevice &getNode_(const std::string &id);	
 	bool processMessage(const NodeAddr& nd, const char *message, std::vector<NodeDevice> &newNodes);
 
 

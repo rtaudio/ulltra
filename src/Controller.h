@@ -10,6 +10,7 @@
 #include "audio/AudioIOManager.h"
 #include "audio/AudioCoder.h"
 #include "audio/WebAudio.h"
+#include "StreamLinkManager.h"
 
 
 
@@ -17,9 +18,11 @@ class LLLink;
 class AudioIO;
 class AudioIOStream;
 class AudioStreamer;
+class StreamLinkManager;
 
 class Controller
 {
+	friend class StreamLinkManager;
 public:
     struct Params {
         std::string nodesFileName;
@@ -48,6 +51,7 @@ private:
 	JsonHttpClient m_client;
 	JsonHttpServer m_rpcServer;
 	AudioIOManager m_audioManager;
+	StreamLinkManager m_streamManager;
 
 	bool m_isRunning;
 	RttThread *m_updateThread;

@@ -154,8 +154,9 @@ bool LLUdpLink::onBlockingTimeoutChanged(uint64_t timeoutUs)
 
 
 
-const uint8_t *LLUdpLink::receive(int &receivedBytes)
+int LLUdpLink::receive(uint8_t *buf, int max)
 {
+	// TODO: need to handle peer shutdown
 	if (m_rxBlockingMode != LLCustomBlock::Mode::UserBlock) {
 		if (m_rxBlockingMode == LLCustomBlock::Mode::Select) {
 			int res = socketSelect(m_socketRx, m_receiveBlockingTimeoutUs);
@@ -165,19 +166,17 @@ const uint8_t *LLUdpLink::receive(int &receivedBytes)
 
 			if (res < 0) {
 				LOG(logERROR) << "Select failed " << res;
-				receivedBytes = -1; //link broke!
-				return 0; // this should not happen!
+				return -1; // link broke! this should not happen!
 			}
 
 			// now we can receive!
 		}
 
-		receivedBytes = socketReceive(m_socketRx, m_rxBuffer, sizeof(m_rxBuffer));
-		if (receivedBytes == -1) {
+		int receivedBytes = socketReceive(m_socketRx, buf, max);
+		if (receivedBytes == -1) { // -1: no data (or error)
 			receivedBytes = 0;
-			return 0;
 		}
-		return m_rxBuffer;
+		return receivedBytes;
 	}
 
 
@@ -186,9 +185,9 @@ const uint8_t *LLUdpLink::receive(int &receivedBytes)
 	auto t0 = UlltraProto::getMicroSecondsCoarse();
 
 	while (true) {
-		receivedBytes = socketReceive(m_socketRx, m_rxBuffer, sizeof(m_rxBuffer));
+		int receivedBytes = socketReceive(m_socketRx, buf, max);
 		if (receivedBytes >= 0)
-			return m_rxBuffer;
+			return receivedBytes;
 
 
 

@@ -81,7 +81,7 @@ set(src_main src/ulltra.cpp src/Controller.cpp src/UlltraProto.cpp)
 set(src_audio src/audio/AudioIOManager.cpp src/audio/AudioCoder.cpp src/audio/coders/AacCoder.cpp src/audio/WebAudio.cpp )
 # autil/test.cpp
 set(src_net src/net/Discovery.cpp src/net/LinkEval.cpp src/net/LLLink.cpp src/net/LLTcp.cpp src/net/LLUdpLink.cpp src/net/LLUdpQWave.cpp src/net/SimpleUdpReceiver.cpp src/net/LLCustomBlock.cpp)
-set(src_streaming src/AudioStreamer.cpp src/AudioStreamerRx.cpp src/AudioStreamerTx.cpp src/OrderingBuffer.cpp)
+set(src_streaming src/AudioStreamerCoding.cpp src/AudioStreamerEncoding.cpp src/AudioStreamerDecoding.cpp src/OrderingBuffer.cpp src/StreamLinkManager.cpp)
 
 
 if(AUDIO_CODEC_OPUS)

@@ -8,7 +8,7 @@
 #include <opus.h>
 #include <opus_multistream.h>
 
-OpusCoder::OpusCoder(const EncoderParams &params)
+OpusCoder::OpusCoder(const CoderParams &params)
     : AudioCoder(params), MSenc(nullptr), enc(nullptr), MSdec(nullptr), dec(nullptr)
 {
 
@@ -19,7 +19,7 @@ OpusCoder::OpusCoder(const EncoderParams &params)
 	unsigned char mapping[256] = { 0,1,255 };
 
 
-    auto appl = params.lowDelay ? OPUS_APPLICATION_RESTRICTED_LOWDELAY : OPUS_APPLICATION_AUDIO;
+    auto appl = params.enc.lowDelay ? OPUS_APPLICATION_RESTRICTED_LOWDELAY : OPUS_APPLICATION_AUDIO;
     int ret_err = -10;
 
 	if (params.sampleRate != 48000)
@@ -45,7 +45,7 @@ OpusCoder::OpusCoder(const EncoderParams &params)
             *                                   channels and the input sampling rate.
             * @hideinitializer */
           // TODO: OPUS_AUTO
-          opus_int32 bitrate = params.maxBitrate;
+          opus_int32 bitrate = params.enc.maxBitrate;
 
           if(opus_multistream_encoder_ctl(MSenc, OPUS_SET_BITRATE(bitrate))!=OPUS_OK) {
               throw std::runtime_error("Opus: failed to set bitrate!");
@@ -59,8 +59,8 @@ OpusCoder::OpusCoder(const EncoderParams &params)
            // if(opus_encoder_ctl(enc, OPUS_SET_FORCE_MODE(-2))!=OPUS_BAD_ARG)test_failed();
          // if(opus_multistream_encoder_ctl(MSenc, OPUS_GET_LSB_DEPTH(&i))!=OPUS_OK)test_failed();
 
-          if(params.complexity >= 0) {
-           if(opus_multistream_encoder_ctl(MSenc, OPUS_SET_COMPLEXITY((opus_int32)params.complexity))!=OPUS_OK) {
+          if(params.enc.complexity >= 0) {
+           if(opus_multistream_encoder_ctl(MSenc, OPUS_SET_COMPLEXITY((opus_int32)params.enc.complexity))!=OPUS_OK) {
                throw std::runtime_error("Opus: failed to set complexity!");
            }
           }
@@ -91,22 +91,22 @@ int OpusCoder::getHeader(uint8_t *outBuffer, int bufferLen) const {
 
 	strcpy((char*)hp, "OpusHead"); hp += 8;
 	*hp = 0x01; hp += 1; // ver
-	*hp = params.params.enc.numChannels; hp += 1; // numChannels
+	*hp = params.numChannels; hp += 1; // numChannels
 	
 	*reinterpret_cast<uint16_t*>(hp) = 3840;  // pre-skip (spec says convergences after 3840)
 	hp += 2;
 
-	if (params.params.enc.sampleRate != 48000) {
-		LOG(logWARNING) << "Opus Warning: sending header with 48KHz samplring rate, it actually is " << params.params.enc.sampleRate;
+	if (params.sampleRate != 48000) {
+		LOG(logWARNING) << "Opus Warning: sending header with 48KHz samplring rate, it actually is " << params.sampleRate;
 	}
 	
-	*reinterpret_cast<uint32_t*>(hp) = 48000;  // params.params.enc.sampleRate; // sampleRate
+	*reinterpret_cast<uint32_t*>(hp) = 48000;  // params.sampleRate; // sampleRate
 	hp += 4;
 
 	*reinterpret_cast<int16_t*>(hp) = 0;// gain
 	hp += 2;
 	
-	*hp = params.params.enc.numChannels <= 2 ? 0 : 1; // channel mapping family (0 = one stream: mono or L,R stereo)
+	*hp = params.numChannels <= 2 ? 0 : 1; // channel mapping family (0 = one stream: mono or L,R stereo)
 
 	memcpy(outBuffer, head, sizeof(head));
 	return sizeof(head);
@@ -121,7 +121,7 @@ int OpusCoder::encodeInterleaved(const float* inputSamples, int numSamplesPerCha
 	*/
 
 
-    auto ts = (numSamplesPerChannel * params.params.enc.numChannels) ;
+    auto ts = (numSamplesPerChannel * params.numChannels) ;
     if(ts > convertBuffer.size()) {
         convertBuffer.resize(ts * 2);
     }
@@ -137,7 +137,7 @@ int OpusCoder::encodeInterleaved(const float* inputSamples, int numSamplesPerCha
      return len;
 }
 
-void OpusCoder::decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames)
+int OpusCoder::decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numSamplesPerChannel)
 {
-	
+	return -1;
 }

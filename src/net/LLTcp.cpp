@@ -82,6 +82,7 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 
 		socketSetBlocking(m_socAccept, false);
 
+
 		LOG(logDEBUG2) << "waiting for slave to connect ...";
 		SocketAddress client;
 		socklen_t len = sizeof(client);
@@ -112,7 +113,8 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 				return false;
 			}
 
-			usleep(100);
+			using namespace std::chrono_literals;
+			std::this_thread::sleep_for(1ms);
 		}
 
 		// do not accept any more clients!!
@@ -134,7 +136,7 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 		//socketSetBlocking(m_soc, true);
 		int res;
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 50; i++) {
 			res = ::connect(m_soc, &server.sa, len);
 			/*res = socketConnectTimeout(m_soc, 1000 * UP::TcpConnectTimeout);
 			if (res == 0) { // timeout
@@ -147,8 +149,10 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 			if (res == 0)
 				break;
 
-			LOG(logDEBUG3) << "Connection failed, retry...";
-			usleep(10000);
+			if((i % 10) == 0)
+				LOG(logDEBUG3) << "Connection failed, retry...";
+			using namespace std::chrono_literals;
+			std::this_thread::sleep_for(20ms);
 		}
 
 		if (res < 0) { // error
@@ -160,6 +164,13 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 
 
 		LOG(logDEBUG3) << "connected ("<<res<<") to server " << server;
+	}
+
+	if (!socketSetBlocking(m_soc, false)) {
+		LOG(logERROR) << "failed to socketSetBlocking(false)! " << lastError();
+		close(m_socAccept);
+		m_socAccept = -1;
+		return false;
 	}
 
 #if _WIN32
@@ -203,7 +214,8 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 
 	
 	// set the buffer size, is this necessary?
-	int n = 256; // 1024 * 8;
+	// yes! setting it to 1 ensures sync (sent packets will not be concatinated!)
+	int n = 1; // 1024 * 8; 
 	if (setsockopt(m_soc, SOL_SOCKET, SO_RCVBUF, (const char *)&n, sizeof(n)) == -1
 		|| setsockopt(m_soc, SOL_SOCKET, SO_SNDBUF, (const char *)&n, sizeof(n)) == -1) {
 		LOG(logERROR) << ("Cannot set rcvbuf size!");
@@ -219,8 +231,9 @@ bool LLTcp::connect(const LinkEndpoint &end, bool isMaster)
 }
 
 
-const uint8_t *LLTcp::receive(int &receivedBytes)
+int LLTcp::receive(uint8_t *buf, int max)
 {
+	/*
 	int res = socketSelect(m_soc, m_recvTimeoutUs);
 	if (res == 0) {
 		return 0; // timeout
@@ -230,15 +243,25 @@ const uint8_t *LLTcp::receive(int &receivedBytes)
 		LOG(logERROR) << *this << "->receive failed! " << lastError();
 		return 0;
 	}
+	*/
 
-	receivedBytes = recv(m_soc, (char*)m_rxBuffer, sizeof(m_rxBuffer), 0);
+	int receivedBytes = recv(m_soc, (char*)buf, max, 0);
 	if (receivedBytes <= 0) {
+#ifdef _WIN32
+		if (WSAGetLastError() == WSAEWOULDBLOCK) {
+			return 0; // timeout
+		}
+#else
+		auto en = errno;
+		if (en == EAGAIN || en == EWOULDBLOCK) {
+			return 0;
+		}
+#endif
 		LOG(logERROR) << *this << "->receive failed: nothing recved after select! " << lastError();
-		receivedBytes = -1;
-		return 0;
+		return -1;
 	}
 
-	return m_rxBuffer;
+	return receivedBytes;
 }
 
 bool LLTcp::send(const uint8_t *data, int dataLength)

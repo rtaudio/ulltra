@@ -4,13 +4,10 @@
 
 #include "AudioIOManager.h"
 #include "AudioIO.h"
-#include "../AudioStreamer.h"
-
+#include "StreamEndpointInfo.h"
 
 #include "coders/AacCoder.h"
 #include "coders/OpusCoder.h"
-
-
 
 
 /*
@@ -142,21 +139,18 @@ AudioIOManager::AudioIOManager()
 
     // AAC
 	coderFactories["aac"] = { AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
-		if (params.type == AudioCoder::Encoder)
-			return new AacCoder(params.params.enc);
-		else
-			return (AacCoder*)nullptr; // TODO
-	}), {8000, 16000, 22050, 44100, 48000, 88200, 96000} };
+		return new AacCoder(params);
+	}), {8000, 16000, 22050, 44100, 48000, 88200, 96000}, false };
 
 
 
 #ifdef WITH_OPUS // Opus Codec    
 	coderFactories["opus"] = { AudioCoder::Factory([](const AudioCoder::CoderParams &params) {
 		if (params.type == AudioCoder::Encoder)
-			return new OpusCoder(params.params.enc);
+			return new OpusCoder(params);
 		else
 			return (OpusCoder*)nullptr; // TODO
-	}), {48000} };
+	}), {48000}, false };
 #endif
 }
 
@@ -177,7 +171,7 @@ void AudioIOManager::update()
 
 
 
-AudioCoder *AudioIOManager::createEncoder(const AudioCoder::EncoderParams &encParams) {
+AudioCoder *AudioIOManager::createEncoder(const AudioCoder::CoderParams &encParams) {
     auto cfIt = coderFactories.find(encParams.coderName);
     if (cfIt == coderFactories.end()) {
 		throw std::runtime_error("Unknown encoder!");
@@ -189,64 +183,7 @@ AudioCoder *AudioIOManager::createEncoder(const AudioCoder::EncoderParams &encPa
 
 
 
-int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
-	double streamTime, RtAudioStreamStatus status, void *data) {
-	DeviceState &ds(*(DeviceState*)data);
-	RtaudioCallbackData &rcd(ds.cd);
-	auto &streams(rcd.streams);
 
-    rcd.lastCallbackTime = UP::getWallClockSeconds();
-
-	if (rcd.hasStreamsToAdd) {
-        LOG(logDEBUG) << "rtAudioInout adding stream!" << rcd.addStreams.size();
-        if(rcd.addStreams.size() == 0) {
-               LOG(logERROR) << "hasStreamsToAdd but empty vector!";
-        }
-		for (auto as : rcd.addStreams)
-			streams.push_back(as);
-		rcd.addStreams.clear();
-		rcd.hasStreamsToAdd = false;
-	}
-	
-	bool res;
-    bool anyOk = false;
-
-	for (auto it = streams.begin(); it != streams.end();) {
-		auto &s(*it);
-
-		if (status) {
-			s->notifyXRun();
-        }
-
-		if (ds.isCapture) {
-			res = s->inputInterleaved((float*)inputBuffer, nBufferFrames, ds.numChannels(), streamTime);
-		} else {
-			res = s->outputInterleaved((float*)outputBuffer, nBufferFrames, ds.numChannels(), streamTime);
-		}
-
-
-		if (!res) {
-			it = streams.erase(it);
-                        LOG(logDEBUG) << "removed stream, still active:" << streams.size();
-			if (streams.size() == 0)
-				break;
-		}
-        else {
-			it++;
-            anyOk = true;
-        }
-	}
-
-    if(anyOk) {
-        rcd.lastIOTime = rcd.lastCallbackTime;
-    }
-
-	if (streams.size() == 0 && (rcd.lastCallbackTime - rcd.lastIOTime) > 4) {
-        	LOG(logDEBUG) << "rtAudioInout end after 4 seconds, no more streams!";
-		return 1;
-	}
-	return 0;
-}
 
 void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSize)
 {
@@ -283,43 +220,36 @@ void AudioIOManager::openDevice(DeviceState &device, int sampleRate, int blockSi
 }
 
 
-std::future<void> AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder::EncoderParams &encParams, BinaryAudioStreamPump pump)
+ActiveStreamHandle AudioIOManager::streamFrom(const StreamEndpointInfo &sei, const AudioCoder::CoderParams &encParams, BinaryAudioStreamPump &&pump)
 {
 	RttLocalLock ll(apiMutex);
+
+	if (encParams.type != AudioCoder::Encoder) {
+		throw std::invalid_argument("called streamFrom() with decoder params!");
+	}
 
 	// here we manage 2 classes of resources:
 	// 1. the audio devices
 	// 2. the encoders
 
-	openEndpoint_();
+	auto &device = startEndpoint_(sei, encParams);	
 
-	/*
-	RtAudio bug?: WASAPI:
-	- capture only works with bs=512,sr=44100 (event though GetMixFormat reports 48000) ???
-	*/
-	// open device if needed // TODO: need to close!
-	bool startDevice = false;
-	if (!device.isOpen()) {
-		openDevice(device, sei.sampleRate, 512); // TODO
-		startDevice = true;
-	}
-	else if(!device.rta->isStreamRunning()) {
-		startDevice = true;
-	}
 
-	AudioCodingStream::Params acsi;
-	acsi.setDeviceId(device.id);
-	acsi.encoderParams = encParams;
+	if (!device.isCapture)
+		throw std::runtime_error("Cannot stream from playback endpoint " + device.info.name);
+
+	AudioStreamerEncoding::Params acsi(device.id, encParams);
 	acsi.async = true; // TODO
 
 	// find an existing streamer with same info
 	// the hash includes: device and encoder params (coderName, sampleRate, channels, bitrate)
-	auto streamerIt = streamers.find(acsi);
-	auto isNewStreamer = (streamerIt == streamers.end());
+	auto streamerIt = streamersTx.find(acsi);
+	auto isNewStreamer = (streamerIt == streamersTx.end());
 
+	// check existing streamer stopped and re-create it
 	if (!isNewStreamer && streamerIt->second->stopped()) {
 		delete streamerIt->second;
-		streamers.erase(streamerIt);
+		streamersTx.erase(streamerIt);
 		isNewStreamer = true;
 	}
 
@@ -328,38 +258,171 @@ std::future<void> AudioIOManager::streamFrom(StreamEndpointInfo &sei, AudioCoder
 		if (cfIt == coderFactories.end()) {
 			throw std::runtime_error("Unknown encoder " + std::string(encParams.coderName));
 		}
-		streamers[acsi] = new AudioCodingStream(acsi, cfIt->second.factory); // TODO acsi.encoderParams
+		streamersTx[acsi] = new AudioStreamerEncoding(acsi, cfIt->second.factory); // TODO acsi.encoderParams
 	}
 
-	auto &streamer(streamers[acsi]);
+	auto &streamer(streamersTx[acsi]);
 
 	streamer->addSink(pump);
 
     if(isNewStreamer) {
-    while (device.cd.hasStreamsToAdd) { std::this_thread::yield(); }
+		streamer->start();
+
+		while (device.cd.hasStreamsToAdd) { using namespace std::chrono_literals;  std::this_thread::sleep_for(10ms); }
 		device.cd.addStreams.push_back(streamer);
-       LOG(logDEBUG) << "notifying audio io thread about new streamer";
-	device.cd.hasStreamsToAdd = true;
+		LOG(logDEBUG) << "notifying audio io thread about new streamer";
+		device.cd.hasStreamsToAdd = true;
     }
-	if (startDevice)
-		device.rta->startStream();
+	
 
-	return std::future<void>()
-}
-
-std::future<void> AudioIOManager::streamTo(BinaryAudioStreamPump pull, AudioCoder::DecoderParams &decParams, StreamEndpointInfo &sei)
-{
-
+	return ActiveStreamHandle(streamer); // todo: this is not correct, streamers are shared
 }
 
 
-void AudioIOManager::openEndpoint_(StreamEndpointInfo &endpoint, const AudioCoder::CoderParams &coderParams)
+
+ActiveStreamHandle AudioIOManager::streamTo(BinaryStreamRead &&pull, const AudioCoder::CoderParams &decParams, const StreamEndpointInfo &sei)
 {
-	if (sei.numChannels != encParams.numChannels || sei.channelOffset != encParams.channelOffset || sei.sampleRate != encParams.sampleRate) {
+	RttLocalLock ll(apiMutex);
+
+	if (decParams.type != AudioCoder::Decoder) {
+		throw std::invalid_argument("called streamTo() with encoder params!");
+	}
+	
+	auto &device = startEndpoint_(sei, decParams);		
+
+	if (device.isCapture)
+		throw std::runtime_error("Cannot stream to capture endpoint " + device.info.name);
+	
+	AudioStreamerCoding::Params acsi(device.id, decParams);
+	acsi.async = true; // TODO
+
+	auto streamer = (AudioStreamerDecoding*)newStreamer(acsi);
+	streamer->setSource(std::move(pull));	
+	streamer->start();
+
+
+	// todo: put this in a function:
+	while (device.cd.hasStreamsToAdd) { using namespace std::chrono_literals;  std::this_thread::sleep_for(10ms); }
+	device.cd.addStreams.push_back(streamer);
+	LOG(logDEBUG) << "notifying audio io thread about new streamer";
+	device.cd.hasStreamsToAdd = true;
+
+	return ActiveStreamHandle(streamer);
+}
+
+
+AudioIOManager::DeviceState & AudioIOManager::startEndpoint_(const StreamEndpointInfo &endpoint, const AudioCoder::CoderParams &coderParams)
+{
+	if (endpoint.numChannels != coderParams.numChannels
+		|| endpoint.channelOffset != coderParams.channelOffset
+		|| endpoint.sampleRate != coderParams.sampleRate) {
 		throw std::runtime_error("StreamEndpointInfo and CoderParams do not match in channels and sample rate!");
 	}
 
-	auto &device = _getDevice(sei.deviceId);
-	if (!device.exists() || !device.isCapture)
-		throw std::runtime_error("Unknown device " + sei.deviceId);
+	auto &device = _getDevice(endpoint.deviceId);
+	if (!device.exists())
+		throw std::runtime_error("Unknown device " + endpoint.deviceId);
+
+	if (device.isCapture != (coderParams.type == AudioCoder::Encoder)) {
+		throw std::runtime_error("Coder type does not fit device!");
+	}
+
+	/*
+	RtAudio bug?: WASAPI:
+	- capture only works with bs=512,sr=44100 (event though GetMixFormat reports 48000) ???
+	*/
+	// open device if needed // TODO: need to close!
+	bool startDevice = false;
+	if (!device.isOpen()) {
+		openDevice(device, endpoint.sampleRate, 512); // TODO
+		startDevice = true;
+	}
+	else if (!device.rta->isStreamRunning()) {
+		startDevice = true;
+	}
+
+
+	if (startDevice)
+		device.rta->startStream();
+
+	return  device;
+}
+
+AudioStreamerCoding *AudioIOManager::newStreamer(const AudioStreamerCoding::Params &params)
+{
+
+	auto cfIt = coderFactories.find(params.coderParams.coderName);
+	if (cfIt == coderFactories.end()) {
+		throw std::runtime_error("Unknown encoder " + std::string(params.coderParams.coderName));
+	}
+
+	if (params.coderParams.type == AudioCoder::Encoder) {
+		return new AudioStreamerEncoding(params, cfIt->second.factory);
+	}
+	else
+	{
+		return new AudioStreamerDecoding(params, cfIt->second.factory);
+	}
+}
+
+int AudioIOManager::rtAudioInout(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
+	double streamTime, RtAudioStreamStatus status, void *data) {
+	DeviceState &ds(*(DeviceState*)data);
+	RtaudioCallbackData &rcd(ds.cd);
+	auto &streams(rcd.streams);
+
+	rcd.lastCallbackTime = UP::getWallClockSeconds();
+
+	if (rcd.hasStreamsToAdd) {
+		LOG(logDEBUG) << "rtAudioInout adding stream!" << rcd.addStreams.size();
+		if (rcd.addStreams.size() == 0) {
+			LOG(logERROR) << "hasStreamsToAdd but empty vector!";
+		}
+		for (auto as : rcd.addStreams)
+			streams.push_back(as);
+		rcd.addStreams.clear();
+		rcd.hasStreamsToAdd = false;
+	}
+
+	bool res;
+	bool anyOk = false;
+
+	for (auto it = streams.begin(); it != streams.end();) {
+		auto &s(*it);
+
+		if (status) {
+			s->notifyXRun();
+		}
+
+		if (ds.isCapture) {
+			res = s->inputInterleaved((float*)inputBuffer, nBufferFrames, ds.numChannels(), ds.clock);
+		}
+		else {
+			res = s->outputInterleaved((float*)outputBuffer, nBufferFrames, ds.numChannels(), ds.clock);
+		}
+
+
+		if (!res) {
+			it = streams.erase(it);
+			LOG(logDEBUG) << "removed stream, still active:" << streams.size();
+			if (streams.size() == 0)
+				break;
+		}
+		else {
+			it++;
+			anyOk = true;
+		}
+	}
+
+	if (anyOk) {
+		rcd.lastIOTime = rcd.lastCallbackTime;
+	}
+
+	ds.clock += nBufferFrames;
+
+	if (streams.size() == 0 && (rcd.lastCallbackTime - rcd.lastIOTime) > 4) {
+		LOG(logDEBUG) << "rtAudioInout end after 4 seconds, no more streams!";
+		return 1;
+	}
+	return 0;
 }

@@ -164,26 +164,35 @@ Discovery::NodeDevice::NodeDevice(int family) {
 
 const Discovery::NodeDevice &Discovery::getNode(const sockaddr_storage &addr) const
 {
-    if(addr.ss_family == 0)
-        return NodeDevice::none;
+	if (addr.ss_family == 0)
+		return NodeDevice::none;
 
-    for (auto &np : m_discovered) {
-        auto &n(np.second);
-        if(addr.ss_family != n.addrStorage.getFamily())
-            continue;
+	for (auto &np : m_discovered) {
+		auto &n(np.second);
+		if (addr.ss_family != n.addrStorage.getFamily())
+			continue;
 
-        if(addr.ss_family == AF_INET) {
-            if(((sockaddr_in*)&addr)->sin_addr.s_addr == ((sockaddr_in*)&n.addrStorage)->sin_addr.s_addr)
-                return m_discovered.at(np.first);
-        }
-        else if(addr.ss_family == AF_INET6) {
-            if(memcmp( &((struct sockaddr_in6 *)&addr)->sin6_addr,&((struct sockaddr_in6 *)&n.addrStorage)->sin6_addr,
-                               sizeof(struct in6_addr)) == 0)
-                return m_discovered.at(np.first);
-        }
+		if (addr.ss_family == AF_INET) {
+			if (((sockaddr_in*)&addr)->sin_addr.s_addr == ((sockaddr_in*)&n.addrStorage)->sin_addr.s_addr)
+				return m_discovered.at(np.first);
+		}
+		else if (addr.ss_family == AF_INET6) {
+			if (memcmp(&((struct sockaddr_in6 *)&addr)->sin6_addr, &((struct sockaddr_in6 *)&n.addrStorage)->sin6_addr,
+				sizeof(struct in6_addr)) == 0)
+				return m_discovered.at(np.first);
+		}
 	}
 
-    return NodeDevice::none;
+	return NodeDevice::none;
+}
+
+const Discovery::NodeDevice &Discovery::getNode(const std::string &id) const
+{
+	for (auto &np : m_discovered) {
+		if(np.second.id == id)
+			return  m_discovered.at(np.first);
+	}
+	return NodeDevice::none;
 }
 
 void Discovery::tryConnectExplictHosts()

@@ -16,7 +16,9 @@
 #include <future>
 
 #include "AudioCoder.h"
-#include "../AudioStreamer.h"
+#include "../AudioStreamerCoding.h"
+#include "../AudioStreamerEncoding.h"
+#include "../AudioStreamerDecoding.h"
 
 #include <rtt/rtt.h>
 
@@ -27,11 +29,27 @@ stream hash:
 EncoderParams = {Bitrate}
 */
 
-class AudioStreamer;
+struct StreamEndpointInfo;
 
-class AudioCodingStream;
+struct ActiveStreamHandle {
+	// no copy
+	ActiveStreamHandle(const ActiveStreamHandle&) = delete;
+	ActiveStreamHandle& operator=(const ActiveStreamHandle&) = delete;
+	// move only
+	ActiveStreamHandle(ActiveStreamHandle&&) = default;
+	ActiveStreamHandle& operator = (ActiveStreamHandle&&) = default;
 
+	ActiveStreamHandle(AudioStreamerCoding *streamer) {} // TODO
 
+	bool isAlive() const { return true; }
+	//void requestCancel();
+	//void waitUntilEnd() const;
+
+	//void detach();
+
+	// destructor syncs
+	//~ActiveStreamHandle() { waitUntilEnd(); }
+};
 
 
 class AudioIOManager
@@ -39,7 +57,7 @@ class AudioIOManager
 private:
 	struct RtaudioCallbackData {
 		AudioIOManager *mgr;
-		std::vector<AudioCodingStream*> streams, addStreams;
+		std::vector<AudioStreamerCoding*> streams, addStreams;
 		std::atomic<bool> hasStreamsToAdd;
 
         uint64_t lastCallbackTime;
@@ -56,24 +74,7 @@ private:
 
 public:
 	
-
-	struct DeviceState;
-
-	struct StreamEndpointInfo {
-		std::string deviceId;
-		int channelOffset;
-		int numChannels;
-		int sampleRate;
-
-		StreamEndpointInfo(const DeviceState & device)
-			: deviceId(device.id), channelOffset(0)
-			, numChannels(device.numChannels())
-			, sampleRate(device.getSampleRateCurrentlyAvailable()[0])
-		{ }
-	};
-
-
-
+	
 	struct DeviceState {
 		friend class AudioIOManager;
 		// no copy
@@ -94,27 +95,23 @@ public:
 		std::string id;
 		RtAudio::DeviceInfo info;
 		RtAudio *rta;
-		
+
+		uint32_t clock;
 
 		bool isLoopback;
-
 		bool isCapture;
 
-		DeviceState(): rta(nullptr), isLoopback(false), index(-1) {}
+		DeviceState(): rta(nullptr), isLoopback(false), index(-1), clock(0) {}
 		inline bool isOpen() const { return rta && rta->isStreamOpen(); }
 		inline int numChannels() const {
 			return isCapture ? info.inputChannels : info.outputChannels;
 		}
-
 
 		std::vector<int> getSampleRateCurrentlyAvailable() const;
 
 		inline bool exists() const { return index >= 0; }
 
 		static DeviceState NoDevice;
-
-
-
 
 	private:
 		RtaudioCallbackData cd;
@@ -130,25 +127,24 @@ public:
 			c.isCapture = isCapture;
 			return c;
 		}
-	};
-
-
-	
+	};	
 
 private:
-	
-
 	//std::map<std::string, AudioIO*> m_audioIOs;
 	//std::map<std::string, AudioStreamInfo> m_availableStreams;
 	//std::map<std::string, AudioIOStream*> m_activeStreams;
 
 	std::vector<DeviceState> deviceStates;
 
-	std::unordered_map<AudioCodingStream::Params, AudioCodingStream*> streamers;
+	// keep encoding streamers in a map to share them
+	std::unordered_map<AudioStreamerCoding::Params, AudioStreamerEncoding*> streamersTx;
+
+	std::vector<AudioStreamerDecoding*> streamersRx;
 
 	struct CoderDescription {
 		AudioCoder::Factory factory;
 		std::vector<int> supportedSampleRates;
+		bool lossless;
 	};
 
 	std::map<std::string, CoderDescription> coderFactories;
@@ -177,11 +173,19 @@ public:
 
 	void update();
 
-     AudioCoder *createEncoder(const AudioCoder::EncoderParams &encParams);
+     AudioCoder *createEncoder(const AudioCoder::CoderParams &encParams);
 
-   inline const std::vector <DeviceState> & getDevices() const { 
-	   return deviceStates;
-   }
+	 inline const std::vector <DeviceState> & getDevices() const {
+		 return deviceStates;
+	 }
+
+	 inline const std::vector <std::string> getCoderNames() const {
+		 std::vector<std::string> names;
+		 for (auto it : coderFactories) {
+			 names.push_back(it.first);
+		 }
+		 return names;
+	 }
 
    inline const DeviceState & getDevice(const std::string &id) const { 
 	   for (auto &s : deviceStates) {
@@ -192,8 +196,8 @@ public:
    }
 
 
-   std::future<void> streamFrom(StreamEndpointInfo &endpoint, AudioCoder::EncoderParams &encoder, BinaryAudioStreamPump pump);
-   std::future<void> streamTo(BinaryAudioStreamPump pull, AudioCoder::DecoderParams &decParams, StreamEndpointInfo &endpoint);
+   ActiveStreamHandle streamFrom(const StreamEndpointInfo &endpoint, const AudioCoder::CoderParams &encoder, BinaryAudioStreamPump &&pump);
+   ActiveStreamHandle streamTo(BinaryStreamRead &&pull, const AudioCoder::CoderParams &decParams, const StreamEndpointInfo &endpoint);
 
 
    static bool compareSampleRatesTo48KHz(int a, int b) {
@@ -209,6 +213,6 @@ public:
    }
 
    private:
-	   void openEndpoint_(StreamEndpointInfo &endpoint, const AudioCoder::CoderParams &coderParams);
+	   DeviceState &startEndpoint_(const StreamEndpointInfo &endpoint, const AudioCoder::CoderParams &coderParams);
+	   AudioStreamerCoding *newStreamer(const AudioStreamerCoding::Params &params);
 };
-

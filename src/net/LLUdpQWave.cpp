@@ -183,15 +183,15 @@ bool LLUdpQWave::send(const uint8_t *data, int dataLength)
 
 
 
-const uint8_t *LLUdpQWave::receive(int &receivedBytes)
+int LLUdpQWave::receive(uint8_t *buf, int max)
 {
-	receivedBytes = socketReceive(m_socketRx, m_rxBuffer, sizeof(m_rxBuffer));
+	int receivedBytes = socketReceive(m_socketRx, buf, max);
 	if (receivedBytes == -1) {
 		receivedBytes = 0;
 		return 0;
 	}
 
-	return m_rxBuffer;
+	return receivedBytes;
 }
 
 

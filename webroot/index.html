@@ -152,14 +152,26 @@
             }
             console.log('Connect', capture, '---->', playback);
 
-            rpc(isWebStream ? 'web-monitor-stream' : 'start-stream', {
+			var requestData = {
                 hostname: isWebStream ? capture.node.hostname : playback.node.hostname,
-                playbackDeviceId: isWebStream ? "" : playback.device.id,
-                captureNodeId: capture.node.id,
-                captureDeviceId: capture.device.id,
-                numChannels: 0, // TODO
-                channelOffset: 0 // TODO
-            }, function (result) {
+				captureNodeId: capture.node.id,
+				captureEndpoint: {deviceId: capture.device.id, numChannels: 0, channelOffset: 0, sampleRate: 0 }, // TODO
+            };
+			
+			if(!isWebStream) {
+				requestData.playbackEndpoint = {
+					deviceId: playback.device.id, 
+					numChannels: 0,  // TODO
+					channelOffset: 0,  // TODO
+					sampleRate: 0  // TODO
+				};
+				
+				requestData.encoderParams = {
+					maxBitrate: 256000 // TODO
+				};
+			}
+			
+            rpc(isWebStream ? 'web-monitor-stream' : 'start-stream', requestData, function (result) {
                 console.log(result);
 
                 if (isWebStream) {
@@ -185,7 +197,7 @@
             var audioNodeEl = $(this).parents('.audio-node');
 
             audioNodeEl.blur();
-            audioNodeEl.css('pointer-events', 'none');
+            //audioNodeEl.css('pointer-events', 'none');
 
             if (window.connectingNodeDevice) {
                 connectDevices(window.connectingNodeDevice, e.data);

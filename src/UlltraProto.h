@@ -72,6 +72,9 @@ public:
 	static const int TcpConnectTimeout = 4000; // milliseconds
 
 
+	static const int NetStreamPort = 4000;
+
+
 	static bool init();
 	static const std::string& getDeviceName();
 

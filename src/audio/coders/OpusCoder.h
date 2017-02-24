@@ -12,13 +12,13 @@ struct OpusMSDecoder;
 class OpusCoder : public AudioCoder
 {
 public:
-        OpusCoder(const EncoderParams &params);
+        OpusCoder(const CoderParams &params);
         virtual ~OpusCoder();
 
 		int getHeader(uint8_t *outBuffer, int bufferLen) const;
 
-	int encodeInterleaved(const float* samples, int numFrames, uint8_t *buffer, int bufferLen);
-	void decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numFrames);
+	int encodeInterleaved(const float* samples, int numSamplesPerChannel, uint8_t *buffer, int bufferLen);
+	int decodeInterleaved(const uint8_t *buffer, int bufferLen, float *samples, int numSamplesPerChannel);
 
 	virtual int getBlockSize() {
 		/*
